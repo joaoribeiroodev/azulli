@@ -1,0 +1,69 @@
+import { redirect } from "next/navigation"
+import Link from "next/link"
+import { createClient } from "@/lib/supabase/server"
+import { SidebarNav } from "@/components/app/sidebar-nav"
+import { UserMenu } from "@/components/app/user-menu"
+
+export default async function AppLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) redirect("/login")
+
+  const { data: tenant } = await supabase
+    .from("tenants")
+    .select("name, tier, trial_ends_at")
+    .limit(1)
+    .maybeSingle()
+
+  const userName =
+    (user.user_metadata?.name as string | undefined) ?? user.email ?? "Você"
+
+  return (
+    <div className="min-h-screen bg-surface flex">
+      {/* Sidebar */}
+      <aside className="w-64 shrink-0 bg-card border-r flex flex-col">
+        <div className="px-5 py-5 border-b">
+          <Link href="/dashboard" className="text-xl font-display font-bold text-brand-ink">
+            Azulli
+          </Link>
+          {tenant?.name && (
+            <p className="text-xs text-muted-foreground truncate mt-0.5">
+              {tenant.name}
+            </p>
+          )}
+        </div>
+
+        <div className="flex-1 overflow-y-auto py-4">
+          <SidebarNav />
+        </div>
+
+        {tenant?.tier === "trial" && tenant.trial_ends_at && (
+          <div className="mx-3 mb-3 rounded-lg bg-brand-soft px-3 py-2.5">
+            <p className="text-xs font-medium text-brand-ink">Trial ativo 🚀</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Expira em{" "}
+              {new Date(tenant.trial_ends_at).toLocaleDateString("pt-BR")}
+            </p>
+            <Link
+              href="/billing"
+              className="mt-2 inline-block text-xs font-medium text-brand hover:text-brand-hover"
+            >
+              Ver planos →
+            </Link>
+          </div>
+        )}
+
+        <div className="border-t p-2">
+          <UserMenu name={userName} email={user.email ?? ""} />
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <main className="flex-1 overflow-y-auto">{children}</main>
+    </div>
+  )
+}

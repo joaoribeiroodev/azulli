@@ -1,64 +1,159 @@
-import { redirect } from "next/navigation"
-import { createClient } from "@/lib/supabase/server"
-import { signOutAction } from "@/lib/auth/actions"
-import { Button } from "@/components/ui/button"
+import { Suspense } from "react"
+import { ArrowDownRight, ArrowUpRight, TrendingUp, AlertCircle } from "lucide-react"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 
-export const metadata = {
-  title: "Dashboard — Azulli",
-}
+import {
+  getDashboardSummary,
+  getLast7DaysSeries,
+  getRecentTransactions,
+} from "@/lib/financial/queries"
+import { formatBRL } from "@/lib/utils/currency"
+
+import { WeeklyChart } from "./_components/weekly-chart"
+import { RecentTransactionsList } from "./_components/recent-transactions"
+import { QuickActions } from "./_components/quick-actions"
+
+export const metadata = { title: "Dashboard — Azulli" }
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) redirect("/login")
-
-  // Busca o tenant do usuário (RLS já filtra)
-  const { data: tenant } = await supabase
-    .from("tenants")
-    .select("name, tier, trial_ends_at")
-    .limit(1)
-    .maybeSingle()
-
   return (
-    <main className="min-h-screen p-8 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      <header className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-3xl font-display font-bold text-brand-ink">
-            Olá, {user.user_metadata?.name ?? "empreendedor"} 👋
+          <h1 className="text-2xl lg:text-3xl font-display font-bold text-brand-ink">
+            Dashboard
           </h1>
-          <p className="text-muted-foreground mt-1">
-            {tenant ? `Empresa: ${tenant.name}` : "Carregando empresa..."}
+          <p className="text-sm text-muted-foreground mt-1">
+            Visão rápida do seu mês.
           </p>
         </div>
+        <QuickActions />
+      </header>
 
-        <form action={signOutAction}>
-          <Button type="submit" variant="outline">
-            Sair
-          </Button>
-        </form>
-      </div>
+      <Suspense fallback={<CardsSkeleton />}>
+        <SummaryCards />
+      </Suspense>
 
-      <div className="rounded-xl border bg-card p-6">
-        <h2 className="text-lg font-semibold mb-2">Fase 2 ✅</h2>
-        <p className="text-sm text-muted-foreground">
-          Autenticação funcionando. Trial:{" "}
-          <span className="font-medium text-foreground">
-            {tenant?.tier === "trial" ? "Ativo" : tenant?.tier}
-          </span>
-          {tenant?.trial_ends_at && (
-            <>
-              {" "}
-              · Expira em{" "}
-              {new Date(tenant.trial_ends_at).toLocaleDateString("pt-BR")}
-            </>
-          )}
-        </p>
-        <p className="text-sm text-muted-foreground mt-2">
-          Próxima fase: construir o financeiro completo.
-        </p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Suspense fallback={<Skeleton className="h-80 lg:col-span-2" />}>
+          <WeeklyChartWrapper />
+        </Suspense>
+
+        <Suspense fallback={<Skeleton className="h-80" />}>
+          <RecentTransactionsWrapper />
+        </Suspense>
       </div>
-    </main>
+    </div>
+  )
+}
+
+async function SummaryCards() {
+  const s = await getDashboardSummary()
+  return (
+    <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardDescription>Entradas do mês</CardDescription>
+          <CardTitle className="text-2xl font-display flex items-center gap-2">
+            <ArrowUpRight className="h-5 w-5 text-success" />
+            {formatBRL(s.income)}
+          </CardTitle>
+        </CardHeader>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardDescription>Saídas do mês</CardDescription>
+          <CardTitle className="text-2xl font-display flex items-center gap-2">
+            <ArrowDownRight className="h-5 w-5 text-destructive" />
+            {formatBRL(s.expense)}
+          </CardTitle>
+        </CardHeader>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardDescription>Lucro líquido</CardDescription>
+          <CardTitle
+            className={`text-2xl font-display flex items-center gap-2 ${
+              s.profit >= 0 ? "text-success-ink" : "text-destructive"
+            }`}
+          >
+            <TrendingUp className="h-5 w-5" />
+            {formatBRL(s.profit)}
+          </CardTitle>
+        </CardHeader>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardDescription>Pendências</CardDescription>
+          <CardTitle className="text-2xl font-display flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-amber-500" />
+            {s.pendingCount}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <p className="text-xs text-muted-foreground">
+            {formatBRL(s.pendingAmount)} a receber/pagar
+            {s.overdueCount > 0 && (
+              <>
+                {" · "}
+                <span className="text-destructive font-medium">
+                  {s.overdueCount} vencidas
+                </span>
+              </>
+            )}
+          </p>
+        </CardContent>
+      </Card>
+    </section>
+  )
+}
+
+async function WeeklyChartWrapper() {
+  const data = await getLast7DaysSeries()
+  return (
+    <Card className="lg:col-span-2">
+      <CardHeader>
+        <CardTitle className="text-base">Últimos 7 dias</CardTitle>
+        <CardDescription>Entradas e saídas pagas no período</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <WeeklyChart data={data} />
+      </CardContent>
+    </Card>
+  )
+}
+
+async function RecentTransactionsWrapper() {
+  const transactions = await getRecentTransactions(6)
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Movimentações recentes</CardTitle>
+        <CardDescription>Últimos lançamentos</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <RecentTransactionsList transactions={transactions} />
+      </CardContent>
+    </Card>
+  )
+}
+
+function CardsSkeleton() {
+  return (
+    <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {[1, 2, 3, 4].map((i) => (
+        <Skeleton key={i} className="h-28" />
+      ))}
+    </section>
   )
 }

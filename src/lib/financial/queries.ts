@@ -269,3 +269,171 @@ export async function listCustomers(): Promise<CustomerRow[]> {
   }
   return data ?? []
 }
+
+// ---------------------------------------------------------------------------
+// Detalhes de cliente
+// ---------------------------------------------------------------------------
+
+export type CustomerDetail = {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  document: string | null
+  created_at: string
+  kpis: {
+    totalReceived: number   // status=paid, type=income
+    pendingAmount: number   // pending + overdue
+    overdueAmount: number   // só overdue
+    averageTicket: number   // média das receitas pagas
+    transactionCount: number
+  }
+}
+
+export async function getCustomerDetails(
+  id: string
+): Promise<CustomerDetail | null> {
+  const supabase = await createClient()
+
+  // RLS filtra por tenant — se for de outro tenant, retorna null (parece "não existe")
+  const { data: customer, error } = await supabase
+    .from("customers")
+    .select("id, name, email, phone, document, created_at")
+    .eq("id", id)
+    .maybeSingle()
+
+  if (error || !customer) return null
+
+  // Busca KPIs agregados da view (overdue dinâmico) — apenas income
+  const { data: txs } = await supabase
+    .from("transactions_with_status")
+    .select("type, amount, status")
+    .eq("customer_id", id)
+    .eq("type", "income")
+
+  let totalReceived = 0
+  let pendingAmount = 0
+  let overdueAmount = 0
+  let paidCount = 0
+
+  for (const t of txs ?? []) {
+    const amount = Number(t.amount)
+    if (t.status === "paid") {
+      totalReceived += amount
+      paidCount += 1
+    } else if (t.status === "pending") {
+      pendingAmount += amount
+    } else if (t.status === "overdue") {
+      pendingAmount += amount
+      overdueAmount += amount
+    }
+  }
+
+  return {
+    ...customer,
+    kpis: {
+      totalReceived,
+      pendingAmount,
+      overdueAmount,
+      averageTicket: paidCount > 0 ? totalReceived / paidCount : 0,
+      transactionCount: txs?.length ?? 0,
+    },
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Listagem paginada por cliente (reusa estrutura de listTransactions)
+// ---------------------------------------------------------------------------
+
+export async function listTransactionsByCustomer(
+  customerId: string,
+  page = 1,
+  pageSize = 15
+): Promise<PaginatedTransactions> {
+  const supabase = await createClient()
+  const p = Math.max(1, page)
+  const ps = Math.min(100, Math.max(5, pageSize))
+  const fromIdx = (p - 1) * ps
+  const toIdx = fromIdx + ps - 1
+
+  const { data, error, count } = await supabase
+    .from("transactions_with_status")
+    .select(
+      "id, type, amount, status, raw_status, due_date, paid_at, description, customer_id",
+      { count: "exact" }
+    )
+    .eq("customer_id", customerId)
+    .order("due_date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .range(fromIdx, toIdx)
+
+  if (error) {
+    console.error("[queries] listTransactionsByCustomer failed:", error)
+    return { rows: [], total: 0, page: p, pageSize: ps, totalPages: 0 }
+  }
+
+  const rows = (data ?? []).map((r) => ({
+    id: r.id,
+    type: r.type as "income" | "expense",
+    amount: Number(r.amount),
+    status: r.status as "pending" | "paid" | "overdue",
+    raw_status: r.raw_status as "pending" | "paid",
+    due_date: r.due_date,
+    paid_at: r.paid_at,
+    description: r.description,
+    customer_id: r.customer_id,
+    customer_name: null, // já está no header, não precisa
+  }))
+
+  const total = count ?? 0
+  return {
+    rows,
+    total,
+    page: p,
+    pageSize: ps,
+    totalPages: Math.max(1, Math.ceil(total / ps)),
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Lista de clientes — adicionar total recebido (LTV) por cliente
+// ---------------------------------------------------------------------------
+
+export type CustomerRowWithTotals = CustomerRow & {
+  total_received: number
+}
+
+export async function listCustomersWithTotals(): Promise<CustomerRowWithTotals[]> {
+  const supabase = await createClient()
+
+  const { data: customers, error } = await supabase
+    .from("customers")
+    .select("id, name, email, phone, document, created_at")
+    .order("name", { ascending: true })
+
+  if (error || !customers || customers.length === 0) {
+    return []
+  }
+
+  const ids = customers.map((c) => c.id)
+  const { data: txs } = await supabase
+    .from("transactions_with_status")
+    .select("customer_id, amount, type, status")
+    .in("customer_id", ids)
+    .eq("type", "income")
+    .eq("status", "paid")
+
+  const totalsMap = new Map<string, number>()
+  for (const t of txs ?? []) {
+    if (!t.customer_id) continue
+    totalsMap.set(
+      t.customer_id,
+      (totalsMap.get(t.customer_id) ?? 0) + Number(t.amount)
+    )
+  }
+
+  return customers.map((c) => ({
+    ...c,
+    total_received: totalsMap.get(c.id) ?? 0,
+  }))
+}

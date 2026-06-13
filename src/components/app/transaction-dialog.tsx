@@ -41,9 +41,10 @@ type Props = {
   type: "income" | "expense"
   onOpenChange: (open: boolean) => void
   customers?: { id: string; name: string }[]
+  defaultCustomerId?: string | null
 }
 
-export function TransactionDialog({ open, type, onOpenChange, customers = [] }: Props) {
+export function TransactionDialog({ open, type, onOpenChange, customers = [], defaultCustomerId = null }: Props) {
   const [isPending, startTransition] = useTransition()
   const [amountDisplay, setAmountDisplay] = useState("")
 
@@ -67,7 +68,7 @@ export function TransactionDialog({ open, type, onOpenChange, customers = [] }: 
         amount: 0,
         due_date: new Date().toISOString().slice(0, 10),
         description: "",
-        customer_id: null,
+        customer_id: defaultCustomerId,
         status: "pending",
       })
       setAmountDisplay("")

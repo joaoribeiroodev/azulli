@@ -1,7 +1,15 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { Mail, Phone, MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import Link from "next/link"
+import {
+  Mail,
+  Phone,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  ChevronRight,
+} from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -31,12 +39,14 @@ import {
 } from "@/components/ui/alert-dialog"
 
 import { deleteCustomerAction } from "@/lib/financial/customers.actions"
-import type { CustomerRow } from "@/lib/financial/queries"
+import { formatBRL } from "@/lib/utils/currency"
+import type { CustomerRowWithTotals } from "@/lib/financial/queries"
 import { CustomerDialog } from "./customer-dialog"
 
-export function CustomersTable({ rows }: { rows: CustomerRow[] }) {
-  const [editing, setEditing] = useState<CustomerRow | null>(null)
-  const [confirmDelete, setConfirmDelete] = useState<CustomerRow | null>(null)
+export function CustomersTable({ rows }: { rows: CustomerRowWithTotals[] }) {
+  const [editing, setEditing] = useState<CustomerRowWithTotals | null>(null)
+  const [confirmDelete, setConfirmDelete] =
+    useState<CustomerRowWithTotals | null>(null)
   const [isPending, startTransition] = useTransition()
 
   function handleDelete() {
@@ -71,15 +81,23 @@ export function CustomersTable({ rows }: { rows: CustomerRow[] }) {
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead className="hidden md:table-cell">E-mail</TableHead>
-              <TableHead className="hidden md:table-cell">Telefone</TableHead>
-              <TableHead className="hidden lg:table-cell">CPF/CNPJ</TableHead>
+              <TableHead className="hidden lg:table-cell">Telefone</TableHead>
+              <TableHead className="text-right">Total recebido</TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((row) => (
-              <TableRow key={row.id}>
-                <TableCell className="font-medium">{row.name}</TableCell>
+              <TableRow key={row.id} className="group">
+                <TableCell className="font-medium">
+                  <Link
+                    href={`/clientes/${row.id}`}
+                    className="inline-flex items-center gap-1 hover:text-brand transition-colors"
+                  >
+                    {row.name}
+                    <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </Link>
+                </TableCell>
                 <TableCell className="hidden md:table-cell text-muted-foreground">
                   {row.email ? (
                     <span className="inline-flex items-center gap-1.5">
@@ -90,7 +108,7 @@ export function CustomersTable({ rows }: { rows: CustomerRow[] }) {
                     "—"
                   )}
                 </TableCell>
-                <TableCell className="hidden md:table-cell text-muted-foreground">
+                <TableCell className="hidden lg:table-cell text-muted-foreground">
                   {row.phone ? (
                     <span className="inline-flex items-center gap-1.5">
                       <Phone className="h-3.5 w-3.5" />
@@ -100,8 +118,16 @@ export function CustomersTable({ rows }: { rows: CustomerRow[] }) {
                     "—"
                   )}
                 </TableCell>
-                <TableCell className="hidden lg:table-cell text-muted-foreground">
-                  {row.document ?? "—"}
+                <TableCell className="text-right">
+                  {row.total_received > 0 ? (
+                    <span className="font-semibold text-success-ink">
+                      {formatBRL(row.total_received)}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      Sem receitas
+                    </span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>
@@ -111,6 +137,11 @@ export function CustomersTable({ rows }: { rows: CustomerRow[] }) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link href={`/clientes/${row.id}`}>
+                          Ver detalhes
+                        </Link>
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setEditing(row)}>
                         <Pencil className="mr-2 h-4 w-4" />
                         Editar

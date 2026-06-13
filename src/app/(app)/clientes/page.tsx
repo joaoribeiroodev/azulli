@@ -1,6 +1,6 @@
 import { Suspense } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
-import { listCustomers } from "@/lib/financial/queries"
+import { listCustomersWithTotals } from "@/lib/financial/queries"
 import { CustomersHeader } from "./_components/customers-header"
 import { CustomersTable } from "./_components/customers-table"
 
@@ -18,6 +18,6 @@ export default async function ClientesPage() {
 }
 
 async function TableSection() {
-  const rows = await listCustomers()
+  const rows = await listCustomersWithTotals()
   return <CustomersTable rows={rows} />
 }

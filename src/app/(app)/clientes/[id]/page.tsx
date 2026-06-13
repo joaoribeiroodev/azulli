@@ -1,0 +1,98 @@
+import { Suspense } from "react"
+import { notFound } from "next/navigation"
+import Link from "next/link"
+import { ChevronLeft } from "lucide-react"
+
+import { Skeleton } from "@/components/ui/skeleton"
+import {
+  getCustomerDetails,
+  listTransactionsByCustomer,
+} from "@/lib/financial/queries"
+
+import { CustomerHeader } from "./_components/customer-header"
+import { CustomerKPICards } from "./_components/customer-kpi-cards"
+import { CustomerContactCard } from "./_components/customer-contact-card"
+import { CustomerTransactions } from "./_components/customer-transactions"
+
+type Params = { id: string }
+type SP = { page?: string }
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<Params>
+}) {
+  const { id } = await params
+  const customer = await getCustomerDetails(id)
+  return {
+    title: customer ? `${customer.name} — Azulli` : "Cliente — Azulli",
+  }
+}
+
+export default async function ClienteDetalhePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<Params>
+  searchParams: Promise<SP>
+}) {
+  const { id } = await params
+  const sp = await searchParams
+
+  const customer = await getCustomerDetails(id)
+  if (!customer) notFound()
+
+  return (
+    <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      <Link
+        href="/clientes"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Voltar para clientes
+      </Link>
+
+      <CustomerHeader customer={customer} />
+
+      <CustomerKPICards kpis={customer.kpis} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <Suspense
+            key={JSON.stringify(sp)}
+            fallback={<Skeleton className="h-96" />}
+          >
+            <TransactionsSection
+              customerId={customer.id}
+              customerName={customer.name}
+              page={sp.page ? parseInt(sp.page, 10) : 1}
+            />
+          </Suspense>
+        </div>
+
+        <div className="space-y-6">
+          <CustomerContactCard customer={customer} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+async function TransactionsSection({
+  customerId,
+  customerName,
+  page,
+}: {
+  customerId: string
+  customerName: string
+  page: number
+}) {
+  const result = await listTransactionsByCustomer(customerId, page)
+  return (
+    <CustomerTransactions
+      customerId={customerId}
+      customerName={customerName}
+      result={result}
+    />
+  )
+}

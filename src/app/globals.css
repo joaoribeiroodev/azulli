@@ -1,69 +1,120 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@import "tw-animate-css";
 
-@layer base {
-  :root {
-    /* Background limpo (slate-50) */
-    --background: 210 40% 98%;
-    --foreground: 222.2 84% 4.9%;
+@custom-variant dark (&:is(.dark *));
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+/* =========================================================================
+   AZULLI — Design Tokens (Tailwind v4 @theme inline)
+   ========================================================================= */
+@theme inline {
+  /* shadcn semantic tokens (mapeados via CSS vars abaixo) */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+  /* ====== Tokens semânticos do Azulli ====== */
+  --color-brand: #2563eb;          /* blue-600 — confiança */
+  --color-brand-hover: #1d4ed8;    /* blue-700 */
+  --color-brand-soft: #dbeafe;     /* blue-100 — backgrounds suaves */
+  --color-brand-ink: #1e3a8a;      /* blue-900 — títulos */
 
-    /* PRIMARY = blue-600 (Azulli) */
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 0 0% 100%;
+  --color-success: #10b981;        /* emerald-500 — pago/lucro */
+  --color-success-soft: #d1fae5;
+  --color-success-ink: #065f46;
 
-    /* SECONDARY = emerald-500 (sucesso/pago/lucro) */
-    --secondary: 160 84% 39%;
-    --secondary-foreground: 0 0% 100%;
+  --color-surface: #f8fafc;        /* slate-50 — background app */
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+  /* Tipografia */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-poppins), var(--font-inter), ui-sans-serif, sans-serif;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-
-    --radius: 0.75rem;
+  /* Animações */
+  --animate-pop-in: pop-in 0.18s ease-out;
+  @keyframes pop-in {
+    0% { transform: scale(0.95); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
   }
+}
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 160 84% 39%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
-  }
+/* =========================================================================
+   shadcn base tokens — paleta Slate + ajustes Azulli
+   (primary = blue-600, secondary = emerald-500)
+   ========================================================================= */
+:root {
+  --radius: 0.625rem;
+
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.13 0.028 261.692);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.13 0.028 261.692);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.13 0.028 261.692);
+
+  /* PRIMARY = blue-600 (Azulli) */
+  --primary: oklch(0.546 0.245 262.881);
+  --primary-foreground: oklch(0.985 0 0);
+
+  /* SECONDARY = emerald-500 (sucesso/pago/lucro) */
+  --secondary: oklch(0.696 0.17 162.48);
+  --secondary-foreground: oklch(0.985 0 0);
+
+  --muted: oklch(0.967 0.003 264.542);
+  --muted-foreground: oklch(0.551 0.027 264.364);
+
+  --accent: oklch(0.967 0.003 264.542);
+  --accent-foreground: oklch(0.21 0.034 264.665);
+
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+
+  --border: oklch(0.928 0.006 264.531);
+  --input: oklch(0.928 0.006 264.531);
+  --ring: oklch(0.546 0.245 262.881);
+}
+
+.dark {
+  --background: oklch(0.13 0.028 261.692);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.13 0.028 261.692);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.13 0.028 261.692);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.623 0.214 259.815);
+  --primary-foreground: oklch(0.21 0.034 264.665);
+  --secondary: oklch(0.696 0.17 162.48);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.278 0.033 256.848);
+  --muted-foreground: oklch(0.707 0.022 261.325);
+  --accent: oklch(0.278 0.033 256.848);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.396 0.141 25.723);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.278 0.033 256.848);
+  --input: oklch(0.278 0.033 256.848);
+  --ring: oklch(0.623 0.214 259.815);
 }
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border outline-ring/50;
   }
   body {
     @apply bg-surface text-foreground font-sans antialiased;

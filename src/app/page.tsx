@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 export default function Home() {
   return (
@@ -15,11 +16,11 @@ export default function Home() {
       </p>
 
       <div className="flex gap-3">
-        <Button size="lg" className="bg-brand hover:bg-brand-hover">
-          Começar trial grátis
+        <Button size="lg" className="bg-brand hover:bg-brand-hover" asChild>
+          <Link href="/register">Começar trial grátis</Link>
         </Button>
-        <Button size="lg" variant="outline">
-          Já tenho conta
+        <Button size="lg" variant="outline" asChild>
+          <Link href="/login">Já tenho conta</Link>
         </Button>
       </div>
     </main>

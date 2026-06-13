@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { Inter, Poppins } from "next/font/google"
+import { Toaster } from "@/components/ui/sonner"
 import "./globals.css"
 
 const inter = Inter({
@@ -18,7 +19,7 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "Azulli — Sua empresa no azul, sua mente em paz.",
   description:
-    "Gestão financeira, cobranças automáticas e notas fiscais para MEIs e Simples Nacional. Sem planilhas, sem dor de cabeça.",
+    "Gestão financeira, cobranças automáticas e notas fiscais para MEIs e Simples Nacional.",
 }
 
 export default function RootLayout({
@@ -26,7 +27,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="pt-BR" className={`${inter.variable} ${poppins.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <Toaster richColors position="top-right" />
+      </body>
     </html>
   )
 }

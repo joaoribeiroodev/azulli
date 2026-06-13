@@ -3,6 +3,7 @@ import Link from "next/link"
 import { createClient } from "@/lib/supabase/server"
 import { SidebarNav } from "@/components/app/sidebar-nav"
 import { UserMenu } from "@/components/app/user-menu"
+import { MobileNav } from "@/components/app/mobile-nav"
 
 export default async function AppLayout({
   children,
@@ -21,11 +22,21 @@ export default async function AppLayout({
 
   const userName =
     (user.user_metadata?.name as string | undefined) ?? user.email ?? "Você"
+  const userEmail = user.email ?? ""
 
   return (
-    <div className="min-h-screen bg-surface flex">
-      {/* Sidebar */}
-      <aside className="w-64 shrink-0 bg-card border-r flex flex-col">
+    <div className="min-h-screen bg-surface lg:flex">
+      {/* Mobile header (visível só em <lg) */}
+      <MobileNav
+        userName={userName}
+        userEmail={userEmail}
+        tenantName={tenant?.name}
+        tenantTier={tenant?.tier}
+        trialEndsAt={tenant?.trial_ends_at}
+      />
+
+      {/* Sidebar desktop (visível só em >=lg) */}
+      <aside className="hidden lg:flex w-64 shrink-0 bg-card border-r flex-col">
         <div className="px-5 py-5 border-b">
           <Link href="/dashboard" className="text-xl font-display font-bold text-brand-ink">
             Azulli
@@ -58,11 +69,10 @@ export default async function AppLayout({
         )}
 
         <div className="border-t p-2">
-          <UserMenu name={userName} email={user.email ?? ""} />
+          <UserMenu name={userName} email={userEmail} />
         </div>
       </aside>
 
-      {/* Main content */}
       <main className="flex-1 overflow-y-auto">{children}</main>
     </div>
   )

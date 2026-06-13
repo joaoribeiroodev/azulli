@@ -1,6 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { z } from "zod"
 import { createClient } from "@/lib/supabase/server"
 import {
   createCustomerSchema,
@@ -56,4 +57,55 @@ export async function createCustomerAction(
   revalidatePath("/clientes")
   revalidatePath("/lancamentos")
   return { success: true, data: { id: data.id } }
+}
+
+const updateCustomerSchema = createCustomerSchema.extend({
+  id: z.string().uuid(),
+})
+type UpdateCustomerInput = z.infer<typeof updateCustomerSchema>
+
+export async function updateCustomerAction(
+  input: UpdateCustomerInput
+): Promise<ActionResult> {
+  const parsed = updateCustomerSchema.safeParse(input)
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Dados inválidos",
+    }
+  }
+
+  const { id, ...rest } = parsed.data
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from("customers")
+    .update({
+      name: rest.name,
+      email: rest.email || null,
+      phone: rest.phone || null,
+      document: rest.document || null,
+    })
+    .eq("id", id)
+
+  if (error) {
+    console.error("[customers] update failed:", error)
+    return { success: false, error: "Não foi possível atualizar o cliente." }
+  }
+
+  revalidatePath("/clientes")
+  return { success: true }
+}
+
+export async function deleteCustomerAction(id: string): Promise<ActionResult> {
+  const supabase = await createClient()
+  const { error } = await supabase.from("customers").delete().eq("id", id)
+  if (error) {
+    console.error("[customers] delete failed:", error)
+    return {
+      success: false,
+      error: "Não foi possível excluir. Verifique se há lançamentos vinculados.",
+    }
+  }
+  revalidatePath("/clientes")
+  return { success: true }
 }

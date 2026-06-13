@@ -153,3 +153,119 @@ export async function getCustomersLite(): Promise<{ id: string; name: string }[]
     .limit(200)
   return data ?? []
 }
+
+// ---------------------------------------------------------------------------
+// Listagem paginada com filtros
+// ---------------------------------------------------------------------------
+
+export type TransactionFilters = {
+  type?: "income" | "expense" | "all"
+  status?: "pending" | "paid" | "overdue" | "all"
+  from?: string // YYYY-MM-DD
+  to?: string   // YYYY-MM-DD
+  page?: number
+  pageSize?: number
+}
+
+export type PaginatedTransactions = {
+  rows: (RecentTransaction & { paid_at: string | null; raw_status: "pending" | "paid" })[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}
+
+export async function listTransactions(
+  filters: TransactionFilters = {}
+): Promise<PaginatedTransactions> {
+  const supabase = await createClient()
+  const page = Math.max(1, filters.page ?? 1)
+  const pageSize = Math.min(100, Math.max(5, filters.pageSize ?? 20))
+  const fromIdx = (page - 1) * pageSize
+  const toIdx = fromIdx + pageSize - 1
+
+  let query = supabase
+    .from("transactions_with_status")
+    .select(
+      "id, type, amount, status, raw_status, due_date, paid_at, description, customer_id",
+      { count: "exact" }
+    )
+
+  if (filters.type && filters.type !== "all") {
+    query = query.eq("type", filters.type)
+  }
+  if (filters.status && filters.status !== "all") {
+    query = query.eq("status", filters.status)
+  }
+  if (filters.from) query = query.gte("due_date", filters.from)
+  if (filters.to) query = query.lte("due_date", filters.to)
+
+  const { data, error, count } = await query
+    .order("due_date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .range(fromIdx, toIdx)
+
+  if (error) {
+    console.error("[queries] listTransactions failed:", error)
+    return { rows: [], total: 0, page, pageSize, totalPages: 0 }
+  }
+
+  const rowsRaw = data ?? []
+  const customerIds = Array.from(
+    new Set(rowsRaw.map((r) => r.customer_id).filter((x): x is string => !!x))
+  )
+
+  let customerMap = new Map<string, string>()
+  if (customerIds.length > 0) {
+    const { data: customers } = await supabase
+      .from("customers")
+      .select("id, name")
+      .in("id", customerIds)
+    customerMap = new Map((customers ?? []).map((c) => [c.id, c.name]))
+  }
+
+  const rows = rowsRaw.map((r) => ({
+    id: r.id,
+    type: r.type as "income" | "expense",
+    amount: Number(r.amount),
+    status: r.status as "pending" | "paid" | "overdue",
+    raw_status: r.raw_status as "pending" | "paid",
+    due_date: r.due_date,
+    paid_at: r.paid_at,
+    description: r.description,
+    customer_id: r.customer_id,
+    customer_name: r.customer_id ? customerMap.get(r.customer_id) ?? null : null,
+  }))
+
+  const total = count ?? 0
+  return {
+    rows,
+    total,
+    page,
+    pageSize,
+    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+  }
+}
+
+export type CustomerRow = {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  document: string | null
+  created_at: string
+}
+
+export async function listCustomers(): Promise<CustomerRow[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("customers")
+    .select("id, name, email, phone, document, created_at")
+    .order("name", { ascending: true })
+
+  if (error) {
+    console.error("[queries] listCustomers failed:", error)
+    return []
+  }
+  return data ?? []
+}

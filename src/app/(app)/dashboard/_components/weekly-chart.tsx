@@ -17,20 +17,24 @@ type Props = { data: DailyBucket[] }
 
 export function WeeklyChart({ data }: Props) {
   return (
-    <div className="h-64 w-full">
-      <ResponsiveContainer width="100%" height="100%">
+    <div style={{ width: "100%", height: 256 }}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
         <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
+          <CartesianGrid
+            strokeDasharray="3 3"
+            vertical={false}
+            className="stroke-muted"
+          />
           <XAxis
             dataKey="label"
             tickLine={false}
             axisLine={false}
-            className="text-xs"
+            tick={{ fontSize: 12 }}
           />
           <YAxis
             tickLine={false}
             axisLine={false}
-            className="text-xs"
+            tick={{ fontSize: 12 }}
             tickFormatter={(v) =>
               v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)
             }

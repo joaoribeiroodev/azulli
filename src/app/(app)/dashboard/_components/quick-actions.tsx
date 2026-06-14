@@ -10,9 +10,14 @@ type Party = { id: string; name: string }
 type Props = {
   customers: Party[]
   suppliers: Party[]
+  recentCategories?: string[]
 }
 
-export function QuickActions({ customers, suppliers }: Props) {
+export function QuickActions({
+  customers,
+  suppliers,
+  recentCategories = [],
+}: Props) {
   const [open, setOpen] = useState<"income" | "expense" | null>(null)
 
   return (
@@ -39,6 +44,7 @@ export function QuickActions({ customers, suppliers }: Props) {
         onOpenChange={(o) => !o && setOpen(null)}
         customers={customers}
         suppliers={suppliers}
+        recentCategories={recentCategories}
       />
     </div>
   )

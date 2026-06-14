@@ -7,12 +7,14 @@ import { Skeleton } from "@/components/ui/skeleton"
 import {
   getCustomerDetails,
   listTransactionsByCustomer,
+  getMonthlySeriesByParty,
 } from "@/lib/financial/queries"
 
 import { CustomerHeader } from "./_components/customer-header"
 import { CustomerKPICards } from "./_components/customer-kpi-cards"
 import { CustomerContactCard } from "./_components/customer-contact-card"
 import { CustomerTransactions } from "./_components/customer-transactions"
+import { MonthlyChartCard } from "@/components/app/monthly-chart-card"
 
 type Params = { id: string }
 type SP = { page?: string }
@@ -42,6 +44,8 @@ export default async function ClienteDetalhePage({
   const customer = await getCustomerDetails(id)
   if (!customer) notFound()
 
+  const initialSeries = await getMonthlySeriesByParty(customer.id, "customer", 6)
+
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       <Link
@@ -55,6 +59,12 @@ export default async function ClienteDetalhePage({
       <CustomerHeader customer={customer} />
 
       <CustomerKPICards kpis={customer.kpis} />
+
+      <MonthlyChartCard
+        partyId={customer.id}
+        partyType="customer"
+        initial={initialSeries}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

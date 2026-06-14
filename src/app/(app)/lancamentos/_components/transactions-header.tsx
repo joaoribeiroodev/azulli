@@ -11,9 +11,14 @@ type Party = { id: string; name: string }
 type Props = {
   customers: Party[]
   suppliers: Party[]
+  recentCategories?: string[]
 }
 
-export function TransactionsHeader({ customers, suppliers }: Props) {
+export function TransactionsHeader({
+  customers,
+  suppliers,
+  recentCategories = [],
+}: Props) {
   const [open, setOpen] = useState<"income" | "expense" | null>(null)
 
   return (
@@ -51,6 +56,7 @@ export function TransactionsHeader({ customers, suppliers }: Props) {
           onOpenChange={(o) => !o && setOpen(null)}
           customers={customers}
           suppliers={suppliers}
+          recentCategories={recentCategories}
         />
       </div>
     </header>

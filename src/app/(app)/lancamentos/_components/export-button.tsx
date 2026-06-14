@@ -13,11 +13,7 @@ import {
 import { Button } from "@/components/ui/button"
 
 /**
- * Botão de exportação que respeita os filtros aplicados na tela.
- * Permite escolher: tudo, só entradas, só saídas.
- *
- * Dica: usar <a> com download dispara o GET no route handler;
- * o navegador faz o save-as automaticamente.
+ * Exporta lançamentos em XLSX respeitando os filtros aplicados (incluindo mês).
  */
 export function ExportButton() {
   const sp = useSearchParams()
@@ -30,6 +26,12 @@ export function ExportButton() {
 
     const status = sp.get("status")
     if (status && status !== "all") params.set("status", status)
+
+    const category = sp.get("category")
+    if (category && category !== "all") params.set("category", category)
+
+    const month = sp.get("month")
+    if (month && month !== "all") params.set("month", month)
 
     const from = sp.get("from")
     if (from) params.set("from", from)
@@ -49,8 +51,8 @@ export function ExportButton() {
           Exportar
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>Exportar como CSV</DropdownMenuLabel>
+      <DropdownMenuContent align="end" className="w-60">
+        <DropdownMenuLabel>Exportar como planilha (XLSX)</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <a href={buildUrl()} download>

@@ -39,6 +39,8 @@ import {
 import { createTransactionAction } from "@/lib/financial/transactions.actions"
 import { maskBRL, parseBRL } from "@/lib/utils/currency"
 
+import { CategoryCombobox } from "@/components/app/category-combobox"
+
 type Party = { id: string; name: string }
 
 type Props = {
@@ -49,6 +51,7 @@ type Props = {
   suppliers?: Party[]
   defaultCustomerId?: string | null
   defaultSupplierId?: string | null
+  recentCategories?: string[]
 }
 
 export function TransactionDialog({
@@ -59,6 +62,7 @@ export function TransactionDialog({
   suppliers = [],
   defaultCustomerId = null,
   defaultSupplierId = null,
+  recentCategories = [],
 }: Props) {
   const [isPending, startTransition] = useTransition()
   const [amountDisplay, setAmountDisplay] = useState("")
@@ -72,6 +76,7 @@ export function TransactionDialog({
       description: "",
       customer_id: null,
       supplier_id: null,
+      category: null,
       status: "pending",
     },
   })
@@ -85,6 +90,7 @@ export function TransactionDialog({
         description: "",
         customer_id: type === "income" ? defaultCustomerId : null,
         supplier_id: type === "expense" ? defaultSupplierId : null,
+        category: null,
         status: "pending",
       })
       setAmountDisplay("")
@@ -115,7 +121,7 @@ export function TransactionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display">
             {isIncome ? "Nova receita" : "Nova despesa"}
@@ -186,6 +192,25 @@ export function TransactionDialog({
                       placeholder={isIncome ? "Venda do mês" : "Conta de luz"}
                       {...field}
                       value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Categoria (opcional)</FormLabel>
+                  <FormControl>
+                    <CategoryCombobox
+                      value={field.value ?? null}
+                      onChange={field.onChange}
+                      type={type}
+                      recentCategories={recentCategories}
                     />
                   </FormControl>
                   <FormMessage />

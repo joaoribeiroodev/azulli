@@ -15,6 +15,7 @@ import {
   getRecentTransactions,
   getCustomersLite,
   getSuppliersLite,
+  getCategoriesUsed,
 } from "@/lib/financial/queries"
 import { formatBRL } from "@/lib/utils/currency"
 
@@ -22,6 +23,7 @@ import { WeeklyChart } from "./_components/weekly-chart"
 import { RecentTransactionsList } from "./_components/recent-transactions"
 import { QuickActions } from "./_components/quick-actions"
 import { CompleteCompanyBanner } from "./_components/complete-company-banner"
+import { TopOfMonthCards } from "./_components/top-of-month"
 
 export const metadata = { title: "Dashboard — Azulli" }
 
@@ -29,7 +31,7 @@ export default async function DashboardPage() {
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       <Suspense fallback={null}>
-        <BannerSection />
+        <CompleteCompanyBanner />
       </Suspense>
 
       <Suspense fallback={<HeaderSkeleton />}>
@@ -38,6 +40,10 @@ export default async function DashboardPage() {
 
       <Suspense fallback={<CardsSkeleton />}>
         <SummaryCards />
+      </Suspense>
+
+      <Suspense fallback={<Skeleton className="h-28" />}>
+        <TopOfMonthCards />
       </Suspense>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -53,14 +59,11 @@ export default async function DashboardPage() {
   )
 }
 
-async function BannerSection() {
-  return <CompleteCompanyBanner />
-}
-
 async function HeaderWithParties() {
-  const [customers, suppliers] = await Promise.all([
+  const [customers, suppliers, categories] = await Promise.all([
     getCustomersLite(),
     getSuppliersLite(),
+    getCategoriesUsed(),
   ])
 
   return (
@@ -73,7 +76,11 @@ async function HeaderWithParties() {
           Visão rápida do seu mês.
         </p>
       </div>
-      <QuickActions customers={customers} suppliers={suppliers} />
+      <QuickActions
+        customers={customers}
+        suppliers={suppliers}
+        recentCategories={categories.map((c) => c.category)}
+      />
     </header>
   )
 }

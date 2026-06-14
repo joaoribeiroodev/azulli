@@ -4,6 +4,7 @@ import {
   listTransactions,
   getCustomersLite,
   getSuppliersLite,
+  getCategoriesUsed,
 } from "@/lib/financial/queries"
 import { getTenantInvoiceContext } from "@/lib/invoices/queries"
 import { TransactionsHeader } from "./_components/transactions-header"
@@ -16,6 +17,8 @@ export const metadata = { title: "Lançamentos — Azulli" }
 type SP = {
   type?: string
   status?: string
+  category?: string
+  month?: string
   from?: string
   to?: string
   page?: string
@@ -34,7 +37,9 @@ export default async function LancamentosPage({
         <HeaderWithParties />
       </Suspense>
 
-      <TransactionsFilters />
+      <Suspense fallback={<Skeleton className="h-24" />}>
+        <FiltersWrapper />
+      </Suspense>
 
       <Suspense
         key={JSON.stringify(sp)}
@@ -47,20 +52,52 @@ export default async function LancamentosPage({
 }
 
 async function HeaderWithParties() {
-  const [customers, suppliers] = await Promise.all([
+  const [customers, suppliers, categories] = await Promise.all([
     getCustomersLite(),
     getSuppliersLite(),
+    getCategoriesUsed(),
   ])
-  return <TransactionsHeader customers={customers} suppliers={suppliers} />
+  return (
+    <TransactionsHeader
+      customers={customers}
+      suppliers={suppliers}
+      recentCategories={categories.map((c) => c.category)}
+    />
+  )
+}
+
+async function FiltersWrapper() {
+  const categories = await getCategoriesUsed()
+  return <TransactionsFilters categories={categories.map((c) => c.category)} />
+}
+
+/**
+ * Converte ?month=YYYY-MM em from/to do mês todo.
+ * Month tem prioridade sobre from/to manuais (UI desabilita os date pickers
+ * quando month está selecionado).
+ */
+function resolveDateRange(sp: SP): { from?: string; to?: string } {
+  if (sp.month && /^\d{4}-\d{2}$/.test(sp.month)) {
+    const [y, m] = sp.month.split("-").map(Number)
+    const lastDay = new Date(y, m, 0).getDate()
+    return {
+      from: `${sp.month}-01`,
+      to: `${sp.month}-${String(lastDay).padStart(2, "0")}`,
+    }
+  }
+  return { from: sp.from || undefined, to: sp.to || undefined }
 }
 
 async function TableSection({ sp }: { sp: SP }) {
+  const { from, to } = resolveDateRange(sp)
+
   const [result, ctx] = await Promise.all([
     listTransactions({
       type: (sp.type as "income" | "expense" | "all") ?? "all",
       status: (sp.status as "pending" | "paid" | "overdue" | "all") ?? "all",
-      from: sp.from || undefined,
-      to: sp.to || undefined,
+      category: sp.category ?? "all",
+      from,
+      to,
       page: sp.page ? parseInt(sp.page, 10) : 1,
       pageSize: 20,
     }),

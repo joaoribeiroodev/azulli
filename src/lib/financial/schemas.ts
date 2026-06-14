@@ -3,6 +3,44 @@ import { z } from "zod"
 export const transactionTypeSchema = z.enum(["income", "expense"])
 export const transactionStatusSchema = z.enum(["pending", "paid", "overdue"])
 
+// ---------------------------------------------------------------------------
+// Sugestões de categorias (não restringe — usuário pode digitar qualquer)
+// ---------------------------------------------------------------------------
+
+export const CATEGORY_SUGGESTIONS = {
+  income: [
+    "Venda de produtos",
+    "Prestação de serviços",
+    "Comissões",
+    "Outros recebimentos",
+  ],
+  expense: [
+    "Compras / Mercadorias",
+    "Aluguel / Imóvel",
+    "Marketing / Publicidade",
+    "Salários / Pró-labore",
+    "Impostos / Taxas",
+    "Transporte / Frete",
+    "Materiais / Suprimentos",
+    "Energia / Água / Internet",
+    "Outros",
+  ],
+} as const
+
+export type CategorySuggestionType = keyof typeof CATEGORY_SUGGESTIONS
+
+// ---------------------------------------------------------------------------
+// Transactions
+// ---------------------------------------------------------------------------
+
+const categoryField = z
+  .string()
+  .trim()
+  .max(60, "Categoria muito longa")
+  .optional()
+  .or(z.literal(""))
+  .nullable()
+
 export const createTransactionSchema = z
   .object({
     type: transactionTypeSchema,
@@ -21,18 +59,17 @@ export const createTransactionSchema = z
       .or(z.literal("")),
     customer_id: z.string().uuid().optional().nullable(),
     supplier_id: z.string().uuid().optional().nullable(),
+    category: categoryField,
     status: z.enum(["pending", "paid"]).default("pending"),
   })
   .refine(
     (data) => {
-      // Receita não pode ter fornecedor; despesa não pode ter cliente
       if (data.type === "income" && data.supplier_id) return false
       if (data.type === "expense" && data.customer_id) return false
       return true
     },
     {
-      message:
-        "Receita só vincula cliente; despesa só vincula fornecedor.",
+      message: "Receita só vincula cliente; despesa só vincula fornecedor.",
       path: ["type"],
     }
   )
@@ -47,6 +84,7 @@ export const updateTransactionSchema = z.object({
   description: z.string().trim().max(280).optional().or(z.literal("")),
   customer_id: z.string().uuid().optional().nullable(),
   supplier_id: z.string().uuid().optional().nullable(),
+  category: categoryField,
   status: z.enum(["pending", "paid"]).optional(),
 })
 

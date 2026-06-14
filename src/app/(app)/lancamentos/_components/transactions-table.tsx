@@ -53,6 +53,7 @@ type Row = {
   status: "pending" | "paid" | "overdue"
   due_date: string
   description: string | null
+  category: string | null
   customer_name: string | null
   supplier_name: string | null
   has_invoice?: boolean
@@ -128,6 +129,7 @@ export function TransactionsTable({ rows, allowsNFe = false }: Props) {
               <TableHead className="hidden md:table-cell">
                 Cliente / Fornecedor
               </TableHead>
+              <TableHead className="hidden xl:table-cell">Categoria</TableHead>
               <TableHead>Data</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Valor</TableHead>
@@ -153,7 +155,7 @@ export function TransactionsTable({ rows, allowsNFe = false }: Props) {
                       className={`h-8 w-8 rounded-full flex items-center justify-center ${
                         isIncome
                           ? "bg-success-soft text-success-ink"
-                          : "bg-red-50 text-destructive"
+                          : "bg-red-50 text-destructive dark:bg-red-950/40"
                       }`}
                     >
                       <Icon className="h-4 w-4" />
@@ -178,6 +180,18 @@ export function TransactionsTable({ rows, allowsNFe = false }: Props) {
                       </span>
                     ) : (
                       "—"
+                    )}
+                  </TableCell>
+                  <TableCell className="hidden xl:table-cell">
+                    {row.category ? (
+                      <Badge
+                        variant="secondary"
+                        className="bg-muted text-foreground hover:bg-muted font-normal"
+                      >
+                        {row.category}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </TableCell>
                   <TableCell className="text-muted-foreground whitespace-nowrap">

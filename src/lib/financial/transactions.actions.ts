@@ -24,6 +24,12 @@ async function getCurrentTenantId(): Promise<string | null> {
   return data.tenant_id
 }
 
+function normalizeCategory(c?: string | null): string | null {
+  if (!c) return null
+  const trimmed = c.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
 export async function createTransactionAction(
   input: CreateTransactionInput
 ): Promise<ActionResult<{ id: string }>> {
@@ -51,6 +57,7 @@ export async function createTransactionAction(
         parsed.data.type === "income" ? parsed.data.customer_id || null : null,
       supplier_id:
         parsed.data.type === "expense" ? parsed.data.supplier_id || null : null,
+      category: normalizeCategory(parsed.data.category),
       status: parsed.data.status,
       paid_at: parsed.data.status === "paid" ? new Date().toISOString() : null,
     })
@@ -64,6 +71,8 @@ export async function createTransactionAction(
 
   revalidatePath("/dashboard")
   revalidatePath("/lancamentos")
+  revalidatePath("/clientes")
+  revalidatePath("/fornecedores")
   return { success: true, data: { id: data.id } }
 }
 
@@ -78,13 +87,13 @@ export async function updateTransactionAction(
     }
   }
 
-  const { id, status, type, customer_id, supplier_id, ...rest } = parsed.data
+  const { id, status, type, customer_id, supplier_id, category, ...rest } =
+    parsed.data
   const supabase = await createClient()
 
   const updates: Record<string, unknown> = { ...rest }
   if (type) updates.type = type
 
-  // Se mudou o type, força limpar a parte que não combina
   if (type === "income") {
     updates.customer_id = customer_id ?? null
     updates.supplier_id = null
@@ -92,9 +101,12 @@ export async function updateTransactionAction(
     updates.supplier_id = supplier_id ?? null
     updates.customer_id = null
   } else {
-    // type não foi enviado — só atualiza o lado que foi enviado
     if (customer_id !== undefined) updates.customer_id = customer_id
     if (supplier_id !== undefined) updates.supplier_id = supplier_id
+  }
+
+  if (category !== undefined) {
+    updates.category = normalizeCategory(category)
   }
 
   if (status) {
@@ -114,6 +126,8 @@ export async function updateTransactionAction(
 
   revalidatePath("/dashboard")
   revalidatePath("/lancamentos")
+  revalidatePath("/clientes")
+  revalidatePath("/fornecedores")
   return { success: true }
 }
 
@@ -139,7 +153,6 @@ export async function deleteTransactionAction(
 ): Promise<ActionResult> {
   const supabase = await createClient()
 
-  // Bloqueia exclusão se já existir invoice emitida (registro fiscal)
   const { data: invoices, error: invErr } = await supabase
     .from("invoices")
     .select("id, status")

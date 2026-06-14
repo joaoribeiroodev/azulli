@@ -7,12 +7,14 @@ import { Skeleton } from "@/components/ui/skeleton"
 import {
   getSupplierDetails,
   listTransactionsBySupplier,
+  getMonthlySeriesByParty,
 } from "@/lib/financial/queries"
 
 import { SupplierHeader } from "./_components/supplier-header"
 import { SupplierKPICards } from "./_components/supplier-kpi-cards"
 import { SupplierContactCard } from "./_components/supplier-contact-card"
 import { SupplierTransactions } from "./_components/supplier-transactions"
+import { MonthlyChartCard } from "@/components/app/monthly-chart-card"
 
 type Params = { id: string }
 type SP = { page?: string }
@@ -42,6 +44,8 @@ export default async function FornecedorDetalhePage({
   const supplier = await getSupplierDetails(id)
   if (!supplier) notFound()
 
+  const initialSeries = await getMonthlySeriesByParty(supplier.id, "supplier", 6)
+
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       <Link
@@ -55,6 +59,12 @@ export default async function FornecedorDetalhePage({
       <SupplierHeader supplier={supplier} />
 
       <SupplierKPICards kpis={supplier.kpis} />
+
+      <MonthlyChartCard
+        partyId={supplier.id}
+        partyType="supplier"
+        initial={initialSeries}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

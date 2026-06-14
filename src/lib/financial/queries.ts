@@ -2,6 +2,10 @@ import "server-only"
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentMonthRange, getLastNDays } from "@/lib/utils/date"
 
+// ===========================================================================
+// Dashboard
+// ===========================================================================
+
 export type DashboardSummary = {
   income: number
   expense: number
@@ -39,10 +43,13 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
 
   for (const row of data) {
     const amount = Number(row.amount)
-    const dueDate = row.due_date // YYYY-MM-DD
+    const dueDate = row.due_date
 
-    // Apenas pagas no mês corrente entram no saldo realizado
-    if (row.status === "paid" && dueDate >= from.slice(0, 10) && dueDate <= to.slice(0, 10)) {
+    if (
+      row.status === "paid" &&
+      dueDate >= from.slice(0, 10) &&
+      dueDate <= to.slice(0, 10)
+    ) {
       if (row.type === "income") income += amount
       else expense += amount
     }
@@ -65,8 +72,8 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
 }
 
 export type DailyBucket = {
-  date: string       // "YYYY-MM-DD"
-  label: string      // "qua" (abreviado pt-BR)
+  date: string
+  label: string
   income: number
   expense: number
 }
@@ -108,13 +115,18 @@ export type RecentTransaction = {
   due_date: string
   description: string | null
   customer_name: string | null
+  supplier_name: string | null
 }
 
-export async function getRecentTransactions(limit = 8): Promise<RecentTransaction[]> {
+export async function getRecentTransactions(
+  limit = 8
+): Promise<RecentTransaction[]> {
   const supabase = await createClient()
   const { data } = await supabase
     .from("transactions_with_status")
-    .select("id, type, amount, status, due_date, description, customer_id")
+    .select(
+      "id, type, amount, status, due_date, description, customer_id, supplier_id"
+    )
     .order("due_date", { ascending: false })
     .limit(limit)
 
@@ -122,6 +134,9 @@ export async function getRecentTransactions(limit = 8): Promise<RecentTransactio
 
   const customerIds = Array.from(
     new Set(data.map((d) => d.customer_id).filter((x): x is string => !!x))
+  )
+  const supplierIds = Array.from(
+    new Set(data.map((d) => d.supplier_id).filter((x): x is string => !!x))
   )
 
   let customerMap = new Map<string, string>()
@@ -133,6 +148,15 @@ export async function getRecentTransactions(limit = 8): Promise<RecentTransactio
     customerMap = new Map((customers ?? []).map((c) => [c.id, c.name]))
   }
 
+  let supplierMap = new Map<string, string>()
+  if (supplierIds.length > 0) {
+    const { data: suppliers } = await supabase
+      .from("suppliers")
+      .select("id, name")
+      .in("id", supplierIds)
+    supplierMap = new Map((suppliers ?? []).map((s) => [s.id, s.name]))
+  }
+
   return data.map((d) => ({
     id: d.id,
     type: d.type as "income" | "expense",
@@ -140,11 +164,18 @@ export async function getRecentTransactions(limit = 8): Promise<RecentTransactio
     status: d.status as "pending" | "paid" | "overdue",
     due_date: d.due_date,
     description: d.description,
-    customer_name: d.customer_id ? customerMap.get(d.customer_id) ?? null : null,
+    customer_name: d.customer_id
+      ? customerMap.get(d.customer_id) ?? null
+      : null,
+    supplier_name: d.supplier_id
+      ? supplierMap.get(d.supplier_id) ?? null
+      : null,
   }))
 }
 
-export async function getCustomersLite(): Promise<{ id: string; name: string }[]> {
+export async function getCustomersLite(): Promise<
+  { id: string; name: string }[]
+> {
   const supabase = await createClient()
   const { data } = await supabase
     .from("customers")
@@ -154,25 +185,58 @@ export async function getCustomersLite(): Promise<{ id: string; name: string }[]
   return data ?? []
 }
 
-// ---------------------------------------------------------------------------
-// Listagem paginada com filtros
-// ---------------------------------------------------------------------------
+export async function getSuppliersLite(): Promise<
+  { id: string; name: string }[]
+> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("suppliers")
+    .select("id, name")
+    .order("name", { ascending: true })
+    .limit(200)
+  return data ?? []
+}
+
+// ===========================================================================
+// Listagem paginada de lançamentos
+// ===========================================================================
 
 export type TransactionFilters = {
   type?: "income" | "expense" | "all"
   status?: "pending" | "paid" | "overdue" | "all"
-  from?: string // YYYY-MM-DD
-  to?: string   // YYYY-MM-DD
+  from?: string
+  to?: string
   page?: number
   pageSize?: number
 }
 
+export type PaginatedTransactionRow = RecentTransaction & {
+  paid_at: string | null
+  raw_status: "pending" | "paid"
+  customer_id: string | null
+  supplier_id: string | null
+  has_invoice: boolean
+}
+
 export type PaginatedTransactions = {
-  rows: (RecentTransaction & { paid_at: string | null; raw_status: "pending" | "paid" })[]
+  rows: PaginatedTransactionRow[]
   total: number
   page: number
   pageSize: number
   totalPages: number
+}
+
+async function buildInvoiceMap(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  txIds: string[]
+): Promise<Set<string>> {
+  if (txIds.length === 0) return new Set()
+  const { data: invs } = await supabase
+    .from("invoices")
+    .select("transaction_id")
+    .in("transaction_id", txIds)
+    .in("status", ["processing", "authorized"])
+  return new Set((invs ?? []).map((i) => i.transaction_id))
 }
 
 export async function listTransactions(
@@ -187,7 +251,7 @@ export async function listTransactions(
   let query = supabase
     .from("transactions_with_status")
     .select(
-      "id, type, amount, status, raw_status, due_date, paid_at, description, customer_id",
+      "id, type, amount, status, raw_status, due_date, paid_at, description, customer_id, supplier_id",
       { count: "exact" }
     )
 
@@ -214,6 +278,9 @@ export async function listTransactions(
   const customerIds = Array.from(
     new Set(rowsRaw.map((r) => r.customer_id).filter((x): x is string => !!x))
   )
+  const supplierIds = Array.from(
+    new Set(rowsRaw.map((r) => r.supplier_id).filter((x): x is string => !!x))
+  )
 
   let customerMap = new Map<string, string>()
   if (customerIds.length > 0) {
@@ -224,7 +291,19 @@ export async function listTransactions(
     customerMap = new Map((customers ?? []).map((c) => [c.id, c.name]))
   }
 
-  const rows = rowsRaw.map((r) => ({
+  let supplierMap = new Map<string, string>()
+  if (supplierIds.length > 0) {
+    const { data: suppliers } = await supabase
+      .from("suppliers")
+      .select("id, name")
+      .in("id", supplierIds)
+    supplierMap = new Map((suppliers ?? []).map((s) => [s.id, s.name]))
+  }
+
+  const txIds = rowsRaw.map((r) => r.id)
+  const invoiceMap = await buildInvoiceMap(supabase, txIds)
+
+  const rows: PaginatedTransactionRow[] = rowsRaw.map((r) => ({
     id: r.id,
     type: r.type as "income" | "expense",
     amount: Number(r.amount),
@@ -234,7 +313,14 @@ export async function listTransactions(
     paid_at: r.paid_at,
     description: r.description,
     customer_id: r.customer_id,
-    customer_name: r.customer_id ? customerMap.get(r.customer_id) ?? null : null,
+    customer_name: r.customer_id
+      ? customerMap.get(r.customer_id) ?? null
+      : null,
+    supplier_id: r.supplier_id,
+    supplier_name: r.supplier_id
+      ? supplierMap.get(r.supplier_id) ?? null
+      : null,
+    has_invoice: invoiceMap.has(r.id),
   }))
 
   const total = count ?? 0
@@ -247,32 +333,9 @@ export async function listTransactions(
   }
 }
 
-export type CustomerRow = {
-  id: string
-  name: string
-  email: string | null
-  phone: string | null
-  document: string | null
-  created_at: string
-}
-
-export async function listCustomers(): Promise<CustomerRow[]> {
-  const supabase = await createClient()
-  const { data, error } = await supabase
-    .from("customers")
-    .select("id, name, email, phone, document, created_at")
-    .order("name", { ascending: true })
-
-  if (error) {
-    console.error("[queries] listCustomers failed:", error)
-    return []
-  }
-  return data ?? []
-}
-
-// ---------------------------------------------------------------------------
-// Detalhes de cliente
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// Cliente — detalhes
+// ===========================================================================
 
 export type CustomerDetail = {
   id: string
@@ -282,10 +345,10 @@ export type CustomerDetail = {
   document: string | null
   created_at: string
   kpis: {
-    totalReceived: number   // status=paid, type=income
-    pendingAmount: number   // pending + overdue
-    overdueAmount: number   // só overdue
-    averageTicket: number   // média das receitas pagas
+    totalReceived: number
+    pendingAmount: number
+    overdueAmount: number
+    averageTicket: number
     transactionCount: number
   }
 }
@@ -295,7 +358,6 @@ export async function getCustomerDetails(
 ): Promise<CustomerDetail | null> {
   const supabase = await createClient()
 
-  // RLS filtra por tenant — se for de outro tenant, retorna null (parece "não existe")
   const { data: customer, error } = await supabase
     .from("customers")
     .select("id, name, email, phone, document, created_at")
@@ -304,7 +366,6 @@ export async function getCustomerDetails(
 
   if (error || !customer) return null
 
-  // Busca KPIs agregados da view (overdue dinâmico) — apenas income
   const { data: txs } = await supabase
     .from("transactions_with_status")
     .select("type, amount, status")
@@ -341,12 +402,96 @@ export async function getCustomerDetails(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Listagem paginada por cliente (reusa estrutura de listTransactions)
-// ---------------------------------------------------------------------------
-
 export async function listTransactionsByCustomer(
   customerId: string,
+  page = 1,
+  pageSize = 15
+): Promise<PaginatedTransactions> {
+  return listTransactionsByParty("customer_id", customerId, page, pageSize)
+}
+
+// ===========================================================================
+// Fornecedor — detalhes
+// ===========================================================================
+
+export type SupplierDetail = {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  document: string | null
+  notes: string | null
+  created_at: string
+  kpis: {
+    totalPaid: number
+    pendingAmount: number
+    overdueAmount: number
+    averageTicket: number
+    transactionCount: number
+  }
+}
+
+export async function getSupplierDetails(
+  id: string
+): Promise<SupplierDetail | null> {
+  const supabase = await createClient()
+
+  const { data: supplier, error } = await supabase
+    .from("suppliers")
+    .select("id, name, email, phone, document, notes, created_at")
+    .eq("id", id)
+    .maybeSingle()
+
+  if (error || !supplier) return null
+
+  const { data: txs } = await supabase
+    .from("transactions_with_status")
+    .select("type, amount, status")
+    .eq("supplier_id", id)
+    .eq("type", "expense")
+
+  let totalPaid = 0
+  let pendingAmount = 0
+  let overdueAmount = 0
+  let paidCount = 0
+
+  for (const t of txs ?? []) {
+    const amount = Number(t.amount)
+    if (t.status === "paid") {
+      totalPaid += amount
+      paidCount += 1
+    } else if (t.status === "pending") {
+      pendingAmount += amount
+    } else if (t.status === "overdue") {
+      pendingAmount += amount
+      overdueAmount += amount
+    }
+  }
+
+  return {
+    ...supplier,
+    kpis: {
+      totalPaid,
+      pendingAmount,
+      overdueAmount,
+      averageTicket: paidCount > 0 ? totalPaid / paidCount : 0,
+      transactionCount: txs?.length ?? 0,
+    },
+  }
+}
+
+export async function listTransactionsBySupplier(
+  supplierId: string,
+  page = 1,
+  pageSize = 15
+): Promise<PaginatedTransactions> {
+  return listTransactionsByParty("supplier_id", supplierId, page, pageSize)
+}
+
+// Helper compartilhado entre customer e supplier
+async function listTransactionsByParty(
+  column: "customer_id" | "supplier_id",
+  partyId: string,
   page = 1,
   pageSize = 15
 ): Promise<PaginatedTransactions> {
@@ -359,20 +504,24 @@ export async function listTransactionsByCustomer(
   const { data, error, count } = await supabase
     .from("transactions_with_status")
     .select(
-      "id, type, amount, status, raw_status, due_date, paid_at, description, customer_id",
+      "id, type, amount, status, raw_status, due_date, paid_at, description, customer_id, supplier_id",
       { count: "exact" }
     )
-    .eq("customer_id", customerId)
+    .eq(column, partyId)
     .order("due_date", { ascending: false })
     .order("created_at", { ascending: false })
     .range(fromIdx, toIdx)
 
   if (error) {
-    console.error("[queries] listTransactionsByCustomer failed:", error)
+    console.error("[queries] listTransactionsByParty failed:", error)
     return { rows: [], total: 0, page: p, pageSize: ps, totalPages: 0 }
   }
 
-  const rows = (data ?? []).map((r) => ({
+  const rowsRaw = data ?? []
+  const txIds = rowsRaw.map((r) => r.id)
+  const invoiceMap = await buildInvoiceMap(supabase, txIds)
+
+  const rows: PaginatedTransactionRow[] = rowsRaw.map((r) => ({
     id: r.id,
     type: r.type as "income" | "expense",
     amount: Number(r.amount),
@@ -382,7 +531,10 @@ export async function listTransactionsByCustomer(
     paid_at: r.paid_at,
     description: r.description,
     customer_id: r.customer_id,
-    customer_name: null, // já está no header, não precisa
+    customer_name: null,
+    supplier_id: r.supplier_id,
+    supplier_name: null,
+    has_invoice: invoiceMap.has(r.id),
   }))
 
   const total = count ?? 0
@@ -395,15 +547,40 @@ export async function listTransactionsByCustomer(
   }
 }
 
-// ---------------------------------------------------------------------------
-// Lista de clientes — adicionar total recebido (LTV) por cliente
-// ---------------------------------------------------------------------------
+// ===========================================================================
+// Listas (clientes / fornecedores) com totais
+// ===========================================================================
+
+export type CustomerRow = {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  document: string | null
+  created_at: string
+}
+
+export async function listCustomers(): Promise<CustomerRow[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from("customers")
+    .select("id, name, email, phone, document, created_at")
+    .order("name", { ascending: true })
+
+  if (error) {
+    console.error("[queries] listCustomers failed:", error)
+    return []
+  }
+  return data ?? []
+}
 
 export type CustomerRowWithTotals = CustomerRow & {
   total_received: number
 }
 
-export async function listCustomersWithTotals(): Promise<CustomerRowWithTotals[]> {
+export async function listCustomersWithTotals(): Promise<
+  CustomerRowWithTotals[]
+> {
   const supabase = await createClient()
 
   const { data: customers, error } = await supabase
@@ -411,9 +588,7 @@ export async function listCustomersWithTotals(): Promise<CustomerRowWithTotals[]
     .select("id, name, email, phone, document, created_at")
     .order("name", { ascending: true })
 
-  if (error || !customers || customers.length === 0) {
-    return []
-  }
+  if (error || !customers || customers.length === 0) return []
 
   const ids = customers.map((c) => c.id)
   const { data: txs } = await supabase
@@ -435,5 +610,54 @@ export async function listCustomersWithTotals(): Promise<CustomerRowWithTotals[]
   return customers.map((c) => ({
     ...c,
     total_received: totalsMap.get(c.id) ?? 0,
+  }))
+}
+
+export type SupplierRow = {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  document: string | null
+  notes: string | null
+  created_at: string
+}
+
+export type SupplierRowWithTotals = SupplierRow & {
+  total_paid: number
+}
+
+export async function listSuppliersWithTotals(): Promise<
+  SupplierRowWithTotals[]
+> {
+  const supabase = await createClient()
+
+  const { data: suppliers, error } = await supabase
+    .from("suppliers")
+    .select("id, name, email, phone, document, notes, created_at")
+    .order("name", { ascending: true })
+
+  if (error || !suppliers || suppliers.length === 0) return []
+
+  const ids = suppliers.map((s) => s.id)
+  const { data: txs } = await supabase
+    .from("transactions_with_status")
+    .select("supplier_id, amount, type, status")
+    .in("supplier_id", ids)
+    .eq("type", "expense")
+    .eq("status", "paid")
+
+  const totalsMap = new Map<string, number>()
+  for (const t of txs ?? []) {
+    if (!t.supplier_id) continue
+    totalsMap.set(
+      t.supplier_id,
+      (totalsMap.get(t.supplier_id) ?? 0) + Number(t.amount)
+    )
+  }
+
+  return suppliers.map((s) => ({
+    ...s,
+    total_paid: totalsMap.get(s.id) ?? 0,
   }))
 }

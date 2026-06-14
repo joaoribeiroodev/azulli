@@ -13,29 +13,28 @@ import {
   getDashboardSummary,
   getLast7DaysSeries,
   getRecentTransactions,
+  getCustomersLite,
+  getSuppliersLite,
 } from "@/lib/financial/queries"
 import { formatBRL } from "@/lib/utils/currency"
 
 import { WeeklyChart } from "./_components/weekly-chart"
 import { RecentTransactionsList } from "./_components/recent-transactions"
 import { QuickActions } from "./_components/quick-actions"
+import { CompleteCompanyBanner } from "./_components/complete-company-banner"
 
 export const metadata = { title: "Dashboard — Azulli" }
 
 export default async function DashboardPage() {
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-      <header className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-display font-bold text-brand-ink">
-            Dashboard
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Visão rápida do seu mês.
-          </p>
-        </div>
-        <QuickActions />
-      </header>
+      <Suspense fallback={null}>
+        <BannerSection />
+      </Suspense>
+
+      <Suspense fallback={<HeaderSkeleton />}>
+        <HeaderWithParties />
+      </Suspense>
 
       <Suspense fallback={<CardsSkeleton />}>
         <SummaryCards />
@@ -51,6 +50,31 @@ export default async function DashboardPage() {
         </Suspense>
       </div>
     </div>
+  )
+}
+
+async function BannerSection() {
+  return <CompleteCompanyBanner />
+}
+
+async function HeaderWithParties() {
+  const [customers, suppliers] = await Promise.all([
+    getCustomersLite(),
+    getSuppliersLite(),
+  ])
+
+  return (
+    <header className="flex items-start justify-between gap-4 flex-wrap">
+      <div>
+        <h1 className="text-2xl lg:text-3xl font-display font-bold text-brand-ink">
+          Dashboard
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Visão rápida do seu mês.
+        </p>
+      </div>
+      <QuickActions customers={customers} suppliers={suppliers} />
+    </header>
   )
 }
 
@@ -145,6 +169,21 @@ async function RecentTransactionsWrapper() {
         <RecentTransactionsList transactions={transactions} />
       </CardContent>
     </Card>
+  )
+}
+
+function HeaderSkeleton() {
+  return (
+    <header className="flex items-start justify-between gap-4 flex-wrap">
+      <div className="space-y-2">
+        <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-4 w-56" />
+      </div>
+      <div className="flex gap-2">
+        <Skeleton className="h-10 w-32" />
+        <Skeleton className="h-10 w-32" />
+      </div>
+    </header>
   )
 }
 

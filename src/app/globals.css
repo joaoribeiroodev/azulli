@@ -7,7 +7,7 @@
    AZULLI — Design Tokens (Tailwind v4 @theme inline)
    ========================================================================= */
 @theme inline {
-  /* shadcn semantic tokens (mapeados via CSS vars abaixo) */
+  /* shadcn semantic tokens */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -28,17 +28,17 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* ====== Tokens semânticos do Azulli ====== */
-  --color-brand: #2563eb;          /* blue-600 — confiança */
-  --color-brand-hover: #1d4ed8;    /* blue-700 */
-  --color-brand-soft: #dbeafe;     /* blue-100 — backgrounds suaves */
-  --color-brand-ink: #1e3a8a;      /* blue-900 — títulos */
+  /* ====== Tokens semânticos do Azulli (themeable) ====== */
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-ink: var(--brand-ink);
 
-  --color-success: #10b981;        /* emerald-500 — pago/lucro */
-  --color-success-soft: #d1fae5;
-  --color-success-ink: #065f46;
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-ink: var(--success-ink);
 
-  --color-surface: #f8fafc;        /* slate-50 — background app */
+  --color-surface: var(--surface);
 
   /* Tipografia */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
@@ -53,8 +53,7 @@
 }
 
 /* =========================================================================
-   shadcn base tokens — paleta Slate + ajustes Azulli
-   (primary = blue-600, secondary = emerald-500)
+   LIGHT — paleta Azulli (default)
    ========================================================================= */
 :root {
   --radius: 0.625rem;
@@ -68,11 +67,9 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.13 0.028 261.692);
 
-  /* PRIMARY = blue-600 (Azulli) */
   --primary: oklch(0.546 0.245 262.881);
   --primary-foreground: oklch(0.985 0 0);
 
-  /* SECONDARY = emerald-500 (sucesso/pago/lucro) */
   --secondary: oklch(0.696 0.17 162.48);
   --secondary-foreground: oklch(0.985 0 0);
 
@@ -88,28 +85,63 @@
   --border: oklch(0.928 0.006 264.531);
   --input: oklch(0.928 0.006 264.531);
   --ring: oklch(0.546 0.245 262.881);
+
+  /* Azulli brand */
+  --brand: #2563eb;
+  --brand-hover: #1d4ed8;
+  --brand-soft: #dbeafe;
+  --brand-ink: #1e3a8a;
+
+  --success: #10b981;
+  --success-soft: #d1fae5;
+  --success-ink: #065f46;
+
+  --surface: #f8fafc;
 }
 
+/* =========================================================================
+   DARK — paleta Azulli dark-mode
+   ========================================================================= */
 .dark {
   --background: oklch(0.13 0.028 261.692);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.13 0.028 261.692);
+
+  --card: oklch(0.18 0.025 260);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.13 0.028 261.692);
+
+  --popover: oklch(0.18 0.025 260);
   --popover-foreground: oklch(0.985 0 0);
+
   --primary: oklch(0.623 0.214 259.815);
-  --primary-foreground: oklch(0.21 0.034 264.665);
+  --primary-foreground: oklch(0.985 0 0);
+
   --secondary: oklch(0.696 0.17 162.48);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.278 0.033 256.848);
+
+  --muted: oklch(0.24 0.025 260);
   --muted-foreground: oklch(0.707 0.022 261.325);
-  --accent: oklch(0.278 0.033 256.848);
+
+  --accent: oklch(0.24 0.025 260);
   --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
+
+  --destructive: oklch(0.55 0.2 25);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.278 0.033 256.848);
-  --input: oklch(0.278 0.033 256.848);
+
+  --border: oklch(0.28 0.025 260);
+  --input: oklch(0.28 0.025 260);
   --ring: oklch(0.623 0.214 259.815);
+
+  /* Azulli brand — versões dark-friendly */
+  --brand: #60a5fa;            /* blue-400 — mais luminoso pra contraste */
+  --brand-hover: #93c5fd;      /* blue-300 */
+  --brand-soft: rgba(96, 165, 250, 0.15);  /* azul translúcido */
+  --brand-ink: #dbeafe;        /* blue-100 — vira o "ink" */
+
+  --success: #34d399;          /* emerald-400 */
+  --success-soft: rgba(52, 211, 153, 0.15);
+  --success-ink: #6ee7b7;      /* emerald-300 */
+
+  --surface: oklch(0.11 0.025 260);  /* um pouco mais escuro que o background */
 }
 
 @layer base {

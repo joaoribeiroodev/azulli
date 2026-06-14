@@ -1,11 +1,18 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, ArrowDownRight, ArrowUpRight } from "lucide-react"
+import { Plus, ArrowDownRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { TransactionDialog } from "@/components/app/transaction-dialog"
 
-export function QuickActions() {
+type Party = { id: string; name: string }
+
+type Props = {
+  customers: Party[]
+  suppliers: Party[]
+}
+
+export function QuickActions({ customers, suppliers }: Props) {
   const [open, setOpen] = useState<"income" | "expense" | null>(null)
 
   return (
@@ -30,6 +37,8 @@ export function QuickActions() {
         open={open !== null}
         type={open ?? "income"}
         onOpenChange={(o) => !o && setOpen(null)}
+        customers={customers}
+        suppliers={suppliers}
       />
     </div>
   )

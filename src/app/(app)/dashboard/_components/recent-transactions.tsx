@@ -27,11 +27,14 @@ export function RecentTransactionsList({ transactions }: Props) {
       {transactions.map((t) => {
         const isIncome = t.type === "income"
         const Icon = isIncome ? ArrowUpRight : ArrowDownRight
+        const partyName = isIncome ? t.customer_name : t.supplier_name
         return (
           <li key={t.id} className="flex items-center gap-3">
             <div
               className={`shrink-0 h-9 w-9 rounded-full flex items-center justify-center ${
-                isIncome ? "bg-success-soft text-success-ink" : "bg-red-50 text-destructive"
+                isIncome
+                  ? "bg-success-soft text-success-ink"
+                  : "bg-red-50 text-destructive dark:bg-red-950/40"
               }`}
             >
               <Icon className="h-4 w-4" />
@@ -41,7 +44,7 @@ export function RecentTransactionsList({ transactions }: Props) {
                 {t.description || (isIncome ? "Receita" : "Despesa")}
               </p>
               <p className="text-xs text-muted-foreground">
-                {t.customer_name ? `${t.customer_name} · ` : ""}
+                {partyName ? `${partyName} · ` : ""}
                 {formatDateBR(t.due_date)}
               </p>
             </div>

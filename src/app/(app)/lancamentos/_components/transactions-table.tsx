@@ -44,6 +44,8 @@ import {
   markAsPaidAction,
 } from "@/lib/financial/transactions.actions"
 
+import { IssueInvoiceButton } from "./issue-invoice-button"
+
 type Row = {
   id: string
   type: "income" | "expense"
@@ -52,6 +54,13 @@ type Row = {
   due_date: string
   description: string | null
   customer_name: string | null
+  supplier_name: string | null
+  has_invoice?: boolean
+}
+
+type Props = {
+  rows: Row[]
+  allowsNFe?: boolean
 }
 
 const STATUS_STYLES: Record<
@@ -72,7 +81,7 @@ const STATUS_STYLES: Record<
   },
 }
 
-export function TransactionsTable({ rows }: { rows: Row[] }) {
+export function TransactionsTable({ rows, allowsNFe = false }: Props) {
   const [confirmDelete, setConfirmDelete] = useState<Row | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -116,10 +125,15 @@ export function TransactionsTable({ rows }: { rows: Row[] }) {
             <TableRow>
               <TableHead className="w-12"></TableHead>
               <TableHead>Descrição</TableHead>
-              <TableHead className="hidden md:table-cell">Cliente</TableHead>
+              <TableHead className="hidden md:table-cell">
+                Cliente / Fornecedor
+              </TableHead>
               <TableHead>Data</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Valor</TableHead>
+              <TableHead className="text-right hidden lg:table-cell">
+                Nota
+              </TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
@@ -128,6 +142,9 @@ export function TransactionsTable({ rows }: { rows: Row[] }) {
               const isIncome = row.type === "income"
               const Icon = isIncome ? ArrowUpRight : ArrowDownRight
               const statusStyle = STATUS_STYLES[row.status]
+              const partyName = isIncome
+                ? row.customer_name
+                : row.supplier_name
 
               return (
                 <TableRow key={row.id}>
@@ -146,7 +163,22 @@ export function TransactionsTable({ rows }: { rows: Row[] }) {
                     {row.description || (isIncome ? "Receita" : "Despesa")}
                   </TableCell>
                   <TableCell className="hidden md:table-cell text-muted-foreground">
-                    {row.customer_name ?? "—"}
+                    {partyName ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <span
+                          className={`text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded ${
+                            isIncome
+                              ? "bg-success-soft text-success-ink"
+                              : "bg-brand-soft text-brand"
+                          }`}
+                        >
+                          {isIncome ? "Cliente" : "Forn."}
+                        </span>
+                        {partyName}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground whitespace-nowrap">
                     {formatDateBR(row.due_date)}
@@ -163,16 +195,33 @@ export function TransactionsTable({ rows }: { rows: Row[] }) {
                   >
                     {isIncome ? "+" : "-"} {formatBRL(row.amount)}
                   </TableCell>
+                  <TableCell className="text-right hidden lg:table-cell">
+                    {isIncome && (
+                      <IssueInvoiceButton
+                        transactionId={row.id}
+                        transactionStatus={row.status}
+                        transactionType={row.type}
+                        allowsNFe={allowsNFe}
+                        hasExistingInvoice={row.has_invoice ?? false}
+                      />
+                    )}
+                  </TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" disabled={isPending}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          disabled={isPending}
+                        >
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         {row.status !== "paid" && (
-                          <DropdownMenuItem onClick={() => handleMarkPaid(row)}>
+                          <DropdownMenuItem
+                            onClick={() => handleMarkPaid(row)}
+                          >
                             <Check className="mr-2 h-4 w-4" />
                             Marcar como pago
                           </DropdownMenuItem>
@@ -202,8 +251,8 @@ export function TransactionsTable({ rows }: { rows: Row[] }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir lançamento?</AlertDialogTitle>
             <AlertDialogDescription>
-              Essa ação não pode ser desfeita. Se houver nota fiscal vinculada, a
-              exclusão será bloqueada.
+              Essa ação não pode ser desfeita. Se houver nota fiscal vinculada,
+              a exclusão será bloqueada.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

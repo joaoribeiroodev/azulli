@@ -1,10 +1,10 @@
 "use client"
 
 import { useTransition } from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 
@@ -19,28 +19,44 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 
-import { loginSchema, type LoginInput } from "@/lib/auth/schemas"
-import { signInAction } from "@/lib/auth/actions"
+import { resetPasswordAction } from "@/lib/auth/actions"
 
-export function LoginForm() {
+const schema = z
+  .object({
+    password: z
+      .string()
+      .min(8, "A senha precisa ter pelo menos 8 caracteres")
+      .regex(/[A-Z]/, "Inclua ao menos uma letra maiúscula")
+      .regex(/[a-z]/, "Inclua ao menos uma letra minúscula")
+      .regex(/\d/, "Inclua ao menos um número"),
+    confirmPassword: z.string(),
+  })
+  .refine((d) => d.password === d.confirmPassword, {
+    message: "As senhas não conferem",
+    path: ["confirmPassword"],
+  })
+
+type FormInput = z.infer<typeof schema>
+
+export function ResetPasswordForm() {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
 
-  const form = useForm<LoginInput>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+  const form = useForm<FormInput>({
+    resolver: zodResolver(schema),
+    defaultValues: { password: "", confirmPassword: "" },
   })
 
-  function onSubmit(values: LoginInput) {
+  function onSubmit(values: FormInput) {
     startTransition(async () => {
-      const result = await signInAction(values)
-
+      const result = await resetPasswordAction(values)
       if (!result.success) {
         toast.error(result.error)
         return
       }
-
-      toast.success("Bom te ver de novo! 💙")
+      toast.success("Senha atualizada! 🎉", {
+        description: "Você já está logado com a nova senha.",
+      })
       router.push("/dashboard")
       router.refresh()
     })
@@ -51,15 +67,15 @@ export function LoginForm() {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
-          name="email"
+          name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>E-mail</FormLabel>
+              <FormLabel>Nova senha</FormLabel>
               <FormControl>
                 <Input
-                  type="email"
-                  placeholder="voce@empresa.com"
-                  autoComplete="email"
+                  type="password"
+                  placeholder="Mínimo 8 caracteres"
+                  autoComplete="new-password"
                   {...field}
                 />
               </FormControl>
@@ -70,24 +86,15 @@ export function LoginForm() {
 
         <FormField
           control={form.control}
-          name="password"
+          name="confirmPassword"
           render={({ field }) => (
             <FormItem>
-              <div className="flex items-center justify-between">
-                <FormLabel>Senha</FormLabel>
-                <Link
-                  href="/forgot-password"
-                  className="text-xs text-brand hover:text-brand-hover font-medium"
-                  tabIndex={-1}
-                >
-                  Esqueci a senha
-                </Link>
-              </div>
+              <FormLabel>Confirme a nova senha</FormLabel>
               <FormControl>
                 <Input
                   type="password"
-                  placeholder="Sua senha"
-                  autoComplete="current-password"
+                  placeholder="Repita a senha"
+                  autoComplete="new-password"
                   {...field}
                 />
               </FormControl>
@@ -105,10 +112,10 @@ export function LoginForm() {
           {isPending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Entrando...
+              Atualizando...
             </>
           ) : (
-            "Entrar"
+            "Salvar nova senha"
           )}
         </Button>
       </form>

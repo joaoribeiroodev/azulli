@@ -32,19 +32,34 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-import { createTransactionSchema, type CreateTransactionInput } from "@/lib/financial/schemas"
+import {
+  createTransactionSchema,
+  type CreateTransactionInput,
+} from "@/lib/financial/schemas"
 import { createTransactionAction } from "@/lib/financial/transactions.actions"
 import { maskBRL, parseBRL } from "@/lib/utils/currency"
+
+type Party = { id: string; name: string }
 
 type Props = {
   open: boolean
   type: "income" | "expense"
   onOpenChange: (open: boolean) => void
-  customers?: { id: string; name: string }[]
+  customers?: Party[]
+  suppliers?: Party[]
   defaultCustomerId?: string | null
+  defaultSupplierId?: string | null
 }
 
-export function TransactionDialog({ open, type, onOpenChange, customers = [], defaultCustomerId = null }: Props) {
+export function TransactionDialog({
+  open,
+  type,
+  onOpenChange,
+  customers = [],
+  suppliers = [],
+  defaultCustomerId = null,
+  defaultSupplierId = null,
+}: Props) {
   const [isPending, startTransition] = useTransition()
   const [amountDisplay, setAmountDisplay] = useState("")
 
@@ -56,11 +71,11 @@ export function TransactionDialog({ open, type, onOpenChange, customers = [], de
       due_date: new Date().toISOString().slice(0, 10),
       description: "",
       customer_id: null,
+      supplier_id: null,
       status: "pending",
     },
   })
 
-  // Reset quando muda type ou abre
   useEffect(() => {
     if (open) {
       form.reset({
@@ -68,12 +83,13 @@ export function TransactionDialog({ open, type, onOpenChange, customers = [], de
         amount: 0,
         due_date: new Date().toISOString().slice(0, 10),
         description: "",
-        customer_id: defaultCustomerId,
+        customer_id: type === "income" ? defaultCustomerId : null,
+        supplier_id: type === "expense" ? defaultSupplierId : null,
         status: "pending",
       })
       setAmountDisplay("")
     }
-  }, [open, type, form])
+  }, [open, type, defaultCustomerId, defaultSupplierId, form])
 
   const isIncome = type === "income"
 
@@ -89,7 +105,9 @@ export function TransactionDialog({ open, type, onOpenChange, customers = [], de
           ? values.status === "paid"
             ? "Dinheiro na conta! 💰 Venda registrada."
             : "Receita agendada. ✅"
-          : "Despesa registrada. 📝"
+          : values.status === "paid"
+            ? "Despesa paga registrada. 📝"
+            : "Despesa registrada. 📝"
       )
       onOpenChange(false)
     })
@@ -175,7 +193,7 @@ export function TransactionDialog({ open, type, onOpenChange, customers = [], de
               )}
             />
 
-            {customers.length > 0 && isIncome && (
+            {isIncome && customers.length > 0 && (
               <FormField
                 control={form.control}
                 name="customer_id"
@@ -184,7 +202,9 @@ export function TransactionDialog({ open, type, onOpenChange, customers = [], de
                     <FormLabel>Cliente (opcional)</FormLabel>
                     <Select
                       value={field.value ?? "_none"}
-                      onValueChange={(v) => field.onChange(v === "_none" ? null : v)}
+                      onValueChange={(v) =>
+                        field.onChange(v === "_none" ? null : v)
+                      }
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -196,6 +216,39 @@ export function TransactionDialog({ open, type, onOpenChange, customers = [], de
                         {customers.map((c) => (
                           <SelectItem key={c.id} value={c.id}>
                             {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {!isIncome && suppliers.length > 0 && (
+              <FormField
+                control={form.control}
+                name="supplier_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fornecedor (opcional)</FormLabel>
+                    <Select
+                      value={field.value ?? "_none"}
+                      onValueChange={(v) =>
+                        field.onChange(v === "_none" ? null : v)
+                      }
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="_none">Sem fornecedor</SelectItem>
+                        {suppliers.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name}
                           </SelectItem>
                         ))}
                       </SelectContent>

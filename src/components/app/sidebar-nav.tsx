@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Receipt,
   Users,
+  Truck,
   FileText,
   Settings,
 } from "lucide-react"
@@ -15,6 +16,7 @@ const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/lancamentos", label: "Lançamentos", icon: Receipt },
   { href: "/clientes", label: "Clientes", icon: Users },
+  { href: "/fornecedores", label: "Fornecedores", icon: Truck },
   { href: "/notas", label: "Notas Fiscais", icon: FileText },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
 ] as const
@@ -25,7 +27,8 @@ export function SidebarNav() {
   return (
     <nav className="flex flex-col gap-1 px-3 py-2">
       {NAV.map((item) => {
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+        const active =
+          pathname === item.href || pathname.startsWith(`${item.href}/`)
         const Icon = item.icon
         return (
           <Link

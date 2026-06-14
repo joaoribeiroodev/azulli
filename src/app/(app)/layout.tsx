@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { SidebarNav } from "@/components/app/sidebar-nav"
 import { UserMenu } from "@/components/app/user-menu"
 import { MobileNav } from "@/components/app/mobile-nav"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export default async function AppLayout({
   children,
@@ -26,7 +27,6 @@ export default async function AppLayout({
 
   return (
     <div className="min-h-screen bg-surface lg:flex">
-      {/* Mobile header (visível só em <lg) */}
       <MobileNav
         userName={userName}
         userEmail={userEmail}
@@ -35,18 +35,21 @@ export default async function AppLayout({
         trialEndsAt={tenant?.trial_ends_at}
       />
 
-      {/* Sidebar desktop (visível só em >=lg) */}
       <aside className="hidden lg:flex w-64 shrink-0 bg-card border-r flex-col">
-        <div className="px-5 py-5 border-b">
-          <Link href="/dashboard" className="text-xl font-display font-bold text-brand-ink">
+        <div className="px-5 py-5 border-b flex items-center justify-between gap-2">
+          <Link
+            href="/dashboard"
+            className="text-xl font-display font-bold text-brand-ink"
+          >
             Azulli
           </Link>
-          {tenant?.name && (
-            <p className="text-xs text-muted-foreground truncate mt-0.5">
-              {tenant.name}
-            </p>
-          )}
+          <ThemeToggle />
         </div>
+        {tenant?.name && (
+          <p className="px-5 pt-2 text-xs text-muted-foreground truncate">
+            {tenant.name}
+          </p>
+        )}
 
         <div className="flex-1 overflow-y-auto py-4">
           <SidebarNav />

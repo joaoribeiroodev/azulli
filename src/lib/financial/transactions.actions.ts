@@ -47,7 +47,10 @@ export async function createTransactionAction(
       amount: parsed.data.amount,
       due_date: parsed.data.due_date,
       description: parsed.data.description || null,
-      customer_id: parsed.data.customer_id || null,
+      customer_id:
+        parsed.data.type === "income" ? parsed.data.customer_id || null : null,
+      supplier_id:
+        parsed.data.type === "expense" ? parsed.data.supplier_id || null : null,
       status: parsed.data.status,
       paid_at: parsed.data.status === "paid" ? new Date().toISOString() : null,
     })
@@ -75,10 +78,25 @@ export async function updateTransactionAction(
     }
   }
 
-  const { id, status, ...rest } = parsed.data
+  const { id, status, type, customer_id, supplier_id, ...rest } = parsed.data
   const supabase = await createClient()
 
   const updates: Record<string, unknown> = { ...rest }
+  if (type) updates.type = type
+
+  // Se mudou o type, força limpar a parte que não combina
+  if (type === "income") {
+    updates.customer_id = customer_id ?? null
+    updates.supplier_id = null
+  } else if (type === "expense") {
+    updates.supplier_id = supplier_id ?? null
+    updates.customer_id = null
+  } else {
+    // type não foi enviado — só atualiza o lado que foi enviado
+    if (customer_id !== undefined) updates.customer_id = customer_id
+    if (supplier_id !== undefined) updates.supplier_id = supplier_id
+  }
+
   if (status) {
     updates.status = status
     updates.paid_at = status === "paid" ? new Date().toISOString() : null

@@ -1,24 +1,28 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { updateSession } from "@/lib/supabase/middleware"
 
-// Rotas públicas — não exigem login
-const PUBLIC_ROUTES = ["/", "/login", "/register", "/auth/callback"]
+const PUBLIC_ROUTES = [
+  "/",
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/auth/callback",
+  "/auth/confirm",
+]
 
-// Rotas que devem permanecer acessíveis mesmo com trial expirado /
-// inadimplência (caso contrário o usuário ficaria em loop sem conseguir pagar).
 const ALWAYS_ALLOWED_FOR_AUTHED = ["/billing", "/logout"]
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // 1) Atualiza JWT e obtém o user atual
   const { response, user } = await updateSession(request)
 
   const isPublic = PUBLIC_ROUTES.some(
     (r) => pathname === r || pathname.startsWith(`${r}/`)
   )
 
-  // 2) Não autenticado tentando acessar rota privada → /login
+  // 1) Não autenticado tentando acessar rota privada → /login
   if (!user && !isPublic) {
     const url = request.nextUrl.clone()
     url.pathname = "/login"
@@ -26,14 +30,19 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // 3) Autenticado em rota pública de auth → /dashboard
-  if (user && (pathname === "/login" || pathname === "/register")) {
+  // 2) Autenticado em rota pública de auth → /dashboard
+  // Exceção: reset-password permite acesso autenticado (link de email cria sessão temporária)
+  if (
+    user &&
+    (pathname === "/login" || pathname === "/register" ||
+      pathname === "/forgot-password")
+  ) {
     const url = request.nextUrl.clone()
     url.pathname = "/dashboard"
     return NextResponse.redirect(url)
   }
 
-  // 4) Autenticado: checa status do tenant (trial + subscription)
+  // 3) Autenticado: checa status do tenant (trial + subscription)
   if (user && !isPublic) {
     const isAlwaysAllowed = ALWAYS_ALLOWED_FOR_AUTHED.some(
       (r) => pathname === r || pathname.startsWith(`${r}/`)
@@ -56,10 +65,6 @@ export async function proxy(request: NextRequest) {
 
   return response
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 type TenantStatus = {
   tier: "trial" | "pro" | "enterprise"

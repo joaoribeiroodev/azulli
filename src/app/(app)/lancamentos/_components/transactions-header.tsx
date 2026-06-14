@@ -4,10 +4,16 @@ import { useState } from "react"
 import { Plus, ArrowDownRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { TransactionDialog } from "@/components/app/transaction-dialog"
+import { ExportButton } from "./export-button"
 
-type Props = { customers: { id: string; name: string }[] }
+type Party = { id: string; name: string }
 
-export function TransactionsHeader({ customers }: Props) {
+type Props = {
+  customers: Party[]
+  suppliers: Party[]
+}
+
+export function TransactionsHeader({ customers, suppliers }: Props) {
   const [open, setOpen] = useState<"income" | "expense" | null>(null)
 
   return (
@@ -21,7 +27,8 @@ export function TransactionsHeader({ customers }: Props) {
         </p>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
+        <ExportButton />
         <Button
           variant="outline"
           onClick={() => setOpen("expense")}
@@ -43,6 +50,7 @@ export function TransactionsHeader({ customers }: Props) {
           type={open ?? "income"}
           onOpenChange={(o) => !o && setOpen(null)}
           customers={customers}
+          suppliers={suppliers}
         />
       </div>
     </header>

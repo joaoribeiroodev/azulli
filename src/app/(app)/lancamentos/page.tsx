@@ -1,6 +1,11 @@
 import { Suspense } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
-import { listTransactions, getCustomersLite } from "@/lib/financial/queries"
+import {
+  listTransactions,
+  getCustomersLite,
+  getSuppliersLite,
+} from "@/lib/financial/queries"
+import { getTenantInvoiceContext } from "@/lib/invoices/queries"
 import { TransactionsHeader } from "./_components/transactions-header"
 import { TransactionsTable } from "./_components/transactions-table"
 import { TransactionsFilters } from "./_components/transactions-filters"
@@ -26,7 +31,7 @@ export default async function LancamentosPage({
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       <Suspense fallback={null}>
-        <HeaderWithCustomers />
+        <HeaderWithParties />
       </Suspense>
 
       <TransactionsFilters />
@@ -41,24 +46,30 @@ export default async function LancamentosPage({
   )
 }
 
-async function HeaderWithCustomers() {
-  const customers = await getCustomersLite()
-  return <TransactionsHeader customers={customers} />
+async function HeaderWithParties() {
+  const [customers, suppliers] = await Promise.all([
+    getCustomersLite(),
+    getSuppliersLite(),
+  ])
+  return <TransactionsHeader customers={customers} suppliers={suppliers} />
 }
 
 async function TableSection({ sp }: { sp: SP }) {
-  const result = await listTransactions({
-    type: (sp.type as "income" | "expense" | "all") ?? "all",
-    status: (sp.status as "pending" | "paid" | "overdue" | "all") ?? "all",
-    from: sp.from || undefined,
-    to: sp.to || undefined,
-    page: sp.page ? parseInt(sp.page, 10) : 1,
-    pageSize: 20,
-  })
+  const [result, ctx] = await Promise.all([
+    listTransactions({
+      type: (sp.type as "income" | "expense" | "all") ?? "all",
+      status: (sp.status as "pending" | "paid" | "overdue" | "all") ?? "all",
+      from: sp.from || undefined,
+      to: sp.to || undefined,
+      page: sp.page ? parseInt(sp.page, 10) : 1,
+      pageSize: 20,
+    }),
+    getTenantInvoiceContext(),
+  ])
 
   return (
     <div className="space-y-4">
-      <TransactionsTable rows={result.rows} />
+      <TransactionsTable rows={result.rows} allowsNFe={ctx.allowsNFe} />
       <TransactionsPagination
         page={result.page}
         totalPages={result.totalPages}

@@ -7,6 +7,7 @@ export type SettingsData = {
     email: string
     name: string
     phone: string | null
+    avatar_url: string | null
   }
   tenant: {
     id: string
@@ -51,11 +52,36 @@ export async function getSettingsData(): Promise<SettingsData | null> {
       email: user.email ?? "",
       name: (user.user_metadata?.name as string | undefined) ?? "",
       phone: (user.user_metadata?.phone as string | undefined) ?? null,
+      avatar_url:
+        (user.user_metadata?.avatar_url as string | undefined) ?? null,
     },
     tenant: tenantRes.data as SettingsData["tenant"],
     settings: (settingsRes.data ?? {
       default_tax_regime: "mei",
       billing_email: null,
     }) as SettingsData["settings"],
+  }
+}
+
+/**
+ * Pega apenas as infos visuais do usuário para o menu da sidebar.
+ * Mais leve que getSettingsData (não bate em tenants/tenant_settings).
+ */
+export async function getCurrentUserDisplay(): Promise<{
+  name: string
+  email: string
+  avatar_url: string | null
+} | null> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return null
+
+  return {
+    name: (user.user_metadata?.name as string | undefined) ?? "",
+    email: user.email ?? "",
+    avatar_url:
+      (user.user_metadata?.avatar_url as string | undefined) ?? null,
   }
 }

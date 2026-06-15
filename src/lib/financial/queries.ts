@@ -1,9 +1,14 @@
 import "server-only"
 import { createClient } from "@/lib/supabase/server"
-import { getCurrentMonthRange, getLastNDays } from "@/lib/utils/date"
+import {
+  getCurrentMonthRange,
+  getLastNDays,
+  getWeekdayLabel,
+  utcToLocalDateBR,
+} from "@/lib/utils/date"
 
 // ===========================================================================
-// Dashboard summary (mantido)
+// Dashboard summary
 // ===========================================================================
 
 export type DashboardSummary = {
@@ -21,7 +26,7 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
 
   const { data, error } = await supabase
     .from("transactions_with_status")
-    .select("type, amount, status, due_date")
+    .select("type, amount, status, due_date, paid_at")
 
   if (error || !data) {
     console.error("[queries] getDashboardSummary failed:", error)
@@ -35,6 +40,9 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
     }
   }
 
+  const fromDate = from.slice(0, 10)
+  const toDate = to.slice(0, 10)
+
   let income = 0
   let expense = 0
   let pendingCount = 0
@@ -43,15 +51,16 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
 
   for (const row of data) {
     const amount = Number(row.amount)
-    const dueDate = row.due_date
 
-    if (
-      row.status === "paid" &&
-      dueDate >= from.slice(0, 10) &&
-      dueDate <= to.slice(0, 10)
-    ) {
-      if (row.type === "income") income += amount
-      else expense += amount
+    if (row.status === "paid") {
+      // Usa paid_at se houver (data real do pagamento, BR), senão due_date
+      const refDate = row.paid_at
+        ? utcToLocalDateBR(row.paid_at)
+        : row.due_date
+      if (refDate >= fromDate && refDate <= toDate) {
+        if (row.type === "income") income += amount
+        else expense += amount
+      }
     }
 
     if (row.status === "pending" || row.status === "overdue") {
@@ -78,26 +87,40 @@ export type DailyBucket = {
   expense: number
 }
 
+/**
+ * Série dos últimos 7 dias agrupada por DATA DO PAGAMENTO (paid_at).
+ * Agrupamento usa timezone BR pra evitar bug de "vendas à noite caem no dia seguinte".
+ */
 export async function getLast7DaysSeries(): Promise<DailyBucket[]> {
   const supabase = await createClient()
   const days = getLastNDays(7)
   const since = days[0]
 
+  // Filtra com margem de 1 dia pros 2 lados pra capturar tudo na faixa BR
+  const sinceUtc = `${since}T00:00:00-03:00`
+
   const { data } = await supabase
     .from("transactions_with_status")
-    .select("type, amount, due_date, status")
-    .gte("due_date", since)
+    .select("type, amount, paid_at, status")
     .eq("status", "paid")
+    .not("paid_at", "is", null)
+    .gte("paid_at", sinceUtc)
 
+  // Monta buckets dos 7 dias com label de dia da semana em PT-BR
   const map = new Map<string, DailyBucket>()
-  const fmt = new Intl.DateTimeFormat("pt-BR", { weekday: "short" })
   for (const d of days) {
-    const label = fmt.format(new Date(`${d}T12:00:00`)).replace(".", "")
-    map.set(d, { date: d, label, income: 0, expense: 0 })
+    map.set(d, {
+      date: d,
+      label: getWeekdayLabel(d),
+      income: 0,
+      expense: 0,
+    })
   }
 
   for (const row of data ?? []) {
-    const bucket = map.get(row.due_date)
+    if (!row.paid_at) continue
+    const localDate = utcToLocalDateBR(row.paid_at)
+    const bucket = map.get(localDate)
     if (!bucket) continue
     const amount = Number(row.amount)
     if (row.type === "income") bucket.income += amount
@@ -176,10 +199,6 @@ export async function getSuppliersLite(): Promise<
   return data ?? []
 }
 
-/**
- * Categorias já usadas pelo tenant — alimenta auto-complete do Combobox.
- * Retorna distinct + count pra ordenar por frequência.
- */
 export async function getCategoriesUsed(
   type?: "income" | "expense"
 ): Promise<{ category: string; count: number }[]> {
@@ -205,7 +224,7 @@ export async function getCategoriesUsed(
 }
 
 // ===========================================================================
-// Top 1 do dashboard
+// Top 1 / Top 5
 // ===========================================================================
 
 export type TopParty = {
@@ -217,7 +236,6 @@ export type TopParty = {
 export async function getTopCustomerOfMonth(): Promise<TopParty | null> {
   const supabase = await createClient()
   const { from, to } = getCurrentMonthRange()
-
   const { data } = await supabase
     .from("transactions")
     .select("amount, customer_id")
@@ -226,14 +244,12 @@ export async function getTopCustomerOfMonth(): Promise<TopParty | null> {
     .not("customer_id", "is", null)
     .gte("paid_at", from)
     .lte("paid_at", to)
-
   return aggregateTopOne(data ?? [], "customer_id", supabase, "customers")
 }
 
 export async function getTopSupplierOfMonth(): Promise<TopParty | null> {
   const supabase = await createClient()
   const { from, to } = getCurrentMonthRange()
-
   const { data } = await supabase
     .from("transactions")
     .select("amount, supplier_id")
@@ -242,7 +258,6 @@ export async function getTopSupplierOfMonth(): Promise<TopParty | null> {
     .not("supplier_id", "is", null)
     .gte("paid_at", from)
     .lte("paid_at", to)
-
   return aggregateTopOne(data ?? [], "supplier_id", supabase, "suppliers")
 }
 
@@ -275,10 +290,6 @@ async function aggregateTopOne(
   return { id: party.id, name: party.name, total: topTotal }
 }
 
-// ===========================================================================
-// Top 5 nas páginas /clientes e /fornecedores
-// ===========================================================================
-
 export type TopPartyRange = "month" | "last30d"
 
 export async function getTopCustomers(
@@ -286,7 +297,6 @@ export async function getTopCustomers(
 ): Promise<TopParty[]> {
   const supabase = await createClient()
   const { from, to } = computeRange(range)
-
   const { data } = await supabase
     .from("transactions")
     .select("amount, customer_id")
@@ -295,7 +305,6 @@ export async function getTopCustomers(
     .not("customer_id", "is", null)
     .gte("paid_at", from)
     .lte("paid_at", to)
-
   return aggregateTopN(data ?? [], "customer_id", supabase, "customers", 5)
 }
 
@@ -304,7 +313,6 @@ export async function getTopSuppliers(
 ): Promise<TopParty[]> {
   const supabase = await createClient()
   const { from, to } = computeRange(range)
-
   const { data } = await supabase
     .from("transactions")
     .select("amount, supplier_id")
@@ -313,7 +321,6 @@ export async function getTopSuppliers(
     .not("supplier_id", "is", null)
     .gte("paid_at", from)
     .lte("paid_at", to)
-
   return aggregateTopN(data ?? [], "supplier_id", supabase, "suppliers", 5)
 }
 
@@ -357,25 +364,25 @@ async function aggregateTopN(
 }
 
 function computeRange(range: TopPartyRange): { from: string; to: string } {
-  const now = new Date()
   if (range === "month") {
     return getCurrentMonthRange()
   }
-  const last30 = new Date(now)
+  const today = new Date()
+  const last30 = new Date(today)
   last30.setDate(last30.getDate() - 30)
   return {
-    from: last30.toISOString().slice(0, 10) + "T00:00:00Z",
-    to: now.toISOString().slice(0, 10) + "T23:59:59Z",
+    from: last30.toISOString().slice(0, 10) + "T00:00:00-03:00",
+    to: today.toISOString().slice(0, 10) + "T23:59:59-03:00",
   }
 }
 
 // ===========================================================================
-// Série mensal (últimos N meses) por entidade
+// Série mensal por entidade (cliente/fornecedor)
 // ===========================================================================
 
 export type MonthlyBucket = {
-  yearMonth: string // "2026-01"
-  label: string // "jan/26"
+  yearMonth: string
+  label: string
   total: number
 }
 
@@ -387,7 +394,7 @@ export async function getMonthlySeriesByParty(
   const supabase = await createClient()
 
   const buckets = buildMonthBuckets(months)
-  const earliest = buckets[0].yearMonth + "-01T00:00:00Z"
+  const earliest = buckets[0].yearMonth + "-01T00:00:00-03:00"
 
   const column = partyType === "customer" ? "customer_id" : "supplier_id"
   const txType = partyType === "customer" ? "income" : "expense"
@@ -404,7 +411,8 @@ export async function getMonthlySeriesByParty(
 
   for (const row of data ?? []) {
     if (!row.paid_at) continue
-    const key = row.paid_at.slice(0, 7) // "YYYY-MM"
+    const localDate = utcToLocalDateBR(row.paid_at)
+    const key = localDate.slice(0, 7)
     const bucket = map.get(key)
     if (bucket) bucket.total += Number(row.amount)
   }
@@ -416,6 +424,7 @@ function buildMonthBuckets(months: number): MonthlyBucket[] {
   const fmt = new Intl.DateTimeFormat("pt-BR", {
     month: "short",
     year: "2-digit",
+    timeZone: "America/Sao_Paulo",
   })
   const buckets: MonthlyBucket[] = []
   const now = new Date()
@@ -429,7 +438,7 @@ function buildMonthBuckets(months: number): MonthlyBucket[] {
 }
 
 // ===========================================================================
-// Listagem paginada de lançamentos (atualizada com category)
+// Listagem paginada de lançamentos
 // ===========================================================================
 
 export type TransactionFilters = {
@@ -605,6 +614,7 @@ export async function getCustomerDetails(
   id: string
 ): Promise<CustomerDetail | null> {
   const supabase = await createClient()
+
   const { data: customer, error } = await supabase
     .from("customers")
     .select("id, name, email, phone, document, created_at")
@@ -681,6 +691,7 @@ export async function getSupplierDetails(
   id: string
 ): Promise<SupplierDetail | null> {
   const supabase = await createClient()
+
   const { data: supplier, error } = await supabase
     .from("suppliers")
     .select("id, name, email, phone, document, notes, created_at")
@@ -804,9 +815,7 @@ export type CustomerRow = {
   created_at: string
 }
 
-export type CustomerRowWithTotals = CustomerRow & {
-  total_received: number
-}
+export type CustomerRowWithTotals = CustomerRow & { total_received: number }
 
 export async function listCustomersWithTotals(): Promise<
   CustomerRowWithTotals[]
@@ -852,9 +861,7 @@ export type SupplierRow = {
   created_at: string
 }
 
-export type SupplierRowWithTotals = SupplierRow & {
-  total_paid: number
-}
+export type SupplierRowWithTotals = SupplierRow & { total_paid: number }
 
 export async function listSuppliersWithTotals(): Promise<
   SupplierRowWithTotals[]

@@ -6,6 +6,7 @@ import {
   getSuppliersLite,
   getCategoriesUsed,
 } from "@/lib/financial/queries"
+import { getProductsLite } from "@/lib/products/queries"
 import { getTenantInvoiceContext } from "@/lib/invoices/queries"
 import { TransactionsHeader } from "./_components/transactions-header"
 import { TransactionsTable } from "./_components/transactions-table"
@@ -52,15 +53,17 @@ export default async function LancamentosPage({
 }
 
 async function HeaderWithParties() {
-  const [customers, suppliers, categories] = await Promise.all([
+  const [customers, suppliers, products, categories] = await Promise.all([
     getCustomersLite(),
     getSuppliersLite(),
+    getProductsLite(),
     getCategoriesUsed(),
   ])
   return (
     <TransactionsHeader
       customers={customers}
       suppliers={suppliers}
+      products={products}
       recentCategories={categories.map((c) => c.category)}
     />
   )
@@ -71,11 +74,6 @@ async function FiltersWrapper() {
   return <TransactionsFilters categories={categories.map((c) => c.category)} />
 }
 
-/**
- * Converte ?month=YYYY-MM em from/to do mês todo.
- * Month tem prioridade sobre from/to manuais (UI desabilita os date pickers
- * quando month está selecionado).
- */
 function resolveDateRange(sp: SP): { from?: string; to?: string } {
   if (sp.month && /^\d{4}-\d{2}$/.test(sp.month)) {
     const [y, m] = sp.month.split("-").map(Number)

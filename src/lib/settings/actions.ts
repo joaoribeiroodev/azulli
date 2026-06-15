@@ -13,12 +13,7 @@ type ActionResult = { success: true } | { success: false; error: string }
 
 const profileSchema = z.object({
   name: z.string().trim().min(2, "Nome muito curto").max(120),
-  phone: z
-    .string()
-    .trim()
-    .max(20)
-    .optional()
-    .or(z.literal("")),
+  phone: z.string().trim().max(20).optional().or(z.literal("")),
 })
 
 export type UpdateProfileInput = z.infer<typeof profileSchema>
@@ -48,7 +43,45 @@ export async function updateUserProfileAction(
   }
 
   revalidatePath("/configuracoes")
-  revalidatePath("/", "layout") // pra atualizar nome no menu
+  revalidatePath("/", "layout")
+  return { success: true }
+}
+
+// ---------------------------------------------------------------------------
+// Avatar URL
+// ---------------------------------------------------------------------------
+
+const avatarSchema = z.object({
+  avatar_url: z
+    .string()
+    .url("URL inválida")
+    .max(500)
+    .nullable(),
+})
+
+export async function updateAvatarAction(
+  avatarUrl: string | null
+): Promise<ActionResult> {
+  const parsed = avatarSchema.safeParse({ avatar_url: avatarUrl })
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "URL inválida",
+    }
+  }
+
+  const supabase = await createClient()
+  const { error } = await supabase.auth.updateUser({
+    data: { avatar_url: parsed.data.avatar_url },
+  })
+
+  if (error) {
+    console.error("[settings] updateAvatar failed:", error.message)
+    return { success: false, error: "Não foi possível atualizar a foto." }
+  }
+
+  revalidatePath("/configuracoes")
+  revalidatePath("/", "layout")
   return { success: true }
 }
 
@@ -58,12 +91,7 @@ export async function updateUserProfileAction(
 
 const tenantSchema = z.object({
   name: z.string().trim().min(2, "Nome da empresa muito curto").max(160),
-  document: z
-    .string()
-    .trim()
-    .max(20)
-    .optional()
-    .or(z.literal("")),
+  document: z.string().trim().max(20).optional().or(z.literal("")),
 })
 
 export type UpdateTenantInput = z.infer<typeof tenantSchema>
@@ -80,9 +108,6 @@ export async function updateTenantAction(
   }
 
   const supabase = await createClient()
-
-  // RLS garante que o usuário só atualiza o próprio tenant.
-  // Buscamos o id pra ser explícito.
   const { data: tenantRow } = await supabase
     .from("tenants")
     .select("id")
@@ -107,13 +132,13 @@ export async function updateTenantAction(
   }
 
   revalidatePath("/configuracoes")
-  revalidatePath("/dashboard") // banner some quando completar
+  revalidatePath("/dashboard")
   revalidatePath("/", "layout")
   return { success: true }
 }
 
 // ---------------------------------------------------------------------------
-// Tenant settings (regime tributário + e-mail de cobrança)
+// Tenant settings
 // ---------------------------------------------------------------------------
 
 const settingsSchema = z.object({

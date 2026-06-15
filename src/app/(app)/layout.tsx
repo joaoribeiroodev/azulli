@@ -24,12 +24,15 @@ export default async function AppLayout({
   const userName =
     (user.user_metadata?.name as string | undefined) ?? user.email ?? "Você"
   const userEmail = user.email ?? ""
+  const avatarUrl =
+    (user.user_metadata?.avatar_url as string | undefined) ?? null
 
   return (
     <div className="min-h-screen bg-surface lg:flex">
       <MobileNav
         userName={userName}
         userEmail={userEmail}
+        avatarUrl={avatarUrl}
         tenantName={tenant?.name}
         tenantTier={tenant?.tier}
         trialEndsAt={tenant?.trial_ends_at}
@@ -72,7 +75,11 @@ export default async function AppLayout({
         )}
 
         <div className="border-t p-2">
-          <UserMenu name={userName} email={userEmail} />
+          <UserMenu
+            name={userName}
+            email={userEmail}
+            avatarUrl={avatarUrl}
+          />
         </div>
       </aside>
 

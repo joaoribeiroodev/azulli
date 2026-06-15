@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
+import { Loader2, ShoppingBag } from "lucide-react"
 
 import {
   Dialog,
@@ -18,12 +18,14 @@ import { Button } from "@/components/ui/button"
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -40,6 +42,8 @@ import { createTransactionAction } from "@/lib/financial/transactions.actions"
 import { maskBRL, parseBRL } from "@/lib/utils/currency"
 
 import { CategoryCombobox } from "@/components/app/category-combobox"
+import { TransactionItemsBuilder } from "@/components/app/transaction-items-builder"
+import type { ProductLite } from "@/lib/products/queries"
 
 type Party = { id: string; name: string }
 
@@ -49,9 +53,22 @@ type Props = {
   onOpenChange: (open: boolean) => void
   customers?: Party[]
   suppliers?: Party[]
+  products?: ProductLite[]
   defaultCustomerId?: string | null
   defaultSupplierId?: string | null
+  defaultProductId?: string | null
   recentCategories?: string[]
+}
+
+/**
+ * Formata label de produto pra Select de forma SEGURA (string simples).
+ * IMPORTANTE: NÃO usar JSX aninhado dentro de SelectItem — quebra o Radix.
+ */
+function formatProductLabel(p: ProductLite): string {
+  if (p.track_stock) {
+    return `${p.name} (${p.stock_quantity} ${p.unit})`
+  }
+  return p.name
 }
 
 export function TransactionDialog({
@@ -60,12 +77,15 @@ export function TransactionDialog({
   onOpenChange,
   customers = [],
   suppliers = [],
+  products = [],
   defaultCustomerId = null,
   defaultSupplierId = null,
+  defaultProductId = null,
   recentCategories = [],
 }: Props) {
   const [isPending, startTransition] = useTransition()
   const [amountDisplay, setAmountDisplay] = useState("")
+  const [multiItem, setMultiItem] = useState(false)
 
   const form = useForm<CreateTransactionInput>({
     resolver: zodResolver(createTransactionSchema),
@@ -76,10 +96,50 @@ export function TransactionDialog({
       description: "",
       customer_id: null,
       supplier_id: null,
+      product_id: null,
+      items: undefined,
       category: null,
       status: "pending",
     },
   })
+
+  const watchedItems = form.watch("items")
+  const watchedProductId = form.watch("product_id")
+
+  useEffect(() => {
+    if (multiItem) {
+      form.setValue("product_id", null)
+      if (!form.getValues("items")) {
+        form.setValue("items", [])
+      }
+    } else {
+      form.setValue("items", undefined)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [multiItem])
+
+  useEffect(() => {
+    if (multiItem && watchedItems) {
+      const total = watchedItems.reduce(
+        (sum, i) => sum + (i.quantity || 0) * (i.unit_price || 0),
+        0
+      )
+      form.setValue("amount", total)
+      setAmountDisplay(total > 0 ? formatToInput(total) : "")
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedItems, multiItem])
+
+  useEffect(() => {
+    if (!multiItem && watchedProductId) {
+      const product = products.find((p) => p.id === watchedProductId)
+      if (product && form.getValues("amount") === 0) {
+        form.setValue("amount", product.price)
+        setAmountDisplay(formatToInput(product.price))
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedProductId])
 
   useEffect(() => {
     if (open) {
@@ -90,12 +150,22 @@ export function TransactionDialog({
         description: "",
         customer_id: type === "income" ? defaultCustomerId : null,
         supplier_id: type === "expense" ? defaultSupplierId : null,
+        product_id: defaultProductId,
+        items: undefined,
         category: null,
         status: "pending",
       })
       setAmountDisplay("")
+      setMultiItem(false)
     }
-  }, [open, type, defaultCustomerId, defaultSupplierId, form])
+  }, [
+    open,
+    type,
+    defaultCustomerId,
+    defaultSupplierId,
+    defaultProductId,
+    form,
+  ])
 
   const isIncome = type === "income"
 
@@ -119,6 +189,8 @@ export function TransactionDialog({
     })
   }
 
+  const hasProducts = products.length > 0
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
@@ -135,37 +207,131 @@ export function TransactionDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="amount"
-              render={() => (
-                <FormItem>
-                  <FormLabel>Valor</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                        R$
-                      </span>
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        placeholder="0,00"
-                        className="pl-9"
-                        value={amountDisplay}
-                        onChange={(e) => {
-                          const masked = maskBRL(e.target.value)
-                          setAmountDisplay(masked)
-                          form.setValue("amount", parseBRL(masked), {
-                            shouldValidate: true,
-                          })
-                        }}
+            {/*
+              FIX: switch sem onClick custom.
+              Como multiItem é state local (não FormField), usamos
+              <label htmlFor> + <Switch id> SEPARADOS.
+            */}
+            {hasProducts && (
+              <div className="flex flex-row items-center justify-between rounded-lg border p-3 bg-muted/30 hover:bg-muted/50 transition-colors">
+                <label
+                  htmlFor="multi-item-switch"
+                  className="flex-1 cursor-pointer mr-3 space-y-1"
+                >
+                  <span className="flex items-center gap-1.5 text-sm font-medium leading-none">
+                    <ShoppingBag className="h-4 w-4" />
+                    Múltiplos itens
+                  </span>
+                  <span className="block text-[11px] text-muted-foreground">
+                    {multiItem
+                      ? "Adicione vários produtos. Valor é calculado."
+                      : "Para vendas com mais de um produto"}
+                  </span>
+                </label>
+                <Switch
+                  id="multi-item-switch"
+                  checked={multiItem}
+                  onCheckedChange={setMultiItem}
+                />
+              </div>
+            )}
+
+            {multiItem && hasProducts && (
+              <FormField
+                control={form.control}
+                name="items"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Itens da venda</FormLabel>
+                    <FormControl>
+                      <TransactionItemsBuilder
+                        products={products}
+                        value={field.value ?? []}
+                        onChange={field.onChange}
+                        type={type}
                       />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {!multiItem && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="amount"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel>Valor</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                            R$
+                          </span>
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="0,00"
+                            className="pl-9"
+                            value={amountDisplay}
+                            onChange={(e) => {
+                              const masked = maskBRL(e.target.value)
+                              setAmountDisplay(masked)
+                              form.setValue("amount", parseBRL(masked), {
+                                shouldValidate: true,
+                              })
+                            }}
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {hasProducts && (
+                  <FormField
+                    control={form.control}
+                    name="product_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Produto / Serviço (opcional)</FormLabel>
+                        <Select
+                          value={field.value ?? "_none"}
+                          onValueChange={(v) =>
+                            field.onChange(v === "_none" ? null : v)
+                          }
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="_none">Sem produto</SelectItem>
+                            {/*
+                              FIX: SelectItem com STRING simples (não JSX).
+                              JSX aninhado quebra Radix Select com loop infinito.
+                            */}
+                            {products.map((p) => (
+                              <SelectItem key={p.id} value={p.id}>
+                                {formatProductLabel(p)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription className="text-xs">
+                          Selecionar atualiza estoque ao marcar como pago
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </>
+            )}
 
             <FormField
               control={form.control}
@@ -330,4 +496,11 @@ export function TransactionDialog({
       </DialogContent>
     </Dialog>
   )
+}
+
+function formatToInput(value: number): string {
+  return value
+    .toFixed(2)
+    .replace(".", ",")
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ".")
 }

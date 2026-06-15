@@ -7,6 +7,7 @@ import {
   Receipt,
   Users,
   Truck,
+  Package,
   FileText,
   Settings,
 } from "lucide-react"
@@ -17,6 +18,7 @@ const NAV = [
   { href: "/lancamentos", label: "Lançamentos", icon: Receipt },
   { href: "/clientes", label: "Clientes", icon: Users },
   { href: "/fornecedores", label: "Fornecedores", icon: Truck },
+  { href: "/produtos", label: "Produtos", icon: Package },
   { href: "/notas", label: "Notas Fiscais", icon: FileText },
   { href: "/configuracoes", label: "Configurações", icon: Settings },
 ] as const

@@ -17,6 +17,7 @@ import {
   getSuppliersLite,
   getCategoriesUsed,
 } from "@/lib/financial/queries"
+import { getProductsLite } from "@/lib/products/queries"
 import { formatBRL } from "@/lib/utils/currency"
 
 import { WeeklyChart } from "./_components/weekly-chart"
@@ -60,9 +61,10 @@ export default async function DashboardPage() {
 }
 
 async function HeaderWithParties() {
-  const [customers, suppliers, categories] = await Promise.all([
+  const [customers, suppliers, products, categories] = await Promise.all([
     getCustomersLite(),
     getSuppliersLite(),
+    getProductsLite(),
     getCategoriesUsed(),
   ])
 
@@ -79,6 +81,7 @@ async function HeaderWithParties() {
       <QuickActions
         customers={customers}
         suppliers={suppliers}
+        products={products}
         recentCategories={categories.map((c) => c.category)}
       />
     </header>

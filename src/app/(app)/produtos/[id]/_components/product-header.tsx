@@ -2,10 +2,18 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Pencil, Trash2, Truck, MoreVertical } from "lucide-react"
+import {
+  Pencil,
+  Settings2,
+  Package,
+  Wrench,
+  Trash2,
+  MoreVertical,
+} from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,45 +32,59 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-import { SupplierDialog } from "@/app/(app)/fornecedores/_components/supplier-dialog"
-import { deleteSupplierAction } from "@/lib/financial/suppliers.actions"
-import type { SupplierDetail } from "@/lib/financial/queries"
+import { ProductDialog } from "@/app/(app)/produtos/_components/product-dialog"
+import { StockAdjustmentDialog } from "@/app/(app)/produtos/_components/stock-adjustment-dialog"
+import { deleteProductAction } from "@/lib/products/actions"
+import type { ProductDetail } from "@/lib/products/queries"
 
-export function SupplierHeader({ supplier }: { supplier: SupplierDetail }) {
+export function ProductHeader({ product }: { product: ProductDetail }) {
   const router = useRouter()
   const [editOpen, setEditOpen] = useState(false)
+  const [adjustOpen, setAdjustOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
 
+  const isService = product.kind === "service"
+  const Icon = isService ? Wrench : Package
+
   async function handleDelete() {
-    const result = await deleteSupplierAction(supplier.id)
+    const result = await deleteProductAction(product.id)
     if (!result.success) {
       toast.error(result.error)
       return
     }
-    toast.success("Fornecedor excluído.")
-    router.push("/fornecedores")
+    toast.success("Produto excluído.")
+    router.push("/produtos")
   }
 
   return (
     <header className="flex items-start justify-between gap-3">
       <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-        <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-brand-soft text-brand flex items-center justify-center shrink-0">
-          <Truck className="h-5 w-5 sm:h-6 sm:w-6" />
+        <div
+          className={`h-12 w-12 sm:h-14 sm:w-14 rounded-full flex items-center justify-center shrink-0 ${
+            isService
+              ? "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+              : "bg-brand-soft text-brand"
+          }`}
+        >
+          <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
         </div>
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-brand-ink truncate">
-            {supplier.name}
-          </h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-brand-ink truncate">
+              {product.name}
+            </h1>
+            {!product.is_active && (
+              <Badge variant="secondary">Inativo</Badge>
+            )}
+          </div>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">
-            Fornecedor desde{" "}
-            {new Date(supplier.created_at).toLocaleDateString("pt-BR", {
-              month: "long",
-              year: "numeric",
-            })}
+            {isService ? "Serviço" : "Produto"}
+            {product.sku && ` · SKU ${product.sku}`}
           </p>
         </div>
       </div>
 
+      {/* Mobile: tudo num dropdown */}
       <div className="sm:hidden">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -71,6 +93,15 @@ export function SupplierHeader({ supplier }: { supplier: SupplierDetail }) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            {product.track_stock && (
+              <>
+                <DropdownMenuItem onClick={() => setAdjustOpen(true)}>
+                  <Settings2 className="mr-2 h-4 w-4" />
+                  Ajustar estoque
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            )}
             <DropdownMenuItem onClick={() => setEditOpen(true)}>
               <Pencil className="mr-2 h-4 w-4" />
               Editar
@@ -87,7 +118,18 @@ export function SupplierHeader({ supplier }: { supplier: SupplierDetail }) {
         </DropdownMenu>
       </div>
 
+      {/* Desktop: botões */}
       <div className="hidden sm:flex gap-2 flex-wrap">
+        {product.track_stock && (
+          <Button
+            variant="outline"
+            onClick={() => setAdjustOpen(true)}
+            className="gap-2"
+          >
+            <Settings2 className="h-4 w-4" />
+            Ajustar estoque
+          </Button>
+        )}
         <Button
           variant="outline"
           onClick={() => setEditOpen(true)}
@@ -106,20 +148,31 @@ export function SupplierHeader({ supplier }: { supplier: SupplierDetail }) {
         </Button>
       </div>
 
-      <SupplierDialog
+      <ProductDialog
         mode="edit"
         open={editOpen}
         onOpenChange={setEditOpen}
-        supplier={supplier}
+        product={product}
       />
+
+      {product.track_stock && (
+        <StockAdjustmentDialog
+          open={adjustOpen}
+          onOpenChange={setAdjustOpen}
+          productId={product.id}
+          productName={product.name}
+          currentStock={product.stock_quantity}
+          unit={product.unit}
+        />
+      )}
 
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir {supplier.name}?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir {product.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Se houver despesas vinculadas, a exclusão será bloqueada.
-              Considere apenas remover a vinculação antes.
+              Se houver vendas registradas, a exclusão será bloqueada — nesse
+              caso, prefira inativá-lo. Inativos não aparecem em novas vendas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

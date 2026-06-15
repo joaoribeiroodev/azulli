@@ -17,37 +17,16 @@ import {
 } from "@/components/ui/toggle-group"
 import { formatBRL } from "@/lib/utils/currency"
 
-import {
-  fetchTopCustomersAction,
-  fetchTopSuppliersAction,
-  type TopPartyData,
-} from "@/lib/financial/top-actions"
+import { fetchTopProductsAction } from "@/lib/products/product-actions"
+import type { TopProduct } from "@/lib/products/queries"
 
 type Props = {
-  kind: "customer" | "supplier"
-  initial: TopPartyData[]
+  initial: TopProduct[]
 }
 
-const COPY = {
-  customer: {
-    title: "Top 5 clientes",
-    desc: "Quem mais te paga no período",
-    emptyTitle: "Nenhuma venda paga ainda",
-    emptyHint: "Bora vender? 🚀",
-    href: (id: string) => `/clientes/${id}`,
-  },
-  supplier: {
-    title: "Top 5 fornecedores",
-    desc: "Pra quem você mais paga no período",
-    emptyTitle: "Nenhuma despesa paga a fornecedor",
-    emptyHint: "Quando pagar uma despesa, aparece aqui.",
-    href: (id: string) => `/fornecedores/${id}`,
-  },
-} as const
-
-export function TopPartiesCard({ kind, initial }: Props) {
+export function TopProductsCard({ initial }: Props) {
   const [range, setRange] = useState<"month" | "last30d">("month")
-  const [rows, setRows] = useState<TopPartyData[]>(initial)
+  const [rows, setRows] = useState<TopProduct[]>(initial)
   const [isPending, startTransition] = useTransition()
   const [firstRender, setFirstRender] = useState(true)
 
@@ -57,33 +36,24 @@ export function TopPartiesCard({ kind, initial }: Props) {
       return
     }
     startTransition(async () => {
-      const data =
-        kind === "customer"
-          ? await fetchTopCustomersAction(range)
-          : await fetchTopSuppliersAction(range)
+      const data = await fetchTopProductsAction(range)
       setRows(data)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range])
 
-  const meta = COPY[kind]
   const total = rows.reduce((sum, r) => sum + r.total, 0)
 
   return (
     <Card>
       <CardHeader>
-        {/* Stack vertical no mobile, lado a lado no sm+ */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div>
             <CardTitle className="text-base flex items-center gap-2">
-              <Trophy
-                className={`h-4 w-4 ${
-                  kind === "customer" ? "text-success-ink" : "text-brand"
-                }`}
-              />
-              {meta.title}
+              <Trophy className="h-4 w-4 text-amber-500" />
+              Top 5 produtos
             </CardTitle>
-            <CardDescription>{meta.desc}</CardDescription>
+            <CardDescription>Os mais vendidos no período</CardDescription>
           </div>
 
           <ToggleGroup
@@ -111,10 +81,10 @@ export function TopPartiesCard({ kind, initial }: Props) {
         ) : rows.length === 0 ? (
           <div className="py-8 text-center">
             <p className="text-sm font-medium text-muted-foreground">
-              {meta.emptyTitle}
+              Nenhuma venda no período
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              {meta.emptyHint}
+              Bora vender? 🚀
             </p>
           </div>
         ) : (
@@ -124,7 +94,7 @@ export function TopPartiesCard({ kind, initial }: Props) {
               return (
                 <li key={row.id}>
                   <Link
-                    href={meta.href(row.id)}
+                    href={`/produtos/${row.id}`}
                     className="group flex items-center gap-3 py-1.5 rounded-md hover:bg-muted/50 px-2 -mx-2 transition-colors"
                   >
                     <span
@@ -142,24 +112,17 @@ export function TopPartiesCard({ kind, initial }: Props) {
                       </p>
                       <div className="h-1 bg-muted rounded-full mt-1 overflow-hidden">
                         <div
-                          className={
-                            kind === "customer"
-                              ? "h-full bg-success rounded-full"
-                              : "h-full bg-brand rounded-full"
-                          }
+                          className="h-full bg-brand rounded-full"
                           style={{ width: `${percent}%` }}
                         />
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <p
-                        className={`text-sm font-semibold whitespace-nowrap ${
-                          kind === "customer"
-                            ? "text-success-ink"
-                            : "text-foreground"
-                        }`}
-                      >
+                      <p className="text-sm font-semibold whitespace-nowrap">
                         {formatBRL(row.total)}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {row.units} {row.units === 1 ? "venda" : "vendas"}
                       </p>
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 hidden sm:block" />

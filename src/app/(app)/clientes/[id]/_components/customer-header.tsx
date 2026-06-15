@@ -2,11 +2,17 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Pencil, Trash2, Plus } from "lucide-react"
+import { Pencil, Trash2, User, MoreVertical } from "lucide-react"
 import { toast } from "sonner"
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,7 +25,6 @@ import {
 } from "@/components/ui/alert-dialog"
 
 import { CustomerDialog } from "@/app/(app)/clientes/_components/customer-dialog"
-import { TransactionDialog } from "@/components/app/transaction-dialog"
 import { deleteCustomerAction } from "@/lib/financial/customers.actions"
 import type { CustomerDetail } from "@/lib/financial/queries"
 
@@ -27,14 +32,6 @@ export function CustomerHeader({ customer }: { customer: CustomerDetail }) {
   const router = useRouter()
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [newIncomeOpen, setNewIncomeOpen] = useState(false)
-
-  const initials = customer.name
-    .split(" ")
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase()
 
   async function handleDelete() {
     const result = await deleteCustomerAction(customer.id)
@@ -47,18 +44,16 @@ export function CustomerHeader({ customer }: { customer: CustomerDetail }) {
   }
 
   return (
-    <header className="flex items-start justify-between gap-4 flex-wrap">
-      <div className="flex items-center gap-4">
-        <Avatar className="h-14 w-14">
-          <AvatarFallback className="bg-brand text-primary-foreground text-lg font-semibold">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-display font-bold text-brand-ink">
+    <header className="flex items-start justify-between gap-3">
+      <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+        <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-success-soft text-success-ink flex items-center justify-center shrink-0">
+          <User className="h-5 w-5 sm:h-6 sm:w-6" />
+        </div>
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-brand-ink truncate">
             {customer.name}
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">
             Cliente desde{" "}
             {new Date(customer.created_at).toLocaleDateString("pt-BR", {
               month: "long",
@@ -68,7 +63,33 @@ export function CustomerHeader({ customer }: { customer: CustomerDetail }) {
         </div>
       </div>
 
-      <div className="flex gap-2 flex-wrap">
+      {/* Mobile: dropdown ⋯ */}
+      <div className="sm:hidden">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" aria-label="Ações">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setEditOpen(true)}>
+              <Pencil className="mr-2 h-4 w-4" />
+              Editar
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => setDeleteOpen(true)}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Excluir
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Desktop: botões */}
+      <div className="hidden sm:flex gap-2 flex-wrap">
         <Button
           variant="outline"
           onClick={() => setEditOpen(true)}
@@ -85,13 +106,6 @@ export function CustomerHeader({ customer }: { customer: CustomerDetail }) {
           <Trash2 className="h-4 w-4" />
           Excluir
         </Button>
-        <Button
-          onClick={() => setNewIncomeOpen(true)}
-          className="bg-brand hover:bg-brand-hover gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Nova receita
-        </Button>
       </div>
 
       <CustomerDialog
@@ -101,21 +115,13 @@ export function CustomerHeader({ customer }: { customer: CustomerDetail }) {
         customer={customer}
       />
 
-      <TransactionDialog
-        open={newIncomeOpen}
-        type="income"
-        onOpenChange={setNewIncomeOpen}
-        customers={[{ id: customer.id, name: customer.name }]}
-        defaultCustomerId={customer.id}
-      />
-
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir {customer.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              O cliente será removido. Lançamentos vinculados perdem a
-              referência, mas continuam no histórico.
+              Se houver lançamentos vinculados, a exclusão será bloqueada.
+              Considere apenas remover a vinculação dos lançamentos antes.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

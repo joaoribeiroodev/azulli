@@ -96,16 +96,12 @@ export function AggregateMonthlyChartCard({ scope, initial }: Props) {
   const total = data.reduce((sum, d) => sum + d.total, 0)
   const meta = COPY[scope]
   const barColor =
-    scope === "customers"
-      ? "var(--success)"
-      : scope === "suppliers"
-        ? "var(--brand)"
-        : "var(--brand)"
+    scope === "customers" ? "var(--success)" : "var(--brand)"
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div>
             <CardTitle className="text-base">{meta.title}</CardTitle>
             <CardDescription>
@@ -121,7 +117,7 @@ export function AggregateMonthlyChartCard({ scope, initial }: Props) {
             }
             size="sm"
             variant="outline"
-            className="shrink-0"
+            className="self-start sm:self-auto shrink-0"
           >
             <ToggleGroupItem value="3" className="text-xs">
               3m

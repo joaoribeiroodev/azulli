@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation"
+import { User, Building2, CreditCard } from "lucide-react"
 import {
   Tabs,
   TabsContent,
@@ -27,8 +28,8 @@ export default async function ConfiguracoesPage({
     : "conta"
 
   return (
-    <div className="p-6 lg:p-8 max-w-4xl mx-auto space-y-6">
-      <header>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
+      <header className="mb-4 sm:mb-6">
         <h1 className="text-2xl lg:text-3xl font-display font-bold text-brand-ink">
           Configurações
         </h1>
@@ -37,24 +38,85 @@ export default async function ConfiguracoesPage({
         </p>
       </header>
 
-      <Tabs defaultValue={initialTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 max-w-md">
-          <TabsTrigger value="conta">Conta</TabsTrigger>
-          <TabsTrigger value="empresa">Empresa</TabsTrigger>
-          <TabsTrigger value="faturamento">Faturamento</TabsTrigger>
-        </TabsList>
+      {/*
+        IMPORTANTE: usamos "block" explícito + "!" (important) em várias classes
+        pra GARANTIR que o shadcn Tabs não interprete como flex-row no mobile.
+        Sintoma anterior: TabsList virava coluna à esquerda e TabsContent ficava
+        espremido à direita.
+      */}
+      <Tabs defaultValue={initialTab} className="block w-full">
+        {/* Wrapper do TabsList — bloco separado em cima */}
+        <div className="block mb-4 sm:mb-6">
+          <TabsList
+            className="
+              !grid !grid-cols-3 !w-full !h-auto
+              gap-1 p-1.5
+              bg-muted/40 border
+              sm:max-w-md
+            "
+          >
+            <TabsTrigger
+              value="conta"
+              className="
+                flex flex-col sm:flex-row items-center justify-center
+                gap-1 sm:gap-1.5
+                py-2 px-1 sm:px-3
+                text-[11px] sm:text-sm
+                min-w-0
+                data-[state=active]:shadow-sm
+              "
+            >
+              <User className="h-4 w-4 sm:h-3.5 sm:w-3.5 shrink-0" />
+              <span className="truncate">Conta</span>
+            </TabsTrigger>
 
-        <TabsContent value="conta" className="space-y-4">
-          <AccountTab user={data.user} />
-        </TabsContent>
+            <TabsTrigger
+              value="empresa"
+              className="
+                flex flex-col sm:flex-row items-center justify-center
+                gap-1 sm:gap-1.5
+                py-2 px-1 sm:px-3
+                text-[11px] sm:text-sm
+                min-w-0
+                data-[state=active]:shadow-sm
+              "
+            >
+              <Building2 className="h-4 w-4 sm:h-3.5 sm:w-3.5 shrink-0" />
+              <span className="truncate">Empresa</span>
+            </TabsTrigger>
 
-        <TabsContent value="empresa" className="space-y-4">
-          <CompanyTab tenant={data.tenant} />
-        </TabsContent>
+            <TabsTrigger
+              value="faturamento"
+              className="
+                flex flex-col sm:flex-row items-center justify-center
+                gap-1 sm:gap-1.5
+                py-2 px-1 sm:px-3
+                text-[11px] sm:text-sm
+                min-w-0
+                data-[state=active]:shadow-sm
+              "
+            >
+              <CreditCard className="h-4 w-4 sm:h-3.5 sm:w-3.5 shrink-0" />
+              <span className="hidden sm:inline truncate">Faturamento</span>
+              <span className="sm:hidden truncate">Plano</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        <TabsContent value="faturamento" className="space-y-4">
-          <BillingTab tenant={data.tenant} settings={data.settings} />
-        </TabsContent>
+        {/* Wrapper do TabsContent — bloco separado embaixo */}
+        <div className="block w-full">
+          <TabsContent value="conta" className="block mt-0 space-y-4">
+            <AccountTab user={data.user} />
+          </TabsContent>
+
+          <TabsContent value="empresa" className="block mt-0 space-y-4">
+            <CompanyTab tenant={data.tenant} />
+          </TabsContent>
+
+          <TabsContent value="faturamento" className="block mt-0 space-y-4">
+            <BillingTab tenant={data.tenant} settings={data.settings} />
+          </TabsContent>
+        </div>
       </Tabs>
     </div>
   )

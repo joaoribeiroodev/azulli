@@ -4,18 +4,21 @@ import { useState } from "react"
 import { Plus, ArrowDownRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { TransactionDialog } from "@/components/app/transaction-dialog"
+import type { ProductLite } from "@/lib/products/queries"
 
 type Party = { id: string; name: string }
 
 type Props = {
   customers: Party[]
   suppliers: Party[]
+  products?: ProductLite[]
   recentCategories?: string[]
 }
 
 export function QuickActions({
   customers,
   suppliers,
+  products = [],
   recentCategories = [],
 }: Props) {
   const [open, setOpen] = useState<"income" | "expense" | null>(null)
@@ -44,6 +47,7 @@ export function QuickActions({
         onOpenChange={(o) => !o && setOpen(null)}
         customers={customers}
         suppliers={suppliers}
+        products={products}
         recentCategories={recentCategories}
       />
     </div>

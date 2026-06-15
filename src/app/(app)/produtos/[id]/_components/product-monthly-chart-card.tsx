@@ -25,12 +25,11 @@ import {
 } from "@/components/ui/toggle-group"
 import { formatBRL } from "@/lib/utils/currency"
 
-import { fetchMonthlySeriesAction } from "@/lib/financial/monthly-actions"
+import { fetchProductMonthlySeriesAction } from "@/lib/products/product-actions"
 import type { MonthlyBucket } from "@/lib/financial/queries"
 
 type Props = {
-  partyId: string
-  partyType: "customer" | "supplier"
+  productId: string
   initial: MonthlyBucket[]
 }
 
@@ -55,7 +54,7 @@ function CustomTooltip({
   )
 }
 
-export function MonthlyChartCard({ partyId, partyType, initial }: Props) {
+export function ProductMonthlyChartCard({ productId, initial }: Props) {
   const [months, setMonths] = useState<3 | 6 | 12>(6)
   const [data, setData] = useState<MonthlyBucket[]>(initial)
   const [isPending, startTransition] = useTransition()
@@ -67,28 +66,23 @@ export function MonthlyChartCard({ partyId, partyType, initial }: Props) {
       return
     }
     startTransition(async () => {
-      const series = await fetchMonthlySeriesAction(partyId, partyType, months)
+      const series = await fetchProductMonthlySeriesAction(productId, months)
       setData(series)
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [months])
 
   const total = data.reduce((sum, d) => sum + d.total, 0)
-  const isCustomer = partyType === "customer"
-  const barColor = isCustomer ? "var(--success)" : "var(--brand)"
-  const allZero = total === 0
 
   return (
     <Card>
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div>
-            <CardTitle className="text-base">
-              {isCustomer ? "Receitas por mês" : "Despesas por mês"}
-            </CardTitle>
+            <CardTitle className="text-base">Vendas por mês</CardTitle>
             <CardDescription>
-              {allZero
-                ? "Sem movimentação no período"
+              {total === 0
+                ? "Sem vendas no período"
                 : `Total: ${formatBRL(total)}`}
             </CardDescription>
           </div>
@@ -150,7 +144,7 @@ export function MonthlyChartCard({ partyId, partyType, initial }: Props) {
               />
               <Bar dataKey="total" radius={[6, 6, 0, 0]}>
                 {data.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={barColor} />
+                  <Cell key={`cell-${index}`} fill="var(--brand)" />
                 ))}
               </Bar>
             </BarChart>

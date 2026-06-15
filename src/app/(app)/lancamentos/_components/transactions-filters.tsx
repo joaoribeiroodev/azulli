@@ -31,7 +31,6 @@ export function TransactionsFilters({ categories = [] }: Props) {
   const from = sp.get("from") ?? ""
   const to = sp.get("to") ?? ""
 
-  // Gera lista dos últimos 12 meses + atual em formato "YYYY-MM"
   const monthOptions = useMemo(() => {
     const fmt = new Intl.DateTimeFormat("pt-BR", {
       month: "long",
@@ -44,7 +43,7 @@ export function TransactionsFilters({ categories = [] }: Props) {
       const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
       const label = fmt
         .format(d)
-        .replace(/^\w/, (c) => c.toUpperCase()) // capitalize
+        .replace(/^\w/, (c) => c.toUpperCase())
       options.push({ value, label })
     }
     return options
@@ -56,12 +55,10 @@ export function TransactionsFilters({ categories = [] }: Props) {
       if (!value || value === "all" || value === "") params.delete(key)
       else params.set(key, value)
     }
-    // Se selecionou um mês, limpa from/to (são alternativos)
     if (patch.month && patch.month !== "all") {
       params.delete("from")
       params.delete("to")
     }
-    // Se preencheu from/to, limpa mês
     if (patch.from || patch.to) {
       params.delete("month")
     }
@@ -82,8 +79,9 @@ export function TransactionsFilters({ categories = [] }: Props) {
     to
 
   return (
-    <section className="rounded-xl border bg-card p-4 space-y-3">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+    <section className="rounded-xl border bg-card p-3 sm:p-4 space-y-3">
+      {/* Mobile-first: 2 cols → 3 cols sm → 6 cols lg */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
         <div className="space-y-1.5">
           <Label className="text-xs">Tipo</Label>
           <Select
@@ -91,7 +89,7 @@ export function TransactionsFilters({ categories = [] }: Props) {
             onValueChange={(v) => update({ type: v })}
             disabled={isPending}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -109,7 +107,7 @@ export function TransactionsFilters({ categories = [] }: Props) {
             onValueChange={(v) => update({ status: v })}
             disabled={isPending}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -121,14 +119,15 @@ export function TransactionsFilters({ categories = [] }: Props) {
           </Select>
         </div>
 
-        <div className="space-y-1.5">
+        {/* Categoria ocupa linha inteira no mobile (col-span-2) */}
+        <div className="space-y-1.5 col-span-2 sm:col-span-1">
           <Label className="text-xs">Categoria</Label>
           <Select
             value={category}
             onValueChange={(v) => update({ category: v })}
             disabled={isPending}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -143,14 +142,14 @@ export function TransactionsFilters({ categories = [] }: Props) {
           </Select>
         </div>
 
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 col-span-2 sm:col-span-3 lg:col-span-1">
           <Label className="text-xs">Mês</Label>
           <Select
             value={month}
             onValueChange={(v) => update({ month: v })}
             disabled={isPending}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -171,6 +170,7 @@ export function TransactionsFilters({ categories = [] }: Props) {
             value={from}
             onChange={(e) => update({ from: e.target.value })}
             disabled={isPending || month !== "all"}
+            className="w-full"
           />
         </div>
 
@@ -181,6 +181,7 @@ export function TransactionsFilters({ categories = [] }: Props) {
             value={to}
             onChange={(e) => update({ to: e.target.value })}
             disabled={isPending || month !== "all"}
+            className="w-full"
           />
         </div>
       </div>

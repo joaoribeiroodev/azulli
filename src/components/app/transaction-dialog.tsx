@@ -40,6 +40,7 @@ import {
 } from "@/lib/financial/schemas"
 import { createTransactionAction } from "@/lib/financial/transactions.actions"
 import { maskBRL, parseBRL } from "@/lib/utils/currency"
+import { cn } from "@/lib/utils"
 
 import { CategoryCombobox } from "@/components/app/category-combobox"
 import { TransactionItemsBuilder } from "@/components/app/transaction-items-builder"
@@ -60,10 +61,6 @@ type Props = {
   recentCategories?: string[]
 }
 
-/**
- * Formata label de produto pra Select de forma SEGURA (string simples).
- * IMPORTANTE: NÃO usar JSX aninhado dentro de SelectItem — quebra o Radix.
- */
 function formatProductLabel(p: ProductLite): string {
   if (p.track_stock) {
     return `${p.name} (${p.stock_quantity} ${p.unit})`
@@ -208,19 +205,37 @@ export function TransactionDialog({
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             {/*
-              FIX: switch sem onClick custom.
-              Como multiItem é state local (não FormField), usamos
-              <label htmlFor> + <Switch id> SEPARADOS.
+              Switch "Múltiplos itens" com feedback visual claro:
+              - OFF: bg-muted/30 (neutro)
+              - ON: border-brand + bg-brand-soft (destacado, mostra que está ativo)
+              - Transition de 300ms suave
             */}
             {hasProducts && (
-              <div className="flex flex-row items-center justify-between rounded-lg border p-3 bg-muted/30 hover:bg-muted/50 transition-colors">
+              <div
+                className={cn(
+                  "flex flex-row items-center justify-between rounded-lg border p-3 transition-all duration-300",
+                  multiItem
+                    ? "border-brand bg-brand-soft/30"
+                    : "border-border bg-muted/30 hover:bg-muted/50"
+                )}
+              >
                 <label
                   htmlFor="multi-item-switch"
                   className="flex-1 cursor-pointer mr-3 space-y-1"
                 >
                   <span className="flex items-center gap-1.5 text-sm font-medium leading-none">
-                    <ShoppingBag className="h-4 w-4" />
+                    <ShoppingBag
+                      className={cn(
+                        "h-4 w-4 transition-colors",
+                        multiItem && "text-brand"
+                      )}
+                    />
                     Múltiplos itens
+                    {multiItem && (
+                      <span className="inline-flex items-center text-[10px] font-semibold uppercase tracking-wide text-brand bg-brand-soft px-1.5 py-0.5 rounded animate-in fade-in zoom-in-95 duration-200">
+                        Ativo
+                      </span>
+                    )}
                   </span>
                   <span className="block text-[11px] text-muted-foreground">
                     {multiItem
@@ -237,28 +252,30 @@ export function TransactionDialog({
             )}
 
             {multiItem && hasProducts && (
-              <FormField
-                control={form.control}
-                name="items"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Itens da venda</FormLabel>
-                    <FormControl>
-                      <TransactionItemsBuilder
-                        products={products}
-                        value={field.value ?? []}
-                        onChange={field.onChange}
-                        type={type}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="animate-in fade-in-50 slide-in-from-top-2 duration-300">
+                <FormField
+                  control={form.control}
+                  name="items"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Itens da venda</FormLabel>
+                      <FormControl>
+                        <TransactionItemsBuilder
+                          products={products}
+                          value={field.value ?? []}
+                          onChange={field.onChange}
+                          type={type}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             )}
 
             {!multiItem && (
-              <>
+              <div className="animate-in fade-in-50 duration-200">
                 <FormField
                   control={form.control}
                   name="amount"
@@ -296,7 +313,7 @@ export function TransactionDialog({
                     control={form.control}
                     name="product_id"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="mt-4">
                         <FormLabel>Produto / Serviço (opcional)</FormLabel>
                         <Select
                           value={field.value ?? "_none"}
@@ -311,10 +328,6 @@ export function TransactionDialog({
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="_none">Sem produto</SelectItem>
-                            {/*
-                              FIX: SelectItem com STRING simples (não JSX).
-                              JSX aninhado quebra Radix Select com loop infinito.
-                            */}
                             {products.map((p) => (
                               <SelectItem key={p.id} value={p.id}>
                                 {formatProductLabel(p)}
@@ -330,7 +343,7 @@ export function TransactionDialog({
                     )}
                   />
                 )}
-              </>
+              </div>
             )}
 
             <FormField

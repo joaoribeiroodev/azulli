@@ -45,6 +45,7 @@ import {
   updateProductAction,
 } from "@/lib/products/actions"
 import { maskBRL, parseBRL } from "@/lib/utils/currency"
+import { cn } from "@/lib/utils"
 
 type Product = {
   id: string
@@ -121,6 +122,7 @@ export function ProductDialog(props: Props) {
 
   const watchedKind = form.watch("kind")
   const watchedTrackStock = form.watch("track_stock")
+  const watchedIsActive = form.watch("is_active")
   const isService = watchedKind === "service"
 
   useEffect(() => {
@@ -174,13 +176,26 @@ export function ProductDialog(props: Props) {
         return
       }
 
-      toast.success(
-        mode === "create"
-          ? values.kind === "service"
+      // Toast diferenciado quando mudou is_active
+      if (mode === "edit" && product) {
+        if (product.is_active && !values.is_active) {
+          toast.success("Produto inativado 🔒", {
+            description: "Não aparece mais em novas vendas.",
+          })
+        } else if (!product.is_active && values.is_active) {
+          toast.success("Produto reativado ✨", {
+            description: "Voltou a aparecer em novas vendas.",
+          })
+        } else {
+          toast.success("Atualizado com sucesso ✅")
+        }
+      } else {
+        toast.success(
+          values.kind === "service"
             ? "Serviço cadastrado! 🛠️"
             : "Produto cadastrado! 📦"
-          : "Atualizado com sucesso ✅"
-      )
+        )
+      }
       onOpenChange(false)
     })
   }
@@ -203,7 +218,6 @@ export function ProductDialog(props: Props) {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Tipo */}
             <FormField
               control={form.control}
               name="kind"
@@ -214,14 +228,15 @@ export function ProductDialog(props: Props) {
                     <button
                       type="button"
                       onClick={() => field.onChange("product")}
-                      className={`flex flex-col items-center gap-1.5 rounded-lg border-2 p-3 transition-colors ${
+                      className={cn(
+                        "flex flex-col items-center gap-1.5 rounded-lg border-2 p-3 transition-all duration-200",
                         field.value === "product"
-                          ? "border-brand bg-brand-soft/30"
+                          ? "border-brand bg-brand-soft/30 scale-[1.02]"
                           : "border-border hover:border-muted-foreground"
-                      }`}
+                      )}
                     >
                       <Package
-                        className={`h-5 w-5 ${
+                        className={`h-5 w-5 transition-colors ${
                           field.value === "product"
                             ? "text-brand"
                             : "text-muted-foreground"
@@ -235,14 +250,15 @@ export function ProductDialog(props: Props) {
                     <button
                       type="button"
                       onClick={() => field.onChange("service")}
-                      className={`flex flex-col items-center gap-1.5 rounded-lg border-2 p-3 transition-colors ${
+                      className={cn(
+                        "flex flex-col items-center gap-1.5 rounded-lg border-2 p-3 transition-all duration-200",
                         field.value === "service"
-                          ? "border-brand bg-brand-soft/30"
+                          ? "border-brand bg-brand-soft/30 scale-[1.02]"
                           : "border-border hover:border-muted-foreground"
-                      }`}
+                      )}
                     >
                       <Wrench
-                        className={`h-5 w-5 ${
+                        className={`h-5 w-5 transition-colors ${
                           field.value === "service"
                             ? "text-brand"
                             : "text-muted-foreground"
@@ -417,16 +433,22 @@ export function ProductDialog(props: Props) {
                 <Separator />
 
                 {/*
-                  FIX: pattern correto sem onClick custom.
-                  O FormLabel do shadcn auto-vincula com o FormControl via formItemId.
-                  Clicar no FormLabel dispara click no Switch nativamente.
-                  Pra área clicável grande, FormLabel ocupa flex-1.
+                  FormItem com cor dinâmica:
+                  - ON: border verde + bg verde claro (visual claro de "ativo")
+                  - OFF: border padrão (transição suave)
                 */}
                 <FormField
                   control={form.control}
                   name="track_stock"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 hover:bg-muted/40 transition-colors">
+                    <FormItem
+                      className={cn(
+                        "flex flex-row items-center justify-between rounded-lg border p-3 transition-all duration-300",
+                        field.value
+                          ? "border-success bg-success-soft/40"
+                          : "border-border hover:bg-muted/40"
+                      )}
+                    >
                       <FormLabel className="flex-1 cursor-pointer mr-3 space-y-1">
                         <span className="block text-sm font-medium">
                           Controlar estoque
@@ -446,7 +468,7 @@ export function ProductDialog(props: Props) {
                 />
 
                 {watchedTrackStock && (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-3 animate-in fade-in-50 slide-in-from-top-1 duration-300">
                     <FormField
                       control={form.control}
                       name="stock_quantity"
@@ -528,7 +550,7 @@ export function ProductDialog(props: Props) {
               </>
             )}
 
-            {/* Status ativo — pattern idêntico ao track_stock */}
+            {/* Status ativo — visual diferente: ON azul (ativo), OFF amber (inativo) */}
             {mode === "edit" && (
               <>
                 <Separator />
@@ -536,13 +558,31 @@ export function ProductDialog(props: Props) {
                   control={form.control}
                   name="is_active"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 hover:bg-muted/40 transition-colors">
+                    <FormItem
+                      className={cn(
+                        "flex flex-row items-center justify-between rounded-lg border p-3 transition-all duration-300",
+                        field.value
+                          ? "border-brand bg-brand-soft/30"
+                          : "border-amber-300 bg-amber-50 dark:border-amber-900/60 dark:bg-amber-950/30"
+                      )}
+                    >
                       <FormLabel className="flex-1 cursor-pointer mr-3 space-y-1">
                         <span className="block text-sm font-medium">
-                          Produto ativo
+                          {field.value
+                            ? "Produto ativo"
+                            : "Produto inativo"}
                         </span>
-                        <span className="block text-xs text-muted-foreground font-normal">
-                          Inativos não aparecem em novas vendas
+                        <span
+                          className={cn(
+                            "block text-xs font-normal transition-colors",
+                            field.value
+                              ? "text-muted-foreground"
+                              : "text-amber-700 dark:text-amber-300"
+                          )}
+                        >
+                          {field.value
+                            ? "Aparece em novas vendas"
+                            : "🔒 Não aparece em novas vendas (histórico preservado)"}
                         </span>
                       </FormLabel>
                       <FormControl>
@@ -568,10 +608,17 @@ export function ProductDialog(props: Props) {
               <Button
                 type="submit"
                 disabled={isPending}
-                className="bg-brand hover:bg-brand-hover"
+                className={cn(
+                  "transition-colors",
+                  mode === "edit" && !watchedIsActive
+                    ? "bg-amber-600 hover:bg-amber-700"
+                    : "bg-brand hover:bg-brand-hover"
+                )}
               >
                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Salvar
+                {mode === "edit" && product?.is_active && !watchedIsActive
+                  ? "Inativar"
+                  : "Salvar"}
               </Button>
             </DialogFooter>
           </form>

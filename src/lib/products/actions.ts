@@ -25,6 +25,17 @@ async function getCurrentTenantId(): Promise<string | null> {
   return data?.tenant_id ?? null
 }
 
+/**
+ * Helper: invalida cache de TODAS as rotas que listam produtos.
+ * Inclui rotas onde getProductsLite() é chamado.
+ */
+function revalidateProductRoutes(productId?: string) {
+  revalidatePath("/produtos")
+  revalidatePath("/lancamentos")
+  revalidatePath("/dashboard")
+  if (productId) revalidatePath(`/produtos/${productId}`)
+}
+
 // ---------------------------------------------------------------------------
 // Create product
 // ---------------------------------------------------------------------------
@@ -46,7 +57,6 @@ export async function createProductAction(
   const supabase = await createClient()
   const d = parsed.data
 
-  // Service force track_stock=false
   const isService = d.kind === "service"
   const trackStock = isService ? false : d.track_stock
   const stockQty = isService ? 0 : d.stock_quantity
@@ -83,7 +93,6 @@ export async function createProductAction(
     }
   }
 
-  // Se criou com estoque inicial > 0, registra movimento "initial"
   if (trackStock && stockQty > 0) {
     await supabase.from("stock_movements").insert({
       tenant_id: tenantId,
@@ -95,8 +104,7 @@ export async function createProductAction(
     })
   }
 
-  revalidatePath("/produtos")
-  revalidatePath("/lancamentos")
+  revalidateProductRoutes(data.id)
   return { success: true, data: { id: data.id } }
 }
 
@@ -120,10 +128,6 @@ export async function updateProductAction(
 
   const isService = rest.kind === "service"
   const trackStock = isService ? false : rest.track_stock
-
-  // Não permitimos mudar stock_quantity diretamente pelo update —
-  // estoque só muda via stock_movements (mantém auditoria).
-  // O campo stock_quantity é gerenciado pelo helper applyStockMovement.
 
   const { error } = await supabase
     .from("products")
@@ -154,8 +158,7 @@ export async function updateProductAction(
     }
   }
 
-  revalidatePath("/produtos")
-  revalidatePath(`/produtos/${id}`)
+  revalidateProductRoutes(id)
   return { success: true }
 }
 
@@ -166,7 +169,6 @@ export async function updateProductAction(
 export async function deleteProductAction(id: string): Promise<ActionResult> {
   const supabase = await createClient()
 
-  // Bloqueia se houver transactions vinculadas
   const { count } = await supabase
     .from("transactions")
     .select("id", { count: "exact", head: true })
@@ -180,7 +182,6 @@ export async function deleteProductAction(id: string): Promise<ActionResult> {
     }
   }
 
-  // Também bloqueia se tem items em transactions
   const { count: itemsCount } = await supabase
     .from("transaction_items")
     .select("id", { count: "exact", head: true })
@@ -200,7 +201,7 @@ export async function deleteProductAction(id: string): Promise<ActionResult> {
     return { success: false, error: "Não foi possível excluir o produto." }
   }
 
-  revalidatePath("/produtos")
+  revalidateProductRoutes()
   return { success: true }
 }
 
@@ -235,8 +236,7 @@ export async function adjustStockAction(
 
   if (!result.success) return result
 
-  revalidatePath("/produtos")
-  revalidatePath(`/produtos/${product_id}`)
+  revalidateProductRoutes(product_id)
   return { success: true }
 }
 
@@ -255,27 +255,16 @@ type ApplyParams = {
   tenantId: string
   productId: string
   kind: StockMovementKind
-  quantity: number // sempre positiva
+  quantity: number
   notes?: string | null
   transactionId?: string | null
   transactionItemId?: string | null
 }
 
-/**
- * Aplica um movimento de estoque de forma transacional:
- * 1. Lê estoque atual
- * 2. Calcula novo (subtrai se sale/adjustment_out, soma caso contrário)
- * 3. Atualiza products.stock_quantity
- * 4. Registra em stock_movements (append-only)
- *
- * Se o produto não tem track_stock=true, retorna sucesso sem ação (no-op).
- * Se daria estoque negativo, falha.
- */
 export async function applyStockMovement(
   supabase: Awaited<ReturnType<typeof createClient>>,
   params: ApplyParams
 ): Promise<ActionResult> {
-  // Lê o produto
   const { data: product, error: prodErr } = await supabase
     .from("products")
     .select("track_stock, stock_quantity, kind, name")
@@ -286,13 +275,11 @@ export async function applyStockMovement(
     return { success: false, error: "Produto não encontrado." }
   }
 
-  // Serviços não controlam estoque — no-op
   if (product.kind === "service" || !product.track_stock) {
     return { success: true }
   }
 
-  const isOutflow =
-    params.kind === "sale" || params.kind === "adjustment_out"
+  const isOutflow = params.kind === "sale" || params.kind === "adjustment_out"
   const delta = isOutflow ? -params.quantity : params.quantity
   const newQty = Number(product.stock_quantity) + delta
 
@@ -303,7 +290,6 @@ export async function applyStockMovement(
     }
   }
 
-  // Atualiza estoque
   const { error: updateErr } = await supabase
     .from("products")
     .update({ stock_quantity: newQty })
@@ -314,12 +300,11 @@ export async function applyStockMovement(
     return { success: false, error: "Não foi possível atualizar o estoque." }
   }
 
-  // Loga o movimento
   const { error: logErr } = await supabase.from("stock_movements").insert({
     tenant_id: params.tenantId,
     product_id: params.productId,
     kind: params.kind,
-    quantity: delta, // negativo se outflow
+    quantity: delta,
     stock_after: newQty,
     transaction_id: params.transactionId ?? null,
     transaction_item_id: params.transactionItemId ?? null,
@@ -328,8 +313,6 @@ export async function applyStockMovement(
 
   if (logErr) {
     console.error("[products] stock movement log failed:", logErr)
-    // Não revertemos a atualização aqui — log de erro é prioridade.
-    // Idealmente isto seria uma transaction SQL. Fica como melhoria.
   }
 
   return { success: true }

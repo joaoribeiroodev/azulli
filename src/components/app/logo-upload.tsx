@@ -51,8 +51,15 @@ export function LogoUpload({ tenantId, tenantName, currentLogoUrl }: Props) {
     setIsUploading(true)
     try {
       const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        toast.error("Sessão expirada. Recarregue a página.")
+        return
+      }
+
       const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg"
-      const path = `company-logos/${tenantId}/logo-${Date.now()}.${ext}`
+      // O bucket avatars exige que o 1º segmento seja o auth.uid()
+      const path = `${user.id}/company-logo-${tenantId}-${Date.now()}.${ext}`
 
       const { error: uploadError } = await supabase.storage
         .from("avatars")
@@ -118,7 +125,7 @@ export function LogoUpload({ tenantId, tenantName, currentLogoUrl }: Props) {
     <div className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-6">
       {/* Preview do logo */}
       <div className="relative self-center sm:self-auto shrink-0">
-        <div className="h-20 w-40 rounded-lg border-2 border-border bg-muted/40 flex items-center justify-center overflow-hidden">
+        <div className="relative h-20 w-40 rounded-lg border-2 border-border bg-muted/40 flex items-center justify-center overflow-hidden">
           {logoUrl ? (
             <Image
               src={logoUrl}

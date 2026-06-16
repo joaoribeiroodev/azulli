@@ -24,15 +24,15 @@ const productBaseSchema = z.object({
     .optional()
     .nullable(),
 
-  track_stock: z.boolean().default(false),
-  stock_quantity: z.number().nonnegative().default(0),
+  track_stock: z.boolean(),
+  stock_quantity: z.number().nonnegative(),
   low_stock_threshold: z.number().nonnegative().optional().nullable(),
-  unit: z.string().trim().max(10).default("un"),
+  unit: z.string().trim().max(10),
 
   ncm: z.string().trim().max(15).optional().or(z.literal("")),
   cfop: z.string().trim().max(10).optional().or(z.literal("")),
 
-  is_active: z.boolean().default(true),
+  is_active: z.boolean(),
 })
 
 export const createProductSchema = productBaseSchema.refine(

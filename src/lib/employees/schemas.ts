@@ -24,7 +24,7 @@ const employeeBaseSchema = z.object({
     .optional()
     .nullable(),
   notes: z.string().trim().max(500).optional().or(z.literal("")),
-  is_active: z.boolean().default(true),
+  is_active: z.boolean(),
 })
 
 export const createEmployeeSchema = employeeBaseSchema

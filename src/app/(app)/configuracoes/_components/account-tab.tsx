@@ -62,7 +62,10 @@ export function AccountTab({ user }: Props) {
   function onSubmit(values: FormInput) {
     startTransition(async () => {
       const result = await updateUserProfileAction(values)
-      if (!result.success) return toast.error(result.error)
+      if (!result.success) {
+        toast.error(result.error)
+        return
+      }
       toast.success("Perfil atualizado! ✅")
     })
   }

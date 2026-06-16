@@ -89,7 +89,10 @@ export function BillingTab({ tenant, settings }: Props) {
   function onSubmit(values: FormInput) {
     startTransition(async () => {
       const result = await updateTenantSettingsAction(values)
-      if (!result.success) return toast.error(result.error)
+      if (!result.success) {
+        toast.error(result.error)
+        return
+      }
       toast.success("Faturamento atualizado! ✅")
     })
   }

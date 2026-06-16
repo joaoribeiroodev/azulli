@@ -71,7 +71,7 @@ export const createTransactionSchema = z
     product_id: z.string().uuid().optional().nullable(),
     items: z.array(transactionItemInputSchema).optional(),
     category: categoryField,
-    status: z.enum(["pending", "paid"]).default("pending"),
+    status: z.enum(["pending", "paid"]),
   })
   .refine(
     (data) => {

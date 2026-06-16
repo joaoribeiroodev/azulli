@@ -57,7 +57,10 @@ export function CompanyTab({ tenant }: Props) {
   function onSubmit(values: FormInput) {
     startTransition(async () => {
       const result = await updateTenantAction(values)
-      if (!result.success) return toast.error(result.error)
+      if (!result.success) {
+        toast.error(result.error)
+        return
+      }
       toast.success("Empresa atualizada! 🏢")
     })
   }

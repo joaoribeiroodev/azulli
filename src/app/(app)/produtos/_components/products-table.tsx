@@ -11,7 +11,6 @@ import {
   ChevronRight,
   AlertTriangle,
   Settings2,
-  EyeOff,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -63,7 +62,10 @@ export function ProductsTable({ rows }: { rows: ProductRowWithStats[] }) {
     setConfirmDelete(null)
     startTransition(async () => {
       const result = await deleteProductAction(row.id)
-      if (!result.success) return toast.error(result.error)
+      if (!result.success) {
+        toast.error(result.error)
+        return
+      }
       toast.success("Produto excluído.")
     })
   }

@@ -240,7 +240,9 @@ export function TransactionDialog({
                   <span className="block text-[11px] text-muted-foreground">
                     {multiItem
                       ? "Adicione vários produtos. Valor é calculado."
-                      : "Para vendas com mais de um produto"}
+                      : isIncome
+                        ? "Para vendas com mais de um produto"
+                        : "Para repor estoque de múltiplos produtos"}
                   </span>
                 </label>
                 <Switch
@@ -258,7 +260,7 @@ export function TransactionDialog({
                   name="items"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Itens da venda</FormLabel>
+                      <FormLabel>{isIncome ? "Itens da venda" : "Itens da compra (Estoque)"}</FormLabel>
                       <FormControl>
                         <TransactionItemsBuilder
                           products={products}

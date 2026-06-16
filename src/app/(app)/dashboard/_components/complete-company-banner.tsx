@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Building2, ChevronRight, X } from "lucide-react"
+import { Building2, ChevronRight } from "lucide-react"
 import { createClient } from "@/lib/supabase/server"
 
 /**

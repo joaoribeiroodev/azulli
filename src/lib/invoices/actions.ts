@@ -207,7 +207,7 @@ export async function issueInvoiceAction(
 
 export async function retryInvoiceAction(
   invoiceId: string
-): Promise<ActionResult> {
+): Promise<ActionResult<{ invoiceId: string }>> {
   const supabase = await createClient()
   const { data: inv } = await supabase
     .from("invoices")

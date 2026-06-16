@@ -89,7 +89,10 @@ export function TransactionsTable({ rows, allowsNFe = false }: Props) {
   function handleMarkPaid(row: Row) {
     startTransition(async () => {
       const result = await markAsPaidAction(row.id)
-      if (!result.success) return toast.error(result.error)
+      if (!result.success) {
+        toast.error(result.error)
+        return
+      }
       toast.success("Pago! ✅ Boa, mais uma fechada.")
     })
   }
@@ -100,7 +103,10 @@ export function TransactionsTable({ rows, allowsNFe = false }: Props) {
     setConfirmDelete(null)
     startTransition(async () => {
       const result = await deleteTransactionAction(row.id)
-      if (!result.success) return toast.error(result.error)
+      if (!result.success) {
+        toast.error(result.error)
+        return
+      }
       toast.success("Lançamento excluído.")
     })
   }

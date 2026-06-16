@@ -36,7 +36,10 @@ export function InvoicesTable({ rows }: { rows: InvoiceRow[] }) {
   function handleRetry(row: InvoiceRow) {
     startTransition(async () => {
       const result = await retryInvoiceAction(row.id)
-      if (!result.success) return toast.error(result.error)
+      if (!result.success) {
+        toast.error(result.error)
+        return
+      }
       toast.success("Nota reenviada! 📄")
     })
   }

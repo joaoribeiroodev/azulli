@@ -55,7 +55,10 @@ export function CustomersTable({ rows }: { rows: CustomerRowWithTotals[] }) {
     setConfirmDelete(null)
     startTransition(async () => {
       const result = await deleteCustomerAction(row.id)
-      if (!result.success) return toast.error(result.error)
+      if (!result.success) {
+        toast.error(result.error)
+        return
+      }
       toast.success("Cliente excluído.")
     })
   }

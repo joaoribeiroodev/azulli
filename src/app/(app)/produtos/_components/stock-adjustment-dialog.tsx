@@ -68,7 +68,10 @@ export function StockAdjustmentDialog({
   function onSubmit(values: StockAdjustmentInput) {
     startTransition(async () => {
       const result = await adjustStockAction(values)
-      if (!result.success) return toast.error(result.error)
+      if (!result.success) {
+        toast.error(result.error)
+        return
+      }
       toast.success("Estoque ajustado! 📦")
       onOpenChange(false)
       form.reset({

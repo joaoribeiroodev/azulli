@@ -92,6 +92,23 @@ export async function updateAvatarAction(
 const tenantSchema = z.object({
   name: z.string().trim().min(2, "Nome da empresa muito curto").max(160),
   document: z.string().trim().max(20).optional().or(z.literal("")),
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .email({ message: "E-mail inválido" })
+    .optional()
+    .or(z.literal("")),
+  phone: z.string().trim().max(20).optional().or(z.literal("")),
+  inscricao_estadual: z.string().trim().max(30).optional().or(z.literal("")),
+  inscricao_municipal: z.string().trim().max(30).optional().or(z.literal("")),
+  cep: z.string().trim().max(9).optional().or(z.literal("")),
+  logradouro: z.string().trim().max(160).optional().or(z.literal("")),
+  numero: z.string().trim().max(20).optional().or(z.literal("")),
+  complemento: z.string().trim().max(80).optional().or(z.literal("")),
+  bairro: z.string().trim().max(80).optional().or(z.literal("")),
+  cidade: z.string().trim().max(80).optional().or(z.literal("")),
+  uf: z.string().trim().max(2).optional().or(z.literal("")),
 })
 
 export type UpdateTenantInput = z.infer<typeof tenantSchema>
@@ -118,11 +135,23 @@ export async function updateTenantAction(
     return { success: false, error: "Empresa não encontrada." }
   }
 
+  const d = parsed.data
   const { error } = await supabase
     .from("tenants")
     .update({
-      name: parsed.data.name,
-      document: parsed.data.document || null,
+      name: d.name,
+      document: d.document || null,
+      email: d.email || null,
+      phone: d.phone ? toE164BR(d.phone) : null,
+      inscricao_estadual: d.inscricao_estadual || null,
+      inscricao_municipal: d.inscricao_municipal || null,
+      cep: d.cep || null,
+      logradouro: d.logradouro || null,
+      numero: d.numero || null,
+      complemento: d.complemento || null,
+      bairro: d.bairro || null,
+      cidade: d.cidade || null,
+      uf: d.uf || null,
     })
     .eq("id", tenantRow.id)
 
@@ -133,6 +162,51 @@ export async function updateTenantAction(
 
   revalidatePath("/configuracoes")
   revalidatePath("/dashboard")
+  revalidatePath("/", "layout")
+  return { success: true }
+}
+
+// ---------------------------------------------------------------------------
+// Logo da empresa
+// ---------------------------------------------------------------------------
+
+const logoSchema = z.object({
+  logo_url: z.string().url("URL inválida").max(500).nullable(),
+})
+
+export async function updateTenantLogoAction(
+  logoUrl: string | null
+): Promise<ActionResult> {
+  const parsed = logoSchema.safeParse({ logo_url: logoUrl })
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "URL inválida",
+    }
+  }
+
+  const supabase = await createClient()
+  const { data: tenantRow } = await supabase
+    .from("tenants")
+    .select("id")
+    .limit(1)
+    .maybeSingle()
+
+  if (!tenantRow) {
+    return { success: false, error: "Empresa não encontrada." }
+  }
+
+  const { error } = await supabase
+    .from("tenants")
+    .update({ logo_url: parsed.data.logo_url })
+    .eq("id", tenantRow.id)
+
+  if (error) {
+    console.error("[settings] updateTenantLogo failed:", error.message)
+    return { success: false, error: "Não foi possível atualizar o logotipo." }
+  }
+
+  revalidatePath("/configuracoes")
   revalidatePath("/", "layout")
   return { success: true }
 }

@@ -16,6 +16,18 @@ export type SettingsData = {
     tier: "trial" | "pro" | "enterprise"
     subscription_status: "active" | "past_due" | "canceled"
     trial_ends_at: string
+    logo_url: string | null
+    email: string | null
+    phone: string | null
+    inscricao_estadual: string | null
+    inscricao_municipal: string | null
+    cep: string | null
+    logradouro: string | null
+    numero: string | null
+    complemento: string | null
+    bairro: string | null
+    cidade: string | null
+    uf: string | null
   }
   settings: {
     default_tax_regime: "mei" | "simples_nacional"
@@ -34,7 +46,7 @@ export async function getSettingsData(): Promise<SettingsData | null> {
   const [tenantRes, settingsRes] = await Promise.all([
     supabase
       .from("tenants")
-      .select("id, name, document, tier, subscription_status, trial_ends_at")
+      .select("id, name, document, tier, subscription_status, trial_ends_at, logo_url, email, phone, inscricao_estadual, inscricao_municipal, cep, logradouro, numero, complemento, bairro, cidade, uf")
       .limit(1)
       .maybeSingle(),
     supabase

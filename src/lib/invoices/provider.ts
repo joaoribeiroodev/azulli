@@ -2,6 +2,22 @@ import "server-only"
 
 export type InvoiceType = "nfe" | "nfse"
 
+export type InvoiceEmitter = {
+  name: string
+  document: string | null
+  email: string | null
+  phone: string | null
+  inscricao_estadual: string | null
+  inscricao_municipal: string | null
+  cep: string | null
+  logradouro: string | null
+  numero: string | null
+  complemento: string | null
+  bairro: string | null
+  cidade: string | null
+  uf: string | null
+}
+
 export type IssueInvoiceRequest = {
   tenantId: string
   transactionId: string
@@ -11,6 +27,7 @@ export type IssueInvoiceRequest = {
   customerDocument: string | null
   description: string | null
   taxRegime: "mei" | "simples_nacional"
+  emitter: InvoiceEmitter
 }
 
 export type IssueInvoiceResponse =

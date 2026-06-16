@@ -35,10 +35,10 @@ export async function issueInvoiceAction(
   const { transaction_id, type } = parsed.data
   const supabase = await createClient()
 
-  // 1) Busca tenant + tier (RLS garante isolamento)
+  // 1) Busca tenant + tier + dados do emitente (RLS garante isolamento)
   const { data: tenantRow } = await supabase
     .from("tenants")
-    .select("id, tier")
+    .select("id, tier, name, document, email, phone, inscricao_estadual, inscricao_municipal, cep, logradouro, numero, complemento, bairro, cidade, uf")
     .limit(1)
     .maybeSingle()
 
@@ -172,6 +172,21 @@ export async function issueInvoiceAction(
     customerDocument,
     description: tx.description,
     taxRegime,
+    emitter: {
+      name: tenantRow.name,
+      document: tenantRow.document ?? null,
+      email: tenantRow.email ?? null,
+      phone: tenantRow.phone ?? null,
+      inscricao_estadual: tenantRow.inscricao_estadual ?? null,
+      inscricao_municipal: tenantRow.inscricao_municipal ?? null,
+      cep: tenantRow.cep ?? null,
+      logradouro: tenantRow.logradouro ?? null,
+      numero: tenantRow.numero ?? null,
+      complemento: tenantRow.complemento ?? null,
+      bairro: tenantRow.bairro ?? null,
+      cidade: tenantRow.cidade ?? null,
+      uf: tenantRow.uf ?? null,
+    },
   })
 
   // 10) Atualiza invoice com o resultado

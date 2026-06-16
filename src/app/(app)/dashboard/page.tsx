@@ -19,12 +19,14 @@ import {
 } from "@/lib/financial/queries"
 import { getProductsLite } from "@/lib/products/queries"
 import { formatBRL } from "@/lib/utils/currency"
+import { fetchExpensesByCategoryAction } from "@/lib/financial/category-actions"
 
 import { WeeklyChart } from "./_components/weekly-chart"
 import { RecentTransactionsList } from "./_components/recent-transactions"
 import { QuickActions } from "./_components/quick-actions"
 import { CompleteCompanyBanner } from "./_components/complete-company-banner"
 import { TopOfMonthCards } from "./_components/top-of-month"
+import { ExpensesByCategoryCard } from "@/components/app/expenses-by-category-card"
 
 export const metadata = { title: "Dashboard — Azulli" }
 
@@ -47,26 +49,32 @@ export default async function DashboardPage() {
         <TopOfMonthCards />
       </Suspense>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Suspense fallback={<Skeleton className="h-80 lg:col-span-2" />}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Suspense fallback={<Skeleton className="h-80" />}>
           <WeeklyChartWrapper />
         </Suspense>
 
         <Suspense fallback={<Skeleton className="h-80" />}>
-          <RecentTransactionsWrapper />
+          <ExpensesByCategoryWrapper />
         </Suspense>
       </div>
+
+      <Suspense fallback={<Skeleton className="h-80" />}>
+        <RecentTransactionsWrapper />
+      </Suspense>
     </div>
   )
 }
 
 async function HeaderWithParties() {
-  const [customers, suppliers, products, categories] = await Promise.all([
-    getCustomersLite(),
-    getSuppliersLite(),
-    getProductsLite(),
-    getCategoriesUsed(),
-  ])
+  const [customers, suppliers, products, incomeCategories, expenseCategories] =
+    await Promise.all([
+      getCustomersLite(),
+      getSuppliersLite(),
+      getProductsLite(),
+      getCategoriesUsed("income"),
+      getCategoriesUsed("expense"),
+    ])
 
   return (
     <header className="flex items-start justify-between gap-4 flex-wrap">
@@ -82,7 +90,8 @@ async function HeaderWithParties() {
         customers={customers}
         suppliers={suppliers}
         products={products}
-        recentCategories={categories.map((c) => c.category)}
+        recentIncomeCategories={incomeCategories.map((c) => c.category)}
+        recentExpenseCategories={expenseCategories.map((c) => c.category)}
       />
     </header>
   )
@@ -155,7 +164,7 @@ async function SummaryCards() {
 async function WeeklyChartWrapper() {
   const data = await getLast7DaysSeries()
   return (
-    <Card className="lg:col-span-2">
+    <Card>
       <CardHeader>
         <CardTitle className="text-base">Últimos 7 dias</CardTitle>
         <CardDescription>Entradas e saídas pagas no período</CardDescription>
@@ -165,6 +174,11 @@ async function WeeklyChartWrapper() {
       </CardContent>
     </Card>
   )
+}
+
+async function ExpensesByCategoryWrapper() {
+  const initial = await fetchExpensesByCategoryAction("month")
+  return <ExpensesByCategoryCard initial={initial} />
 }
 
 async function RecentTransactionsWrapper() {

@@ -6,7 +6,17 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
-import { Loader2, Sparkles, Clock, CheckCircle2 } from "lucide-react"
+import {
+  Loader2,
+  Sparkles,
+  Clock,
+  Check,
+  ExternalLink,
+  AlertCircle,
+} from "lucide-react"
+
+import { PLANS, formatPlanPrice } from "@/lib/billing/plans"
+import { formatDateBR } from "@/lib/utils/date"
 
 import {
   Card,
@@ -38,6 +48,30 @@ import {
 
 import { updateTenantSettingsAction } from "@/lib/settings/actions"
 
+// Tipo local — não importamos de queries.ts (server-only)
+type BillingStateSnapshot = {
+  tenant_tier: "trial" | "pro" | "enterprise"
+  trial_ends_at: string | null
+  subscription_status:
+    | "pending"
+    | "active"
+    | "past_due"
+    | "canceled"
+    | "trial_expired"
+    | null
+  plan_id: "pro" | "enterprise" | null
+  current_period_end: string | null
+  effective_status:
+    | "trial_active"
+    | "trial_expired"
+    | "pending"
+    | "active"
+    | "past_due"
+    | "canceled"
+    | "no_subscription"
+  trial_days_left: number | null
+}
+
 const schema = z.object({
   default_tax_regime: z.enum(["mei", "simples_nacional"]),
   billing_email: z
@@ -52,30 +86,60 @@ const schema = z.object({
 type FormInput = z.infer<typeof schema>
 
 type Props = {
-  tenant: {
-    tier: "trial" | "pro" | "enterprise"
-    subscription_status: "active" | "past_due" | "canceled"
-    trial_ends_at: string
-  }
+  billingState: BillingStateSnapshot | null
   settings: {
     default_tax_regime: "mei" | "simples_nacional"
     billing_email: string | null
   }
 }
 
-const TIER_LABELS = {
-  trial: "Trial",
-  pro: "Pro",
-  enterprise: "Empresarial",
-} as const
+function StatusBadge({ status }: { status: BillingStateSnapshot["effective_status"] | undefined }) {
+  const map: Record<string, { label: string; className: string }> = {
+    trial_active: { label: "Trial ativo", className: "bg-brand-soft text-brand-ink" },
+    trial_expired: { label: "Trial expirado", className: "bg-red-100 text-red-800" },
+    pending: { label: "Aguardando pagamento", className: "bg-amber-100 text-amber-800" },
+    active: { label: "Ativa", className: "bg-success-soft text-success-ink" },
+    past_due: { label: "Pagamento atrasado", className: "bg-amber-100 text-amber-800" },
+    canceled: { label: "Cancelada", className: "bg-red-100 text-red-800" },
+    no_subscription: { label: "Sem assinatura", className: "bg-muted text-muted-foreground" },
+  }
+  if (!status) return null
+  const s = map[status]
+  if (!s) return null
+  return (
+    <Badge variant="secondary" className={s.className}>
+      {s.label}
+    </Badge>
+  )
+}
 
-const STATUS_LABELS = {
-  active: { label: "Ativa", color: "bg-success-soft text-success-ink" },
-  past_due: { label: "Pagamento atrasado", color: "bg-amber-100 text-amber-800" },
-  canceled: { label: "Cancelada", color: "bg-red-100 text-red-800" },
-} as const
+function ManageBillingButton({ status }: { status: BillingStateSnapshot["effective_status"] | undefined }) {
+  const configs: Partial<Record<string, { label: string; className?: string }>> = {
+    trial_active: { label: "Ver planos" },
+    trial_expired: { label: "Assinar agora" },
+    pending: { label: "Ver fatura" },
+    active: { label: "Gerenciar" },
+    past_due: { label: "Pagar agora", className: "text-destructive border-destructive hover:text-destructive" },
+    canceled: { label: "Reativar" },
+    no_subscription: { label: "Ver planos" },
+  }
+  const cfg = status ? (configs[status] ?? { label: "Gerenciar" }) : { label: "Gerenciar" }
 
-export function BillingTab({ tenant, settings }: Props) {
+  return (
+    <Button asChild variant="outline" className={cfg.className}>
+      <Link href="/billing" className="gap-2 flex items-center">
+        {status === "past_due" ? (
+          <AlertCircle className="h-4 w-4" />
+        ) : (
+          <ExternalLink className="h-4 w-4" />
+        )}
+        {cfg.label}
+      </Link>
+    </Button>
+  )
+}
+
+export function BillingTab({ billingState, settings }: Props) {
   const [isPending, startTransition] = useTransition()
 
   const form = useForm<FormInput>({
@@ -93,73 +157,101 @@ export function BillingTab({ tenant, settings }: Props) {
         toast.error(result.error)
         return
       }
-      toast.success("Faturamento atualizado! ✅")
+      toast.success("Faturamento atualizado!")
     })
   }
 
-  const isTrial = tenant.tier === "trial"
-  const trialDate = new Date(tenant.trial_ends_at)
-  const daysLeft = Math.max(
-    0,
-    Math.ceil((trialDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-  )
-  const statusStyle = STATUS_LABELS[tenant.subscription_status]
+  const plan =
+    billingState?.plan_id ? PLANS[billingState.plan_id] : null
+
+  const trialDaysLeft = billingState?.trial_days_left ?? 0
+  const trialEndsAt = billingState?.trial_ends_at
 
   return (
     <div className="space-y-6">
-      {/* Card: Plano atual */}
+      {/* Card: Plano / assinatura atual */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             Plano atual
-            {tenant.tier === "enterprise" && (
+            {billingState?.plan_id === "enterprise" && (
               <Sparkles className="h-4 w-4 text-brand" />
             )}
           </CardTitle>
           <CardDescription>
-            Veja seu status e mudanças disponíveis.
+            Status da sua assinatura e opções disponíveis.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <p className="text-2xl font-display font-bold text-brand-ink">
-                {TIER_LABELS[tenant.tier]}
+                {plan?.name ?? (billingState?.tenant_tier === "trial" ? "Trial" : "—")}
               </p>
-              <Badge variant="secondary" className={statusStyle.color}>
-                {statusStyle.label}
-              </Badge>
+              <StatusBadge status={billingState?.effective_status} />
             </div>
 
-            {isTrial && (
+            {/* Exibição extra por estado */}
+            {billingState?.effective_status === "trial_active" && trialEndsAt && (
               <div className="rounded-lg bg-brand-soft px-4 py-3 text-sm">
                 <p className="font-medium text-brand-ink flex items-center gap-1.5">
                   <Clock className="h-4 w-4" />
-                  {daysLeft > 0
-                    ? `${daysLeft} ${daysLeft === 1 ? "dia restante" : "dias restantes"}`
+                  {trialDaysLeft > 0
+                    ? `${trialDaysLeft} ${trialDaysLeft === 1 ? "dia restante" : "dias restantes"}`
                     : "Trial expirado"}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Termina em {trialDate.toLocaleDateString("pt-BR")}
+                  Termina em {formatDateBR(trialEndsAt)}
                 </p>
               </div>
             )}
+
+            {plan && billingState?.effective_status === "active" && (
+              <p className="text-2xl font-display font-bold text-brand-ink">
+                {formatPlanPrice(plan.price)}
+                <span className="text-sm font-normal text-muted-foreground">/mês</span>
+              </p>
+            )}
           </div>
+
+          {/* Próxima cobrança / data de acesso */}
+          {billingState?.current_period_end &&
+            (billingState.effective_status === "active" ||
+              billingState.effective_status === "canceled") && (
+              <div className="text-sm text-muted-foreground">
+                {billingState.effective_status === "active"
+                  ? `Próxima cobrança em ${formatDateBR(billingState.current_period_end)}`
+                  : `Acesso até ${formatDateBR(billingState.current_period_end)}`}
+              </div>
+            )}
+
+          {/* Features do plano */}
+          {plan && billingState?.effective_status === "active" && (
+            <>
+              <Separator />
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-y-1.5 gap-x-4">
+                {plan.features.map((feature) => (
+                  <li
+                    key={feature}
+                    className="flex items-center gap-2 text-sm text-muted-foreground"
+                  >
+                    <Check className="h-3.5 w-3.5 shrink-0 text-success" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
 
           <Separator />
 
           <div className="flex justify-between items-center gap-4 flex-wrap">
             <p className="text-sm text-muted-foreground">
-              {isTrial
-                ? "Assine um plano para continuar usando depois do trial."
-                : "Quer mudar de plano ou cancelar?"}
+              {billingState?.effective_status === "active"
+                ? "Gerencie sua assinatura na página de faturamento."
+                : "Veja os planos disponíveis e escolha o melhor pra você."}
             </p>
-            <Button asChild variant="outline" className="gap-2">
-              <Link href="/billing">
-                <CheckCircle2 className="h-4 w-4" />
-                {isTrial ? "Ver planos" : "Gerenciar assinatura"}
-              </Link>
-            </Button>
+            <ManageBillingButton status={billingState?.effective_status} />
           </div>
         </CardContent>
       </Card>
@@ -181,10 +273,7 @@ export function BillingTab({ tenant, settings }: Props) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Regime tributário</FormLabel>
-                    <Select
-                      value={field.value}
-                      onValueChange={field.onChange}
-                    >
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue />
@@ -200,7 +289,7 @@ export function BillingTab({ tenant, settings }: Props) {
                       </SelectContent>
                     </Select>
                     <FormDescription className="text-xs">
-                      Usado para calcular impostos nas notas fiscais.
+                      Usado para sugerir categorias e cálculos fiscais nos relatórios.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

@@ -10,21 +10,19 @@ import {
   Package,
   UserCog,
   Target,
-  FileText,
   Settings,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const items = [
-  { href: "/dashboard",          label: "Painel",            icon: LayoutDashboard },
-  { href: "/lancamentos",        label: "Lançamentos",       icon: ArrowLeftRight },
-  { href: "/clientes",           label: "Clientes",          icon: Users },
-  { href: "/fornecedores",       label: "Fornecedores",      icon: Truck },
-  { href: "/produtos",           label: "Produtos",          icon: Package },
-  { href: "/funcionarios",       label: "Funcionários",      icon: UserCog },
-  { href: "/metas-e-lembretes",  label: "Metas e lembretes", icon: Target },
-  { href: "/notas-fiscais",      label: "Notas fiscais",     icon: FileText },
-  { href: "/configuracoes",      label: "Configurações",     icon: Settings },
+  { href: "/dashboard", label: "Painel", icon: LayoutDashboard },
+  { href: "/lancamentos", label: "Lançamentos", icon: ArrowLeftRight },
+  { href: "/clientes", label: "Clientes", icon: Users },
+  { href: "/fornecedores", label: "Fornecedores", icon: Truck },
+  { href: "/produtos", label: "Produtos", icon: Package },
+  { href: "/funcionarios", label: "Funcionários", icon: UserCog },
+  { href: "/metas-e-lembretes", label: "Metas e lembretes", icon: Target },
+  { href: "/configuracoes", label: "Configurações", icon: Settings },
 ]
 
 export function SidebarNav() {

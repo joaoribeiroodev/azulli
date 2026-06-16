@@ -7,7 +7,6 @@ import {
   getCategoriesUsed,
 } from "@/lib/financial/queries"
 import { getProductsLite } from "@/lib/products/queries"
-import { getTenantInvoiceContext } from "@/lib/invoices/queries"
 import { TransactionsHeader } from "./_components/transactions-header"
 import { TransactionsTable } from "./_components/transactions-table"
 import { TransactionsFilters } from "./_components/transactions-filters"
@@ -53,18 +52,21 @@ export default async function LancamentosPage({
 }
 
 async function HeaderWithParties() {
-  const [customers, suppliers, products, categories] = await Promise.all([
-    getCustomersLite(),
-    getSuppliersLite(),
-    getProductsLite(),
-    getCategoriesUsed(),
-  ])
+  const [customers, suppliers, products, incomeCategories, expenseCategories] =
+    await Promise.all([
+      getCustomersLite(),
+      getSuppliersLite(),
+      getProductsLite(),
+      getCategoriesUsed("income"),
+      getCategoriesUsed("expense"),
+    ])
   return (
     <TransactionsHeader
       customers={customers}
       suppliers={suppliers}
       products={products}
-      recentCategories={categories.map((c) => c.category)}
+      recentIncomeCategories={incomeCategories.map((c) => c.category)}
+      recentExpenseCategories={expenseCategories.map((c) => c.category)}
     />
   )
 }
@@ -89,22 +91,19 @@ function resolveDateRange(sp: SP): { from?: string; to?: string } {
 async function TableSection({ sp }: { sp: SP }) {
   const { from, to } = resolveDateRange(sp)
 
-  const [result, ctx] = await Promise.all([
-    listTransactions({
-      type: (sp.type as "income" | "expense" | "all") ?? "all",
-      status: (sp.status as "pending" | "paid" | "overdue" | "all") ?? "all",
-      category: sp.category ?? "all",
-      from,
-      to,
-      page: sp.page ? parseInt(sp.page, 10) : 1,
-      pageSize: 20,
-    }),
-    getTenantInvoiceContext(),
-  ])
+  const result = await listTransactions({
+    type: (sp.type as "income" | "expense" | "all") ?? "all",
+    status: (sp.status as "pending" | "paid" | "overdue" | "all") ?? "all",
+    category: sp.category ?? "all",
+    from,
+    to,
+    page: sp.page ? parseInt(sp.page, 10) : 1,
+    pageSize: 20,
+  })
 
   return (
     <div className="space-y-4">
-      <TransactionsTable rows={result.rows} allowsNFe={ctx.allowsNFe} />
+      <TransactionsTable rows={result.rows} />
       <TransactionsPagination
         page={result.page}
         totalPages={result.totalPages}

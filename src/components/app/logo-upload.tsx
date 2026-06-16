@@ -149,7 +149,7 @@ export function LogoUpload({ tenantId, tenantName, currentLogoUrl }: Props) {
         <div>
           <p className="text-sm font-medium">Logotipo da empresa</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            JPG, PNG ou WEBP até 2MB. Aparece nas notas fiscais.
+            JPG, PNG ou WEBP até 2MB. Aparece em documentos e comunicações.
           </p>
         </div>
 

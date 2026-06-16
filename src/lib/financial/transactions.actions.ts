@@ -278,25 +278,6 @@ export async function deleteTransactionAction(
 ): Promise<ActionResult> {
   const supabase = await createClient()
 
-  const { data: invoices, error: invErr } = await supabase
-    .from("invoices")
-    .select("id, status")
-    .eq("transaction_id", id)
-    .limit(1)
-
-  if (invErr) {
-    console.error("[transactions] invoice check failed:", invErr)
-    return { success: false, error: "Erro ao verificar notas vinculadas." }
-  }
-
-  if (invoices && invoices.length > 0) {
-    return {
-      success: false,
-      error:
-        "Este lançamento já tem nota fiscal emitida e não pode ser excluído. Cancele a nota antes.",
-    }
-  }
-
   // Os items são deletados em cascade pela FK ON DELETE CASCADE.
   // Estoque NÃO é revertido automaticamente (decisão consciente:
   // log permanece pra auditoria; revertê-lo viraria movimento contrário

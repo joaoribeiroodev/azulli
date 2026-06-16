@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 
 import { updateTenantAction } from "@/lib/settings/actions"
+import { formatWhatsAppBR } from "@/lib/utils/format"
 import { LogoUpload } from "@/components/app/logo-upload"
 
 const schema = z.object({
@@ -84,7 +85,7 @@ export function CompanyTab({ tenant }: Props) {
       name: tenant.name,
       document: tenant.document ?? "",
       email: tenant.email ?? "",
-      phone: tenant.phone ?? "",
+      phone: tenant.phone ? formatWhatsAppBR(tenant.phone) : "",
       inscricao_estadual: tenant.inscricao_estadual ?? "",
       inscricao_municipal: tenant.inscricao_municipal ?? "",
       cep: tenant.cep ?? "",
@@ -144,7 +145,7 @@ export function CompanyTab({ tenant }: Props) {
         <CardHeader>
           <CardTitle>Logotipo</CardTitle>
           <CardDescription>
-            Aparece nas notas fiscais e documentos gerados.
+            Aparece em documentos e comunicações enviadas aos seus clientes.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -161,7 +162,7 @@ export function CompanyTab({ tenant }: Props) {
         <CardHeader>
           <CardTitle>Dados da empresa</CardTitle>
           <CardDescription>
-            Identificação, contato, fiscal e endereço usados nas notas fiscais.
+            Identificação, contato e endereço da sua empresa.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -197,7 +198,7 @@ export function CompanyTab({ tenant }: Props) {
                         />
                       </FormControl>
                       <FormDescription className="text-xs">
-                        Necessário para emitir notas fiscais.
+                        Usado em relatórios e documentos da sua empresa.
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -237,9 +238,14 @@ export function CompanyTab({ tenant }: Props) {
                         <FormLabel>WhatsApp / Telefone</FormLabel>
                         <FormControl>
                           <Input
+                            type="tel"
+                            inputMode="numeric"
                             placeholder="(71) 99999-9999"
                             {...field}
                             value={field.value ?? ""}
+                            onChange={(e) =>
+                              field.onChange(formatWhatsAppBR(e.target.value))
+                            }
                           />
                         </FormControl>
                         <FormMessage />

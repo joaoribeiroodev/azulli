@@ -20,7 +20,7 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "Azulli — Sua empresa no azul, sua mente em paz.",
   description:
-    "Gestão financeira, cobranças automáticas e notas fiscais para MEIs e Simples Nacional.",
+    "Gestão financeira inteligente com automação e IA para MEIs e Simples Nacional.",
 }
 
 export default function RootLayout({

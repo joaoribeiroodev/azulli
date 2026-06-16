@@ -44,8 +44,6 @@ import {
   markAsPaidAction,
 } from "@/lib/financial/transactions.actions"
 
-import { IssueInvoiceButton } from "./issue-invoice-button"
-
 type Row = {
   id: string
   type: "income" | "expense"
@@ -56,12 +54,10 @@ type Row = {
   category: string | null
   customer_name: string | null
   supplier_name: string | null
-  has_invoice?: boolean
 }
 
 type Props = {
   rows: Row[]
-  allowsNFe?: boolean
 }
 
 const STATUS_STYLES: Record<
@@ -82,7 +78,7 @@ const STATUS_STYLES: Record<
   },
 }
 
-export function TransactionsTable({ rows, allowsNFe = false }: Props) {
+export function TransactionsTable({ rows }: Props) {
   const [confirmDelete, setConfirmDelete] = useState<Row | null>(null)
   const [isPending, startTransition] = useTransition()
 
@@ -139,9 +135,6 @@ export function TransactionsTable({ rows, allowsNFe = false }: Props) {
               <TableHead>Data</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Valor</TableHead>
-              <TableHead className="text-right hidden lg:table-cell">
-                Nota
-              </TableHead>
               <TableHead className="w-12"></TableHead>
             </TableRow>
           </TableHeader>
@@ -215,17 +208,6 @@ export function TransactionsTable({ rows, allowsNFe = false }: Props) {
                   >
                     {isIncome ? "+" : "-"} {formatBRL(row.amount)}
                   </TableCell>
-                  <TableCell className="text-right hidden lg:table-cell">
-                    {isIncome && (
-                      <IssueInvoiceButton
-                        transactionId={row.id}
-                        transactionStatus={row.status}
-                        transactionType={row.type}
-                        allowsNFe={allowsNFe}
-                        hasExistingInvoice={row.has_invoice ?? false}
-                      />
-                    )}
-                  </TableCell>
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -271,8 +253,7 @@ export function TransactionsTable({ rows, allowsNFe = false }: Props) {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir lançamento?</AlertDialogTitle>
             <AlertDialogDescription>
-              Essa ação não pode ser desfeita. Se houver nota fiscal vinculada,
-              a exclusão será bloqueada.
+              Essa ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

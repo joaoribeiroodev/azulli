@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/tabs"
 
 import { getSettingsData } from "@/lib/settings/queries"
+import { getBillingStateLight } from "@/lib/billing/queries"
 import { AccountTab } from "./_components/account-tab"
 import { CompanyTab } from "./_components/company-tab"
 import { BillingTab } from "./_components/billing-tab"
@@ -19,7 +20,10 @@ export default async function ConfiguracoesPage({
 }: {
   searchParams: Promise<{ tab?: string }>
 }) {
-  const data = await getSettingsData()
+  const [data, billingState] = await Promise.all([
+    getSettingsData(),
+    getBillingStateLight(),
+  ])
   if (!data) redirect("/login")
 
   const sp = await searchParams
@@ -114,7 +118,7 @@ export default async function ConfiguracoesPage({
           </TabsContent>
 
           <TabsContent value="faturamento" className="block mt-0 space-y-4">
-            <BillingTab tenant={data.tenant} settings={data.settings} />
+            <BillingTab billingState={billingState} settings={data.settings} />
           </TabsContent>
         </div>
       </Tabs>

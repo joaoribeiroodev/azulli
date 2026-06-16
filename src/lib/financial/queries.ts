@@ -456,7 +456,6 @@ export type PaginatedTransactionRow = RecentTransaction & {
   raw_status: "pending" | "paid"
   customer_id: string | null
   supplier_id: string | null
-  has_invoice: boolean
 }
 
 export type PaginatedTransactions = {
@@ -465,19 +464,6 @@ export type PaginatedTransactions = {
   page: number
   pageSize: number
   totalPages: number
-}
-
-async function buildInvoiceMap(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  txIds: string[]
-): Promise<Set<string>> {
-  if (txIds.length === 0) return new Set()
-  const { data: invs } = await supabase
-    .from("invoices")
-    .select("transaction_id")
-    .in("transaction_id", txIds)
-    .in("status", ["processing", "authorized"])
-  return new Set((invs ?? []).map((i) => i.transaction_id))
 }
 
 async function hydrateParties(
@@ -556,8 +542,6 @@ export async function listTransactions(
 
   const rowsRaw = data ?? []
   const { customerMap, supplierMap } = await hydrateParties(supabase, rowsRaw)
-  const txIds = rowsRaw.map((r) => r.id)
-  const invoiceMap = await buildInvoiceMap(supabase, txIds)
 
   const rows: PaginatedTransactionRow[] = rowsRaw.map((r) => ({
     id: r.id,
@@ -577,7 +561,6 @@ export async function listTransactions(
     supplier_name: r.supplier_id
       ? supplierMap.get(r.supplier_id) ?? null
       : null,
-    has_invoice: invoiceMap.has(r.id),
   }))
 
   const total = count ?? 0
@@ -772,8 +755,6 @@ async function listTransactionsByParty(
   }
 
   const rowsRaw = data ?? []
-  const txIds = rowsRaw.map((r) => r.id)
-  const invoiceMap = await buildInvoiceMap(supabase, txIds)
 
   const rows: PaginatedTransactionRow[] = rowsRaw.map((r) => ({
     id: r.id,
@@ -789,7 +770,6 @@ async function listTransactionsByParty(
     customer_name: null,
     supplier_id: r.supplier_id,
     supplier_name: null,
-    has_invoice: invoiceMap.has(r.id),
   }))
 
   const total = count ?? 0

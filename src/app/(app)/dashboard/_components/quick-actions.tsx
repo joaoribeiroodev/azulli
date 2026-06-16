@@ -12,14 +12,16 @@ type Props = {
   customers: Party[]
   suppliers: Party[]
   products?: ProductLite[]
-  recentCategories?: string[]
+  recentIncomeCategories?: string[]
+  recentExpenseCategories?: string[]
 }
 
 export function QuickActions({
   customers,
   suppliers,
   products = [],
-  recentCategories = [],
+  recentIncomeCategories = [],
+  recentExpenseCategories = [],
 }: Props) {
   const [open, setOpen] = useState<"income" | "expense" | null>(null)
 
@@ -48,7 +50,9 @@ export function QuickActions({
         customers={customers}
         suppliers={suppliers}
         products={products}
-        recentCategories={recentCategories}
+        recentCategories={
+          open === "income" ? recentIncomeCategories : recentExpenseCategories
+        }
       />
     </div>
   )

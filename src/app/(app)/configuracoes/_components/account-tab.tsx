@@ -122,9 +122,14 @@ export function AccountTab({ user }: Props) {
                     <FormLabel>WhatsApp</FormLabel>
                     <FormControl>
                       <Input
+                        type="tel"
+                        inputMode="numeric"
                         placeholder="(71) 99999-9999"
                         {...field}
                         value={field.value ?? ""}
+                        onChange={(e) =>
+                          field.onChange(formatWhatsAppBR(e.target.value))
+                        }
                       />
                     </FormControl>
                     <FormDescription className="text-xs">

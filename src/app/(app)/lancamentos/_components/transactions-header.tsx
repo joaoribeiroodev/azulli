@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, ArrowDownRight } from "lucide-react"
+import Link from "next/link"
+import { Plus, ArrowDownRight, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { TransactionDialog } from "@/components/app/transaction-dialog"
 import { ExportButton } from "./export-button"
@@ -39,6 +40,12 @@ export function TransactionsHeader({
 
       <div className="flex gap-2 flex-wrap">
         <ExportButton />
+        <Button variant="outline" asChild className="gap-2">
+          <Link href="/lancamentos/importar">
+            <Upload className="h-4 w-4" />
+            Importar OFX
+          </Link>
+        </Button>
         <Button
           variant="outline"
           onClick={() => setOpen("expense")}

@@ -29,8 +29,9 @@ export const PLANS: Record<"pro" | "enterprise", Plan> = {
       "Controle de estoque",
       "Metas e lembretes",
       "Exportação Excel",
-      "Importação automática de extrato bancário (em breve)",
-      "Detector de despesas recorrentes (em breve)",
+      "Importação automática de extrato bancário (OFX)",
+      "Detector de despesas recorrentes",
+      "Categorização automática com IA",
       "Suporte por e-mail",
     ],
     limits: {

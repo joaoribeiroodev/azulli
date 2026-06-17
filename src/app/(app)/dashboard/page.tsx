@@ -26,6 +26,7 @@ import { RecentTransactionsList } from "./_components/recent-transactions"
 import { QuickActions } from "./_components/quick-actions"
 import { CompleteCompanyBanner } from "./_components/complete-company-banner"
 import { TopOfMonthCards } from "./_components/top-of-month"
+import { RecurringExpensesCard } from "./_components/recurring-expenses-card"
 import { ExpensesByCategoryCard } from "@/components/app/expenses-by-category-card"
 
 export const metadata = { title: "Dashboard — Azulli" }
@@ -58,6 +59,10 @@ export default async function DashboardPage() {
           <ExpensesByCategoryWrapper />
         </Suspense>
       </div>
+
+      <Suspense fallback={<Skeleton className="h-80" />}>
+        <RecurringExpensesCard />
+      </Suspense>
 
       <Suspense fallback={<Skeleton className="h-80" />}>
         <RecentTransactionsWrapper />

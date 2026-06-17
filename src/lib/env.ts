@@ -7,6 +7,7 @@ const envSchema = z.object({
   ASAAS_API_KEY: z.string().optional(),
   ASAAS_BASE_URL: z.string().url().optional(),
   ASAAS_WEBHOOK_TOKEN: z.string().optional(),
+  GOOGLE_GENERATIVE_AI_API_KEY: z.string().optional(),
 })
 
 const parsed = envSchema.safeParse({
@@ -16,6 +17,7 @@ const parsed = envSchema.safeParse({
   ASAAS_API_KEY: process.env.ASAAS_API_KEY,
   ASAAS_BASE_URL: process.env.ASAAS_BASE_URL,
   ASAAS_WEBHOOK_TOKEN: process.env.ASAAS_WEBHOOK_TOKEN,
+  GOOGLE_GENERATIVE_AI_API_KEY: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
 })
 
 if (!parsed.success) {

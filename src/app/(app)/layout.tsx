@@ -5,6 +5,7 @@ import { SidebarNav } from "@/components/app/sidebar-nav"
 import { UserMenu } from "@/components/app/user-menu"
 import { MobileNav } from "@/components/app/mobile-nav"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { RegisterServiceWorker } from "@/components/pwa/register-sw"
 
 import { getCurrentMembership } from "@/lib/team/queries"
 
@@ -95,6 +96,8 @@ export default async function AppLayout({
       </aside>
 
       <main className="flex-1 overflow-y-auto">{children}</main>
+
+      <RegisterServiceWorker />
     </div>
   )
 }

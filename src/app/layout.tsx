@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Inter, Poppins } from "next/font/google"
 import { Toaster } from "@/components/ui/sonner"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -18,6 +18,10 @@ const poppins = Poppins({
   display: "swap",
 })
 
+export const viewport: Viewport = {
+  themeColor: "#050a30",
+}
+
 export const metadata: Metadata = {
   title: "Azulli — Sua empresa no azul, sua mente em paz.",
   description:
@@ -25,6 +29,12 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_APP_URL ?? "https://use.azulli.app.br"
   ),
+  applicationName: "Azulli",
+  appleWebApp: {
+    capable: true,
+    title: "Azulli",
+    statusBarStyle: "black-translucent",
+  },
   openGraph: {
     title: "Azulli — Sua empresa no azul",
     description:

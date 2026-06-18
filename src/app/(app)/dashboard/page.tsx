@@ -28,9 +28,11 @@ import { CompleteCompanyBanner } from "./_components/complete-company-banner"
 import { TopOfMonthCards } from "./_components/top-of-month"
 import { RecurringExpensesCard } from "./_components/recurring-expenses-card"
 import { ExpensesByCategoryCard } from "@/components/app/expenses-by-category-card"
-import { ForecastGateSection } from "./_components/forecast-gate-section"
+import {
+  ForecastNotifications,
+  ForecastChartSection,
+} from "./_components/forecast-gate-section"
 import { TrialEndingBanner } from "./_components/trial-ending-banner"
-import { HumanInsightCard } from "./_components/human-insight-card"
 import { DashboardTour } from "./_components/dashboard-tour"
 import { DashboardTipCard } from "./_components/dashboard-tip-card"
 
@@ -39,17 +41,23 @@ export const metadata = { title: "Dashboard — Azulli" }
 export default async function DashboardPage() {
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-      <Suspense fallback={null}>
-        <CompleteCompanyBanner />
-      </Suspense>
-
-      <Suspense fallback={null}>
-        <TrialEndingBanner />
-      </Suspense>
-
       <Suspense fallback={<HeaderSkeleton />}>
         <HeaderWithParties />
       </Suspense>
+
+      <section className="space-y-3" aria-label="Notificações">
+        <Suspense fallback={null}>
+          <CompleteCompanyBanner />
+        </Suspense>
+
+        <Suspense fallback={null}>
+          <TrialEndingBanner />
+        </Suspense>
+
+        <ForecastNotifications />
+
+        <DashboardTipCard />
+      </section>
 
       <Suspense fallback={<CardsSkeleton />}>
         <SummaryCards />
@@ -57,6 +65,10 @@ export default async function DashboardPage() {
 
       <Suspense fallback={<Skeleton className="h-28" />}>
         <TopOfMonthCards />
+      </Suspense>
+
+      <Suspense fallback={<Skeleton className="h-80" />}>
+        <RecentTransactionsWrapper />
       </Suspense>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -69,21 +81,11 @@ export default async function DashboardPage() {
         </Suspense>
       </div>
 
-      <ForecastGateSection />
+      <ForecastChartSection />
 
       <Suspense fallback={<Skeleton className="h-80" />}>
         <RecurringExpensesCard />
       </Suspense>
-
-      <Suspense fallback={<Skeleton className="h-80" />}>
-        <RecentTransactionsWrapper />
-      </Suspense>
-
-      <Suspense fallback={<Skeleton className="h-16" />}>
-        <HumanInsightCard />
-      </Suspense>
-
-      <DashboardTipCard />
 
       <DashboardTour />
     </div>

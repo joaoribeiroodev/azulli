@@ -77,7 +77,7 @@ export default async function ConfiguracoesPage({
           <TabsList
             className={`
               !grid !w-full !h-auto
-              ${membership?.role === "owner" ? "!grid-cols-5" : "!grid-cols-4"}
+              ${membership?.role === "owner" ? "!grid-cols-2 sm:!grid-cols-5" : "!grid-cols-2 sm:!grid-cols-4"}
               gap-1 p-1.5
               bg-muted/40 border
               sm:max-w-2xl

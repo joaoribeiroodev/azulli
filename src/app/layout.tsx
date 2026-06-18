@@ -20,6 +20,7 @@ const poppins = Poppins({
 
 export const viewport: Viewport = {
   themeColor: "#050a30",
+  viewportFit: "cover",
 }
 
 export const metadata: Metadata = {

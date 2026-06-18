@@ -26,18 +26,18 @@ export function QuickActions({
   const [open, setOpen] = useState<"income" | "expense" | null>(null)
 
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
       <Button
         variant="outline"
         onClick={() => setOpen("expense")}
-        className="gap-2"
+        className="gap-2 flex-1 sm:flex-none min-w-[8.5rem]"
       >
         <ArrowDownRight className="h-4 w-4" />
         Nova despesa
       </Button>
       <Button
         onClick={() => setOpen("income")}
-        className="bg-brand hover:bg-brand-hover gap-2"
+        className="bg-brand hover:bg-brand-hover gap-2 flex-1 sm:flex-none min-w-[8.5rem]"
       >
         <Plus className="h-4 w-4" />
         Nova receita

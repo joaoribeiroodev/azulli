@@ -44,7 +44,7 @@ export function SupplierHeader({ supplier }: { supplier: SupplierDetail }) {
   }
 
   return (
-    <header className="flex items-start justify-between gap-3">
+    <header className="flex items-start justify-between gap-3 flex-wrap">
       <div className="flex items-center gap-3 sm:gap-4 min-w-0">
         <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-full bg-brand-soft text-brand flex items-center justify-center shrink-0">
           <Truck className="h-5 w-5 sm:h-6 sm:w-6" />

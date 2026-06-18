@@ -351,7 +351,7 @@ export function CompanyTab({ tenant }: Props) {
                   </div>
 
                   {/* Logradouro + Número */}
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <FormField
                       control={form.control}
                       name="logradouro"
@@ -427,7 +427,7 @@ export function CompanyTab({ tenant }: Props) {
                   </div>
 
                   {/* Cidade + UF */}
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <FormField
                       control={form.control}
                       name="cidade"

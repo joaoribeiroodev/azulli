@@ -82,13 +82,16 @@ export function DashboardTour() {
 
       <div
         className={cn(
-          "fixed z-[62] w-[min(100%,20rem)] rounded-xl border bg-card shadow-lg p-4 space-y-3",
+          "fixed z-[62] w-[min(20rem,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] rounded-xl border bg-card shadow-lg p-4 space-y-3",
           rect
             ? {
                 top: Math.min(rect.bottom + 12, window.innerHeight - 220),
-                left: Math.min(rect.left, window.innerWidth - 336),
+                left: Math.min(
+                  Math.max(rect.left, 16),
+                  window.innerWidth - Math.min(320, window.innerWidth - 32)
+                ),
               }
-            : { bottom: 24, right: 24 }
+            : { bottom: 24, left: 16, right: 16 }
         )}
       >
         <div className="flex items-start justify-between gap-2">

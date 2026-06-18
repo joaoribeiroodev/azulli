@@ -42,14 +42,19 @@ export function MobileNav({
   const initials = getInitials(userName || userEmail)
 
   return (
-    <header className="lg:hidden sticky top-0 z-30 flex h-14 items-center justify-between gap-2 border-b bg-card px-4">
+    <header className="lg:hidden sticky top-0 z-30 flex h-14 items-center justify-between gap-2 border-b bg-card px-4 pt-[env(safe-area-inset-top,0px)]">
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" aria-label="Abrir menu">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Abrir menu"
+            data-tour="dashboard-sidebar"
+          >
             <Menu className="h-5 w-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-72 p-0 flex flex-col">
+        <SheetContent side="left" className="w-[min(100%,18rem)] p-0 flex flex-col">
           <SheetHeader className="px-5 py-4 border-b">
             <SheetTitle className="text-xl font-display font-bold text-brand-ink text-left">
               Azulli

@@ -47,7 +47,7 @@ export default async function FornecedorDetalhePage({
   const initialSeries = await getMonthlySeriesByParty(supplier.id, "supplier", 6)
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       <Link
         href="/fornecedores"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"

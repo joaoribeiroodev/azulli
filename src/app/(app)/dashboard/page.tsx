@@ -40,7 +40,7 @@ export const metadata = { title: "Dashboard — Azulli" }
 
 export default async function DashboardPage() {
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       <Suspense fallback={<HeaderSkeleton />}>
         <HeaderWithParties />
       </Suspense>
@@ -107,7 +107,7 @@ async function HeaderWithParties() {
       className="flex items-start justify-between gap-4 flex-wrap"
       data-tour="dashboard-quick-actions"
     >
-      <div>
+      <div className="min-w-0 flex-1">
         <h1 className="text-2xl lg:text-3xl font-display font-bold text-brand-ink">
           Dashboard
         </h1>

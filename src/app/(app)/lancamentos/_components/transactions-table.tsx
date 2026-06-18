@@ -203,7 +203,7 @@ export function TransactionsTable({
 
   return (
     <>
-      <div className="rounded-xl border bg-card overflow-hidden">
+      <div className="rounded-xl border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -214,7 +214,7 @@ export function TransactionsTable({
               </TableHead>
               <TableHead className="hidden xl:table-cell">Categoria</TableHead>
               <TableHead>Data</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead className="hidden sm:table-cell">Status</TableHead>
               <TableHead className="text-right">Valor</TableHead>
               {!readOnly && <TableHead className="w-12"></TableHead>}
             </TableRow>
@@ -291,7 +291,7 @@ export function TransactionsTable({
                   <TableCell className="text-muted-foreground whitespace-nowrap">
                     {formatDateBR(row.due_date)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <Badge variant="secondary" className={statusStyle.className}>
                       {statusStyle.label}
                     </Badge>

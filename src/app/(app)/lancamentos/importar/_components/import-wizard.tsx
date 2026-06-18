@@ -425,7 +425,7 @@ function ReviewStep({
                 {periodLabel}
               </p>
             </div>
-            <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center w-full sm:w-auto">
               <Stat label="No filtro" value={displayRows.length} />
               <Stat
                 label="Duplicados"
@@ -444,7 +444,7 @@ function ReviewStep({
             Filtrar por mês do extrato
           </Label>
           <Select value={monthFilter} onValueChange={setMonthFilter}>
-            <SelectTrigger className="w-[220px]">
+            <SelectTrigger className="w-full max-w-[220px]">
               <SelectValue placeholder="Todos os meses" />
             </SelectTrigger>
             <SelectContent>

@@ -7,7 +7,7 @@ export const metadata = { title: "Importar extrato OFX — Azulli" }
 
 export default function ImportarPage() {
   return (
-    <div className="p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-6">
       <div>
         <Button variant="ghost" size="sm" asChild className="-ml-2 mb-2">
           <Link href="/lancamentos">

@@ -250,9 +250,9 @@ export function ChatShell({
   const isEmpty = messages.length === 0 && !pending
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex flex-col min-h-0 flex-1">
       {/* Header */}
-      <div className="border-b px-6 py-4">
+      <div className="border-b px-4 sm:px-6 py-4">
         <h1 className="text-xl font-display font-bold text-brand-ink flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-brand" />
           Assistente IA
@@ -318,7 +318,7 @@ export function ChatShell({
       </div>
 
       {/* Input */}
-      <div className="border-t bg-background/95 backdrop-blur sticky bottom-0">
+      <div className="border-t bg-background/95 backdrop-blur sticky bottom-0 pb-[env(safe-area-inset-bottom,0px)]">
         <form
           onSubmit={handleSubmit}
           className="max-w-3xl mx-auto px-4 sm:px-6 py-4"

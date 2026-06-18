@@ -30,12 +30,12 @@ export function TransactionsPagination({
   if (total === 0) return null
 
   return (
-    <div className="flex items-center justify-between text-sm">
-      <p className="text-muted-foreground">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-sm">
+      <p className="text-muted-foreground text-center sm:text-left">
         Página {page} de {totalPages} · {total}{" "}
         {total === 1 ? "lançamento" : "lançamentos"}
       </p>
-      <div className="flex gap-2">
+      <div className="flex gap-2 justify-center sm:justify-end">
         <Button
           variant="outline"
           size="sm"

@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   description:
     "Gestão financeira inteligente para MEIs e pequenas empresas: lançamentos, OFX, previsão de caixa e assistente IA.",
   metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL ?? "https://useazulli.app.br"
+    process.env.NEXT_PUBLIC_APP_URL ?? "https://use.azulli.app.br"
   ),
   openGraph: {
     title: "Azulli — Sua empresa no azul",

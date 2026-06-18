@@ -43,7 +43,7 @@ export async function proxy(request: NextRequest) {
 
   const { response, user } = await updateSession(request)
 
-  // Domínio do app (useazulli.app.br): `/` não é landing — login ou painel
+  // Domínio do app (use.azulli.app.br): `/` não é landing — login ou painel
   if (pathname === "/" && isAppProductHost(request.nextUrl.hostname)) {
     const url = request.nextUrl.clone()
     if (user) {

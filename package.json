@@ -10,7 +10,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:weekly-insights": "node scripts/test-weekly-insights.mjs"
+    "test:weekly-insights": "node scripts/test-weekly-insights.mjs",
+    "test:asaas": "node scripts/test-asaas.mjs",
+    "generate:secret": "node scripts/generate-secret.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

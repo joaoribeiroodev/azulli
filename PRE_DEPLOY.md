@@ -41,7 +41,7 @@
 
 | Status | Item |
 |--------|------|
-| ⬜ | Vercel: repo + env vars de produção |
+| ⬜ | Vercel: repo + env vars de produção → ver **`docs/DEPLOY_PRODUCAO.md`** |
 | ⬜ | Domínios `useazulli.app.br` (app) + `azulli.app.br` (marketing) → CNAME Vercel |
 | ⬜ | Supabase: Site URL + Redirect URLs de auth |
 | ✅ | Migrations `00021` + `00022` aplicadas em prod |

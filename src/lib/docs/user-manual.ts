@@ -14,7 +14,7 @@ export const USER_MANUAL_META = {
   subtitle: "Guia completo para organizar finanças do seu negócio",
   version: "1.0",
   updatedAt: "2026-06",
-  siteUrl: "https://useazulli.app.br",
+  siteUrl: "https://use.azulli.app.br",
   supportEmail: "oi@azulli.app.br",
 }
 

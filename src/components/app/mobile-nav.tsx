@@ -42,20 +42,27 @@ export function MobileNav({
   const initials = getInitials(userName || userEmail)
 
   return (
-    <header className="lg:hidden sticky top-0 z-30 flex h-14 items-center justify-between gap-2 border-b bg-card px-4 pt-[env(safe-area-inset-top,0px)]">
+    <header
+      className="lg:hidden sticky top-0 z-30 w-full shrink-0 flex min-h-14 items-center justify-between gap-2 border-b bg-card px-4 py-3"
+      style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top, 0px))" }}
+    >
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
           <Button
             variant="ghost"
             size="icon"
+            className="shrink-0"
             aria-label="Abrir menu"
             data-tour="dashboard-sidebar"
           >
             <Menu className="h-5 w-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="left" className="w-[min(100%,18rem)] p-0 flex flex-col">
-          <SheetHeader className="px-5 py-4 border-b">
+        <SheetContent
+          side="left"
+          className="w-72 max-w-[85vw] p-0 flex flex-col"
+        >
+          <SheetHeader className="px-5 py-4 border-b shrink-0">
             <SheetTitle className="text-xl font-display font-bold text-brand-ink text-left">
               Azulli
             </SheetTitle>
@@ -67,14 +74,14 @@ export function MobileNav({
           </SheetHeader>
 
           <div
-            className="flex-1 overflow-y-auto py-4"
+            className="flex-1 overflow-y-auto py-4 min-h-0"
             onClick={() => setOpen(false)}
           >
             <SidebarNav tier={tenantTier} role={userRole} />
           </div>
 
           {tenantTier === "trial" && trialEndsAt && (
-            <div className="mx-3 mb-3 rounded-lg bg-brand-soft px-3 py-2.5">
+            <div className="mx-3 mb-3 rounded-lg bg-brand-soft px-3 py-2.5 shrink-0">
               <p className="text-xs font-medium text-brand-ink">
                 Trial ativo 🚀
               </p>
@@ -91,7 +98,7 @@ export function MobileNav({
             </div>
           )}
 
-          <div className="border-t p-2">
+          <div className="border-t p-2 shrink-0">
             <UserMenu
               name={userName}
               email={userEmail}
@@ -103,12 +110,12 @@ export function MobileNav({
 
       <Link
         href="/dashboard"
-        className="text-lg font-display font-bold text-brand-ink"
+        className="text-lg font-display font-bold text-brand-ink truncate min-w-0"
       >
         Azulli
       </Link>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 shrink-0">
         <ThemeToggle />
         <Avatar className="h-8 w-8 border border-border">
           {avatarUrl ? (

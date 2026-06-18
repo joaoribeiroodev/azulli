@@ -34,7 +34,7 @@ export default async function AppLayout({
   const userRole = membership?.role ?? "owner"
 
   return (
-    <div className="min-h-screen bg-surface lg:flex">
+    <div className="min-h-dvh bg-surface flex flex-col lg:flex-row">
       <MobileNav
         userName={userName}
         userEmail={userEmail}
@@ -46,7 +46,7 @@ export default async function AppLayout({
       />
 
       <aside
-        className="hidden lg:flex w-64 shrink-0 bg-card border-r flex-col"
+        className="hidden lg:flex w-64 shrink-0 bg-card border-r flex-col min-h-dvh"
         data-tour="dashboard-sidebar"
       >
         <div className="px-5 py-5 border-b flex items-center justify-between gap-2">
@@ -64,14 +64,14 @@ export default async function AppLayout({
           </p>
         )}
 
-        <div className="flex-1 overflow-y-auto py-4">
+        <div className="flex-1 overflow-y-auto py-4 min-h-0">
           <SidebarNav tier={tenant?.tier} role={userRole} />
         </div>
 
         {tenant?.tier === "trial" &&
           tenant.trial_ends_at &&
           userRole !== "accountant" && (
-          <div className="mx-3 mb-3 rounded-lg bg-brand-soft px-3 py-2.5">
+          <div className="mx-3 mb-3 rounded-lg bg-brand-soft px-3 py-2.5 shrink-0">
             <p className="text-xs font-medium text-brand-ink">Trial ativo 🚀</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               Expira em{" "}
@@ -86,7 +86,7 @@ export default async function AppLayout({
           </div>
         )}
 
-        <div className="border-t p-2">
+        <div className="border-t p-2 shrink-0">
           <UserMenu
             name={userName}
             email={userEmail}
@@ -95,7 +95,7 @@ export default async function AppLayout({
         </div>
       </aside>
 
-      <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden">{children}</main>
+      <main className="flex-1 min-w-0 w-full overflow-y-auto">{children}</main>
 
       <RegisterServiceWorker />
     </div>

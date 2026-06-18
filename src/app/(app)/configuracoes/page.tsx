@@ -73,11 +73,11 @@ export default async function ConfiguracoesPage({
       */}
       <Tabs defaultValue={initialTab} className="block w-full">
         {/* Wrapper do TabsList — bloco separado em cima */}
-        <div className="block mb-4 sm:mb-6">
+        <div className="block mb-4 sm:mb-6 overflow-x-auto -mx-1 px-1">
           <TabsList
             className={`
-              !grid !w-full !h-auto
-              ${membership?.role === "owner" ? "!grid-cols-2 sm:!grid-cols-5" : "!grid-cols-2 sm:!grid-cols-4"}
+              !grid !w-full !h-auto !min-w-max
+              ${membership?.role === "owner" ? "!grid-cols-5" : "!grid-cols-4"}
               gap-1 p-1.5
               bg-muted/40 border
               sm:max-w-2xl

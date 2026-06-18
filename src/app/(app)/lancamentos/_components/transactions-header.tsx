@@ -28,8 +28,8 @@ export function TransactionsHeader({
   const [open, setOpen] = useState<"income" | "expense" | null>(null)
 
   return (
-    <header className="flex items-start justify-between gap-4 flex-wrap">
-      <div>
+    <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0">
         <h1 className="text-2xl lg:text-3xl font-display font-bold text-brand-ink">
           Lançamentos
         </h1>
@@ -38,7 +38,7 @@ export function TransactionsHeader({
         </p>
       </div>
 
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex flex-wrap gap-2 w-full sm:w-auto sm:justify-end">
         <ExportButton />
         <Button variant="outline" asChild className="gap-2">
           <Link href="/lancamentos/importar">

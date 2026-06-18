@@ -104,10 +104,10 @@ async function HeaderWithParties() {
 
   return (
     <header
-      className="flex items-start justify-between gap-4 flex-wrap"
+      className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
       data-tour="dashboard-quick-actions"
     >
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0">
         <h1 className="text-2xl lg:text-3xl font-display font-bold text-brand-ink">
           Dashboard
         </h1>

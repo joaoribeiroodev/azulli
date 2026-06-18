@@ -47,6 +47,14 @@ export default async function DashboardPage() {
         <TrialEndingBanner />
       </Suspense>
 
+      <ForecastGateSection />
+
+      <DashboardTipCard />
+
+      <Suspense fallback={<Skeleton className="h-16" />}>
+        <HumanInsightCard />
+      </Suspense>
+
       <Suspense fallback={<HeaderSkeleton />}>
         <HeaderWithParties />
       </Suspense>
@@ -69,8 +77,6 @@ export default async function DashboardPage() {
         </Suspense>
       </div>
 
-      <ForecastGateSection />
-
       <Suspense fallback={<Skeleton className="h-80" />}>
         <RecurringExpensesCard />
       </Suspense>
@@ -78,12 +84,6 @@ export default async function DashboardPage() {
       <Suspense fallback={<Skeleton className="h-80" />}>
         <RecentTransactionsWrapper />
       </Suspense>
-
-      <Suspense fallback={<Skeleton className="h-16" />}>
-        <HumanInsightCard />
-      </Suspense>
-
-      <DashboardTipCard />
 
       <DashboardTour />
     </div>

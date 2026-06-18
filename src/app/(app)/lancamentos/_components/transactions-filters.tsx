@@ -80,8 +80,7 @@ export function TransactionsFilters({ categories = [] }: Props) {
 
   return (
     <section className="rounded-xl border bg-card p-3 sm:p-4 space-y-3">
-      {/* Mobile-first: 2 cols → 3 cols sm → 6 cols lg */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 [&>div]:min-w-0">
         <div className="space-y-1.5">
           <Label className="text-xs">Tipo</Label>
           <Select
@@ -163,26 +162,28 @@ export function TransactionsFilters({ categories = [] }: Props) {
           </Select>
         </div>
 
-        <div className="space-y-1.5">
-          <Label className="text-xs">De</Label>
-          <Input
-            type="date"
-            value={from}
-            onChange={(e) => update({ from: e.target.value })}
-            disabled={isPending || month !== "all"}
-            className="w-full"
-          />
-        </div>
+        <div className="col-span-2 sm:col-span-3 lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 min-w-0">
+          <div className="space-y-1.5 min-w-0">
+            <Label className="text-xs">De</Label>
+            <Input
+              type="date"
+              value={from}
+              onChange={(e) => update({ from: e.target.value })}
+              disabled={isPending || month !== "all"}
+              className="w-full min-w-0 max-w-full"
+            />
+          </div>
 
-        <div className="space-y-1.5">
-          <Label className="text-xs">Até</Label>
-          <Input
-            type="date"
-            value={to}
-            onChange={(e) => update({ to: e.target.value })}
-            disabled={isPending || month !== "all"}
-            className="w-full"
-          />
+          <div className="space-y-1.5 min-w-0">
+            <Label className="text-xs">Até</Label>
+            <Input
+              type="date"
+              value={to}
+              onChange={(e) => update({ to: e.target.value })}
+              disabled={isPending || month !== "all"}
+              className="w-full min-w-0 max-w-full"
+            />
+          </div>
         </div>
       </div>
 

@@ -154,6 +154,15 @@
   html {
     overflow-x: clip;
   }
+  /* iOS: inputs de data não estouram em grids estreitos */
+  input[type="date"] {
+    max-width: 100%;
+    min-width: 0;
+  }
+  input[type="date"]::-webkit-date-and-time-value {
+    min-width: 0;
+    text-align: left;
+  }
   h1, h2, h3, h4 {
     @apply font-display tracking-tight text-brand-ink;
   }

@@ -151,6 +151,7 @@ export async function createTransactionAction(
   revalidatePath("/lancamentos")
   revalidatePath("/clientes")
   revalidatePath("/fornecedores")
+  revalidatePath("/funcionarios")
   revalidatePath("/produtos")
   return { success: true, data: { id: tx.id } }
 }

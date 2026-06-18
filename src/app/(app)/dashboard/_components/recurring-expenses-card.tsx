@@ -52,6 +52,7 @@ export async function RecurringExpensesCard() {
 
   const top = recurring.slice(0, TOP_N)
   const totalMonthly = recurring.reduce((sum, r) => sum + r.monthlyAmount, 0)
+  const staleCount = recurring.filter((r) => r.possiblyCanceled).length
   const moreCount = recurring.length - top.length
 
   return (
@@ -71,6 +72,14 @@ export async function RecurringExpensesCard() {
                 {formatBRL(totalMonthly)}
               </strong>
               /mês
+              {staleCount > 0 && (
+                <>
+                  {" · "}
+                  <span className="text-warning">
+                    {staleCount} possível{staleCount === 1 ? "" : "s"} corte
+                  </span>
+                </>
+              )}
             </CardDescription>
           </div>
           <Badge variant="secondary" className="bg-brand-soft text-brand">
@@ -99,6 +108,14 @@ export async function RecurringExpensesCard() {
                     className="bg-muted text-foreground hover:bg-muted font-normal text-[10px] py-0"
                   >
                     {r.category}
+                  </Badge>
+                )}
+                {r.possiblyCanceled && (
+                  <Badge
+                    variant="outline"
+                    className="text-warning border-warning/40 font-normal text-[10px] py-0"
+                  >
+                    Possível corte
                   </Badge>
                 )}
               </div>

@@ -88,22 +88,55 @@ function resolveDateRange(sp: SP): { from?: string; to?: string } {
   return { from: sp.from || undefined, to: sp.to || undefined }
 }
 
+function hasActiveFilters(sp: SP): boolean {
+  return (
+    (sp.type && sp.type !== "all") ||
+    (sp.status && sp.status !== "all") ||
+    (sp.category && sp.category !== "all") ||
+    Boolean(sp.month) ||
+    Boolean(sp.from) ||
+    Boolean(sp.to)
+  )
+}
+
 async function TableSection({ sp }: { sp: SP }) {
   const { from, to } = resolveDateRange(sp)
 
-  const result = await listTransactions({
-    type: (sp.type as "income" | "expense" | "all") ?? "all",
-    status: (sp.status as "pending" | "paid" | "overdue" | "all") ?? "all",
-    category: sp.category ?? "all",
-    from,
-    to,
-    page: sp.page ? parseInt(sp.page, 10) : 1,
-    pageSize: 20,
-  })
+  const [
+    result,
+    customers,
+    suppliers,
+    products,
+    incomeCategories,
+    expenseCategories,
+  ] = await Promise.all([
+    listTransactions({
+      type: (sp.type as "income" | "expense" | "all") ?? "all",
+      status: (sp.status as "pending" | "paid" | "overdue" | "all") ?? "all",
+      category: sp.category ?? "all",
+      from,
+      to,
+      page: sp.page ? parseInt(sp.page, 10) : 1,
+      pageSize: 20,
+    }),
+    getCustomersLite(),
+    getSuppliersLite(),
+    getProductsLite(),
+    getCategoriesUsed("income"),
+    getCategoriesUsed("expense"),
+  ])
 
   return (
     <div className="space-y-4">
-      <TransactionsTable rows={result.rows} />
+      <TransactionsTable
+        rows={result.rows}
+        hasActiveFilters={hasActiveFilters(sp)}
+        customers={customers}
+        suppliers={suppliers}
+        products={products}
+        recentIncomeCategories={incomeCategories.map((c) => c.category)}
+        recentExpenseCategories={expenseCategories.map((c) => c.category)}
+      />
       <TransactionsPagination
         page={result.page}
         totalPages={result.totalPages}

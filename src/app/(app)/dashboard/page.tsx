@@ -28,6 +28,11 @@ import { CompleteCompanyBanner } from "./_components/complete-company-banner"
 import { TopOfMonthCards } from "./_components/top-of-month"
 import { RecurringExpensesCard } from "./_components/recurring-expenses-card"
 import { ExpensesByCategoryCard } from "@/components/app/expenses-by-category-card"
+import { ForecastGateSection } from "./_components/forecast-gate-section"
+import { TrialEndingBanner } from "./_components/trial-ending-banner"
+import { HumanInsightCard } from "./_components/human-insight-card"
+import { DashboardTour } from "./_components/dashboard-tour"
+import { DashboardTipCard } from "./_components/dashboard-tip-card"
 
 export const metadata = { title: "Dashboard — Azulli" }
 
@@ -36,6 +41,18 @@ export default async function DashboardPage() {
     <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       <Suspense fallback={null}>
         <CompleteCompanyBanner />
+      </Suspense>
+
+      <Suspense fallback={null}>
+        <TrialEndingBanner />
+      </Suspense>
+
+      <ForecastGateSection />
+
+      <DashboardTipCard />
+
+      <Suspense fallback={<Skeleton className="h-16" />}>
+        <HumanInsightCard />
       </Suspense>
 
       <Suspense fallback={<HeaderSkeleton />}>
@@ -67,6 +84,8 @@ export default async function DashboardPage() {
       <Suspense fallback={<Skeleton className="h-80" />}>
         <RecentTransactionsWrapper />
       </Suspense>
+
+      <DashboardTour />
     </div>
   )
 }
@@ -82,7 +101,10 @@ async function HeaderWithParties() {
     ])
 
   return (
-    <header className="flex items-start justify-between gap-4 flex-wrap">
+    <header
+      className="flex items-start justify-between gap-4 flex-wrap"
+      data-tour="dashboard-quick-actions"
+    >
       <div>
         <h1 className="text-2xl lg:text-3xl font-display font-bold text-brand-ink">
           Dashboard
@@ -105,7 +127,10 @@ async function HeaderWithParties() {
 async function SummaryCards() {
   const s = await getDashboardSummary()
   return (
-    <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <section
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+      data-tour="dashboard-kpis"
+    >
       <Card>
         <CardHeader className="pb-2">
           <CardDescription>Entradas do mês</CardDescription>
@@ -189,7 +214,7 @@ async function ExpensesByCategoryWrapper() {
 async function RecentTransactionsWrapper() {
   const transactions = await getRecentTransactions(6)
   return (
-    <Card>
+    <Card data-tour="dashboard-recent">
       <CardHeader>
         <CardTitle className="text-base">Movimentações recentes</CardTitle>
         <CardDescription>Últimos lançamentos</CardDescription>

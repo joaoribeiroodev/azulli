@@ -6,6 +6,8 @@ import { UserMenu } from "@/components/app/user-menu"
 import { MobileNav } from "@/components/app/mobile-nav"
 import { ThemeToggle } from "@/components/theme-toggle"
 
+import { getCurrentMembership } from "@/lib/team/queries"
+
 export default async function AppLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
@@ -27,6 +29,9 @@ export default async function AppLayout({
   const avatarUrl =
     (user.user_metadata?.avatar_url as string | undefined) ?? null
 
+  const membership = await getCurrentMembership()
+  const userRole = membership?.role ?? "owner"
+
   return (
     <div className="min-h-screen bg-surface lg:flex">
       <MobileNav
@@ -36,9 +41,13 @@ export default async function AppLayout({
         tenantName={tenant?.name}
         tenantTier={tenant?.tier}
         trialEndsAt={tenant?.trial_ends_at}
+        userRole={userRole}
       />
 
-      <aside className="hidden lg:flex w-64 shrink-0 bg-card border-r flex-col">
+      <aside
+        className="hidden lg:flex w-64 shrink-0 bg-card border-r flex-col"
+        data-tour="dashboard-sidebar"
+      >
         <div className="px-5 py-5 border-b flex items-center justify-between gap-2">
           <Link
             href="/dashboard"
@@ -55,10 +64,12 @@ export default async function AppLayout({
         )}
 
         <div className="flex-1 overflow-y-auto py-4">
-          <SidebarNav />
+          <SidebarNav tier={tenant?.tier} role={userRole} />
         </div>
 
-        {tenant?.tier === "trial" && tenant.trial_ends_at && (
+        {tenant?.tier === "trial" &&
+          tenant.trial_ends_at &&
+          userRole !== "accountant" && (
           <div className="mx-3 mb-3 rounded-lg bg-brand-soft px-3 py-2.5">
             <p className="text-xs font-medium text-brand-ink">Trial ativo 🚀</p>
             <p className="text-xs text-muted-foreground mt-0.5">

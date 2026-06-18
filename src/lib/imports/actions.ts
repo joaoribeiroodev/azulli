@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { createClient } from "@/lib/supabase/server"
+import { dateYMDToPaidAtBR } from "@/lib/utils/date"
 import { decodeOfxBuffer, parseOfx } from "@/lib/imports/ofx-parser"
 import { categorizeImportBatch } from "@/lib/imports/categorize"
 import type {
@@ -250,13 +251,12 @@ export async function confirmImportAction(
     }
   }
 
-  const nowIso = new Date().toISOString()
   const insertRows = rows.map((r) => ({
     tenant_id: batch.tenant_id,
     type: r.type,
     amount: r.amount,
     due_date: r.date,
-    paid_at: nowIso, // OFX traz só transações já realizadas
+    paid_at: dateYMDToPaidAtBR(r.date),
     description: r.description || null,
     category: r.category && r.category.length > 0 ? r.category : null,
     status: "paid" as const,

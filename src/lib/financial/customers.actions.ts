@@ -7,6 +7,7 @@ import {
   createCustomerSchema,
   type CreateCustomerInput,
 } from "@/lib/financial/schemas"
+import { checkPlanLimit } from "@/lib/billing/plan-limits"
 
 type ActionResult<T = undefined> =
   | { success: true; data?: T }
@@ -35,6 +36,9 @@ export async function createCustomerAction(
 
   const tenantId = await getCurrentTenantId()
   if (!tenantId) return { success: false, error: "Empresa não encontrada." }
+
+  const limit = await checkPlanLimit("customers")
+  if (!limit.allowed) return { success: false, error: limit.error }
 
   const supabase = await createClient()
   const { data, error } = await supabase

@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Settings, LogOut, User } from "lucide-react"
+import { Settings, User } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-import { signOutAction } from "@/lib/auth/actions"
+import { LogoutMenuItem } from "@/components/app/logout-menu-item"
 
 type Props = {
   name: string
@@ -77,17 +77,7 @@ export function UserMenu({ name, email, avatarUrl }: Props) {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <form action={signOutAction}>
-          <DropdownMenuItem asChild>
-            <button
-              type="submit"
-              className="w-full cursor-pointer text-destructive focus:text-destructive"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
-            </button>
-          </DropdownMenuItem>
-        </form>
+        <LogoutMenuItem />
       </DropdownMenuContent>
     </DropdownMenu>
   )

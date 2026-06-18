@@ -32,8 +32,8 @@ export async function CompleteCompanyBanner() {
             Complete os dados da sua empresa
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            CNPJ/CPF e regime tributário são necessários para emitir notas
-            fiscais e ativar todas as funcionalidades.
+            CNPJ/CPF e regime tributário ajudam em relatórios e na assinatura
+            do plano.
           </p>
         </div>
         <ChevronRight className="h-5 w-5 text-brand shrink-0 group-hover:translate-x-0.5 transition-transform" />

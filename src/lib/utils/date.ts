@@ -124,3 +124,12 @@ export function utcToLocalDateBR(utcISO: string): string {
     day: "2-digit",
   }).format(new Date(utcISO))
 }
+
+/**
+ * Converte YYYY-MM-DD (data do banco/OFX) em timestamptz para paid_at,
+ * usando meio-dia BR para evitar shift de dia nos gráficos.
+ */
+export function dateYMDToPaidAtBR(dateYMD: string): string {
+  const d = dateYMD.slice(0, 10)
+  return `${d}T12:00:00-03:00`
+}

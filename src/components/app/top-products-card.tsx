@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition, useEffect } from "react"
+import { useState, useTransition } from "react"
 import Link from "next/link"
 import { ChevronRight, Trophy, Loader2 } from "lucide-react"
 
@@ -16,6 +16,7 @@ import {
   ToggleGroupItem,
 } from "@/components/ui/toggle-group"
 import { formatBRL } from "@/lib/utils/currency"
+import { useUpdateOnChange } from "@/hooks/use-update-on-change"
 
 import { fetchTopProductsAction } from "@/lib/products/product-actions"
 import type { TopProduct } from "@/lib/products/queries"
@@ -28,18 +29,12 @@ export function TopProductsCard({ initial }: Props) {
   const [range, setRange] = useState<"month" | "last30d">("month")
   const [rows, setRows] = useState<TopProduct[]>(initial)
   const [isPending, startTransition] = useTransition()
-  const [firstRender, setFirstRender] = useState(true)
 
-  useEffect(() => {
-    if (firstRender) {
-      setFirstRender(false)
-      return
-    }
+  useUpdateOnChange(() => {
     startTransition(async () => {
       const data = await fetchTopProductsAction(range)
       setRows(data)
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range])
 
   const total = rows.reduce((sum, r) => sum + r.total, 0)

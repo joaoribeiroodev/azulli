@@ -30,6 +30,8 @@ import { Separator } from "@/components/ui/separator"
 import { updateUserProfileAction } from "@/lib/settings/actions"
 import { formatWhatsAppBR } from "@/lib/utils/format"
 import { AvatarUpload } from "@/components/app/avatar-upload"
+import { PrivacyDataCard } from "./privacy-data-card"
+import { ManualHelpCard } from "./manual-help-card"
 
 const schema = z.object({
   name: z.string().trim().min(2, "Nome muito curto").max(120),
@@ -46,9 +48,10 @@ type Props = {
     phone: string | null
     avatar_url: string | null
   }
+  hasActiveSubscription: boolean
 }
 
-export function AccountTab({ user }: Props) {
+export function AccountTab({ user, hasActiveSubscription }: Props) {
   const [isPending, startTransition] = useTransition()
 
   const form = useForm<FormInput>({
@@ -169,6 +172,13 @@ export function AccountTab({ user }: Props) {
           </Form>
         </CardContent>
       </Card>
+
+      <ManualHelpCard />
+
+      <PrivacyDataCard
+        userEmail={user.email}
+        hasActiveSubscription={hasActiveSubscription}
+      />
     </div>
   )
 }

@@ -9,6 +9,7 @@ import {
   Pencil,
   Trash2,
   ChevronRight,
+  Truck,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -40,11 +41,13 @@ import {
 
 import { deleteSupplierAction } from "@/lib/financial/suppliers.actions"
 import { formatBRL } from "@/lib/utils/currency"
+import { ListEmptyState } from "@/components/app/list-empty-state"
 import type { SupplierRowWithTotals } from "@/lib/financial/queries"
 import { SupplierDialog } from "./supplier-dialog"
 
 export function SuppliersTable({ rows }: { rows: SupplierRowWithTotals[] }) {
   const [editing, setEditing] = useState<SupplierRowWithTotals | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] =
     useState<SupplierRowWithTotals | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -65,14 +68,22 @@ export function SuppliersTable({ rows }: { rows: SupplierRowWithTotals[] }) {
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-xl border bg-card py-16 text-center">
-        <p className="text-sm text-muted-foreground">
-          Você ainda não tem fornecedores cadastrados.
-        </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          Cadastre o primeiro pra começar a registrar despesas.
-        </p>
-      </div>
+      <>
+        <ListEmptyState
+          icon={Truck}
+          title="Sem fornecedores cadastrados"
+          description="Cadastre fornecedores para registrar despesas e ver quanto você paga a cada um."
+          action={{
+            label: "Novo fornecedor",
+            onClick: () => setCreateOpen(true),
+          }}
+        />
+        <SupplierDialog
+          mode="create"
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+        />
+      </>
     )
   }
 

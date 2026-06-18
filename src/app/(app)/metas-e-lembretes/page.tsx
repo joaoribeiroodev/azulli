@@ -102,11 +102,9 @@ export default async function MetasELembretesPage({
 }
 
 async function GoalsSection() {
-  const [goals, goalsWithArchived] = await Promise.all([
-    listGoals({ includeArchived: false }),
-    listGoals({ includeArchived: true }),
-  ])
-  return <GoalsTab goals={goals} goalsWithArchived={goalsWithArchived} />
+  const allGoals = await listGoals({ includeArchived: true })
+  const goals = allGoals.filter((g) => !g.is_archived)
+  return <GoalsTab goals={goals} goalsWithArchived={allGoals} />
 }
 
 async function RemindersSection() {

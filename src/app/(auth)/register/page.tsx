@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/server"
+import { isOnboardingComplete } from "@/lib/onboarding/queries"
 import { RegisterForm } from "./register-form"
 
 export const metadata = {
@@ -15,12 +16,13 @@ export const metadata = {
 }
 
 export default async function RegisterPage() {
-  // Se já estiver autenticado, manda pro dashboard
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (user) redirect("/dashboard")
+  if (user) {
+    redirect((await isOnboardingComplete()) ? "/dashboard" : "/onboarding")
+  }
 
   return (
     <Card className="shadow-sm">

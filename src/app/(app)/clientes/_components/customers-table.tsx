@@ -9,6 +9,7 @@ import {
   Pencil,
   Trash2,
   ChevronRight,
+  Users,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -40,11 +41,13 @@ import {
 
 import { deleteCustomerAction } from "@/lib/financial/customers.actions"
 import { formatBRL } from "@/lib/utils/currency"
+import { ListEmptyState } from "@/components/app/list-empty-state"
 import type { CustomerRowWithTotals } from "@/lib/financial/queries"
 import { CustomerDialog } from "./customer-dialog"
 
 export function CustomersTable({ rows }: { rows: CustomerRowWithTotals[] }) {
   const [editing, setEditing] = useState<CustomerRowWithTotals | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] =
     useState<CustomerRowWithTotals | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -65,14 +68,22 @@ export function CustomersTable({ rows }: { rows: CustomerRowWithTotals[] }) {
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-xl border bg-card py-16 text-center">
-        <p className="text-sm text-muted-foreground">
-          Você ainda não tem clientes cadastrados.
-        </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          Cadastre o primeiro pra começar a vincular vendas.
-        </p>
-      </div>
+      <>
+        <ListEmptyState
+          icon={Users}
+          title="Sem clientes cadastrados"
+          description="Cadastre clientes para vincular vendas e acompanhar quem mais compra de você."
+          action={{
+            label: "Novo cliente",
+            onClick: () => setCreateOpen(true),
+          }}
+        />
+        <CustomerDialog
+          mode="create"
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+        />
+      </>
     )
   }
 

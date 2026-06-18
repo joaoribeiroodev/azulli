@@ -44,6 +44,7 @@ import {
 
 import { deleteProductAction } from "@/lib/products/actions"
 import { formatBRL } from "@/lib/utils/currency"
+import { ListEmptyState } from "@/components/app/list-empty-state"
 import type { ProductRowWithStats } from "@/lib/products/queries"
 
 import { ProductDialog } from "./product-dialog"
@@ -51,6 +52,7 @@ import { StockAdjustmentDialog } from "./stock-adjustment-dialog"
 
 export function ProductsTable({ rows }: { rows: ProductRowWithStats[] }) {
   const [editing, setEditing] = useState<ProductRowWithStats | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
   const [adjusting, setAdjusting] = useState<ProductRowWithStats | null>(null)
   const [confirmDelete, setConfirmDelete] =
     useState<ProductRowWithStats | null>(null)
@@ -72,14 +74,18 @@ export function ProductsTable({ rows }: { rows: ProductRowWithStats[] }) {
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-xl border bg-card py-16 text-center">
-        <p className="text-sm text-muted-foreground">
-          Nenhum produto ou serviço cadastrado.
-        </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          Comece cadastrando o primeiro pra registrar vendas.
-        </p>
-      </div>
+      <>
+        <ListEmptyState
+          icon={Package}
+          title="Sem produtos ou serviços"
+          description="Cadastre itens do seu catálogo para registrar vendas com estoque e preço."
+          action={{
+            label: "Novo item",
+            onClick: () => setCreateOpen(true),
+          }}
+        />
+        <ProductDialog mode="create" open={createOpen} onOpenChange={setCreateOpen} />
+      </>
     )
   }
 

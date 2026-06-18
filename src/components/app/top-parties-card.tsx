@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition, useEffect } from "react"
+import { useState, useTransition } from "react"
 import Link from "next/link"
 import { ChevronRight, Trophy, Loader2 } from "lucide-react"
 
@@ -16,6 +16,7 @@ import {
   ToggleGroupItem,
 } from "@/components/ui/toggle-group"
 import { formatBRL } from "@/lib/utils/currency"
+import { useUpdateOnChange } from "@/hooks/use-update-on-change"
 
 import {
   fetchTopCustomersAction,
@@ -49,13 +50,8 @@ export function TopPartiesCard({ kind, initial }: Props) {
   const [range, setRange] = useState<"month" | "last30d">("month")
   const [rows, setRows] = useState<TopPartyData[]>(initial)
   const [isPending, startTransition] = useTransition()
-  const [firstRender, setFirstRender] = useState(true)
 
-  useEffect(() => {
-    if (firstRender) {
-      setFirstRender(false)
-      return
-    }
+  useUpdateOnChange(() => {
     startTransition(async () => {
       const data =
         kind === "customer"
@@ -63,8 +59,7 @@ export function TopPartiesCard({ kind, initial }: Props) {
           : await fetchTopSuppliersAction(range)
       setRows(data)
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [range])
+  }, [range, kind])
 
   const meta = COPY[kind]
   const total = rows.reduce((sum, r) => sum + r.total, 0)

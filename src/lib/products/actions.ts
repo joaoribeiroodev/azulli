@@ -10,6 +10,7 @@ import {
   type UpdateProductInput,
   type StockAdjustmentInput,
 } from "@/lib/products/schemas"
+import { checkPlanLimit } from "@/lib/billing/plan-limits"
 
 type ActionResult<T = undefined> =
   | { success: true; data?: T }
@@ -53,6 +54,9 @@ export async function createProductAction(
 
   const tenantId = await getCurrentTenantId()
   if (!tenantId) return { success: false, error: "Empresa não encontrada." }
+
+  const limit = await checkPlanLimit("products")
+  if (!limit.allowed) return { success: false, error: limit.error }
 
   const supabase = await createClient()
   const d = parsed.data

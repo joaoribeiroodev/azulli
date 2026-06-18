@@ -58,6 +58,9 @@ type Props = {
   defaultCustomerId?: string | null
   defaultSupplierId?: string | null
   defaultProductId?: string | null
+  defaultDescription?: string
+  defaultCategory?: string | null
+  defaultAmount?: number | null
   recentCategories?: string[]
 }
 
@@ -78,6 +81,9 @@ export function TransactionDialog({
   defaultCustomerId = null,
   defaultSupplierId = null,
   defaultProductId = null,
+  defaultDescription = "",
+  defaultCategory = null,
+  defaultAmount = null,
   recentCategories = [],
 }: Props) {
   const [isPending, startTransition] = useTransition()
@@ -140,19 +146,20 @@ export function TransactionDialog({
 
   useEffect(() => {
     if (open) {
+      const amount = defaultAmount ?? 0
       form.reset({
         type,
-        amount: 0,
+        amount,
         due_date: new Date().toISOString().slice(0, 10),
-        description: "",
+        description: defaultDescription,
         customer_id: type === "income" ? defaultCustomerId : null,
         supplier_id: type === "expense" ? defaultSupplierId : null,
         product_id: defaultProductId,
         items: undefined,
-        category: null,
+        category: defaultCategory,
         status: "pending",
       })
-      setAmountDisplay("")
+      setAmountDisplay(amount > 0 ? formatToInput(amount) : "")
       setMultiItem(false)
     }
   }, [
@@ -161,6 +168,9 @@ export function TransactionDialog({
     defaultCustomerId,
     defaultSupplierId,
     defaultProductId,
+    defaultDescription,
+    defaultCategory,
+    defaultAmount,
     form,
   ])
 

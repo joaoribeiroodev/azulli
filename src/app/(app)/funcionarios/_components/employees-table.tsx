@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useMemo, useState, useTransition } from "react"
 import Link from "next/link"
 import {
   User,
@@ -9,6 +9,7 @@ import {
   Pencil,
   Trash2,
   ChevronRight,
+  Search,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -43,15 +44,33 @@ import {
 import { deleteEmployeeAction } from "@/lib/employees/actions"
 import { formatBRL } from "@/lib/utils/currency"
 import { formatDateBR } from "@/lib/utils/date"
+import { ListEmptyState } from "@/components/app/list-empty-state"
+import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils"
 import type { EmployeeRow } from "@/lib/employees/queries"
-
 import { EmployeeDialog } from "./employee-dialog"
 
 export function EmployeesTable({ rows }: { rows: EmployeeRow[] }) {
   const [editing, setEditing] = useState<EmployeeRow | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<EmployeeRow | null>(null)
+  const [search, setSearch] = useState("")
+  const [filter, setFilter] = useState<"all" | "active" | "inactive">("all")
   const [isPending, startTransition] = useTransition()
 
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return rows.filter((row) => {
+      if (filter === "active" && !row.is_active) return false
+      if (filter === "inactive" && row.is_active) return false
+      if (!q) return true
+      return (
+        row.name.toLowerCase().includes(q) ||
+        (row.role?.toLowerCase().includes(q) ?? false) ||
+        (row.email?.toLowerCase().includes(q) ?? false)
+      )
+    })
+  }, [rows, search, filter])
   function handleDelete() {
     if (!confirmDelete) return
     const row = confirmDelete
@@ -68,20 +87,66 @@ export function EmployeesTable({ rows }: { rows: EmployeeRow[] }) {
 
   if (rows.length === 0) {
     return (
-      <div className="rounded-xl border bg-card py-16 text-center">
-        <Users className="h-10 w-10 text-muted-foreground/40 mx-auto mb-2" />
-        <p className="text-sm text-muted-foreground">
-          Nenhum funcionário cadastrado.
-        </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          Comece adicionando o primeiro membro da equipe.
-        </p>
-      </div>
+      <>
+        <ListEmptyState
+          icon={Users}
+          title="Sem funcionários cadastrados"
+          description="Adicione sua equipe para estimar a folha de pagamento e manter contatos."
+          action={{
+            label: "Novo funcionário",
+            onClick: () => setCreateOpen(true),
+          }}
+        />
+        <EmployeeDialog
+          mode="create"
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+        />
+      </>
     )
   }
 
   return (
     <>
+      <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <div className="relative max-w-sm w-full">
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+            aria-hidden
+          />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por nome, cargo ou e-mail…"
+            className="pl-9"
+            aria-label="Buscar funcionários"
+          />
+        </div>
+        <div className="flex gap-1 rounded-lg border bg-muted/30 p-1">
+          {(["all", "active", "inactive"] as const).map((key) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setFilter(key)}
+              className={cn(
+                "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                filter === key
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {key === "all" ? "Todos" : key === "active" ? "Ativos" : "Inativos"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="rounded-xl border bg-muted/20 p-8 text-center text-sm text-muted-foreground">
+          Nenhum funcionário encontrado com esse filtro.
+        </div>
+      ) : (
       <div className="rounded-xl border bg-card overflow-hidden">
         <Table>
           <TableHeader>
@@ -96,7 +161,7 @@ export function EmployeesTable({ rows }: { rows: EmployeeRow[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.map((row) => (
+            {filtered.map((row) => (
               <TableRow
                 key={row.id}
                 className={!row.is_active ? "opacity-60" : "group"}
@@ -172,6 +237,8 @@ export function EmployeesTable({ rows }: { rows: EmployeeRow[] }) {
             ))}
           </TableBody>
         </Table>
+      </div>
+      )}
       </div>
 
       {editing && (

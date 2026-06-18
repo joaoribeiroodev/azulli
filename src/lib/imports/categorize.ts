@@ -9,7 +9,7 @@
  *   5. Se IA off, falha ou demora demais → retorna mapa vazio (graceful).
  */
 
-import { GEMINI_FLASH_MODEL, getGeminiClient } from "@/lib/ai/gemini"
+import { GEMINI_FLASH_MODEL, getGeminiClientForOfx } from "@/lib/ai/gemini"
 import { CATEGORY_SUGGESTIONS } from "@/lib/financial/schemas"
 import { createClient } from "@/lib/supabase/server"
 import { SchemaType } from "@google/generative-ai"
@@ -142,7 +142,7 @@ export async function categorizeImportBatch(
   const result = new Map<string, string>()
   if (rows.length === 0) return result
 
-  const client = getGeminiClient()
+  const client = getGeminiClientForOfx()
   if (!client) return result
 
   let history: Awaited<ReturnType<typeof loadHistory>>

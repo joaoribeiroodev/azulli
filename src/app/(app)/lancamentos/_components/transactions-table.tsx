@@ -7,6 +7,7 @@ import {
   MoreHorizontal,
   Check,
   Trash2,
+  Receipt,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -39,6 +40,13 @@ import {
 
 import { formatBRL } from "@/lib/utils/currency"
 import { formatDateBR } from "@/lib/utils/date"
+import { ListEmptyState } from "@/components/app/list-empty-state"
+import { TransactionDialog } from "@/components/app/transaction-dialog"
+import {
+  TransactionDetailDialog,
+  type TransactionDetailData,
+} from "@/components/app/transaction-detail-dialog"
+import type { ProductLite } from "@/lib/products/queries"
 import {
   deleteTransactionAction,
   markAsPaidAction,
@@ -50,15 +58,28 @@ type Row = {
   amount: number
   status: "pending" | "paid" | "overdue"
   due_date: string
+  paid_at?: string | null
   description: string | null
   category: string | null
   customer_name: string | null
   supplier_name: string | null
+  source?: string | null
 }
+
+type Party = { id: string; name: string }
 
 type Props = {
   rows: Row[]
+  hasActiveFilters?: boolean
+  customers?: Party[]
+  suppliers?: Party[]
+  products?: ProductLite[]
+  recentIncomeCategories?: string[]
+  recentExpenseCategories?: string[]
+  readOnly?: boolean
 }
+
+const DESC_PREVIEW_LEN = 48
 
 const STATUS_STYLES: Record<
   Row["status"],
@@ -78,9 +99,39 @@ const STATUS_STYLES: Record<
   },
 }
 
-export function TransactionsTable({ rows }: Props) {
+export function TransactionsTable({
+  rows,
+  hasActiveFilters = false,
+  customers = [],
+  suppliers = [],
+  products = [],
+  recentIncomeCategories = [],
+  recentExpenseCategories = [],
+  readOnly = false,
+}: Props) {
   const [confirmDelete, setConfirmDelete] = useState<Row | null>(null)
+  const [detailRow, setDetailRow] = useState<TransactionDetailData | null>(null)
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [createOpen, setCreateOpen] = useState<"income" | "expense" | null>(
+    null
+  )
   const [isPending, startTransition] = useTransition()
+
+  function openDetail(row: Row) {
+    setDetailRow({
+      type: row.type,
+      amount: row.amount,
+      status: row.status,
+      due_date: row.due_date,
+      paid_at: row.paid_at,
+      description: row.description,
+      category: row.category,
+      customer_name: row.customer_name,
+      supplier_name: row.supplier_name,
+      source: row.source,
+    })
+    setDetailOpen(true)
+  }
 
   function handleMarkPaid(row: Row) {
     startTransition(async () => {
@@ -108,15 +159,45 @@ export function TransactionsTable({ rows }: Props) {
   }
 
   if (rows.length === 0) {
+    if (hasActiveFilters) {
+      return (
+        <ListEmptyState
+          icon={Receipt}
+          title="Nenhum lançamento encontrado"
+          description="Nenhum resultado com os filtros atuais. Tente ampliar o período ou limpar os filtros."
+        />
+      )
+    }
+
     return (
-      <div className="rounded-xl border bg-card py-16 text-center">
-        <p className="text-sm text-muted-foreground">
-          Nenhum lançamento encontrado.
-        </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          Ajuste os filtros ou registre uma nova receita.
-        </p>
-      </div>
+      <>
+        <ListEmptyState
+          icon={Receipt}
+          title="Sem lançamentos ainda"
+          description="Registre receitas e despesas para ver o fluxo de caixa e relatórios."
+          action={{
+            label: "Nova receita",
+            onClick: () => setCreateOpen("income"),
+          }}
+          secondaryAction={{
+            label: "Importar OFX",
+            href: "/lancamentos/importar",
+          }}
+        />
+        <TransactionDialog
+          open={createOpen !== null}
+          type={createOpen ?? "income"}
+          onOpenChange={(open) => !open && setCreateOpen(null)}
+          customers={customers}
+          suppliers={suppliers}
+          products={products}
+          recentCategories={
+            createOpen === "income"
+              ? recentIncomeCategories
+              : recentExpenseCategories
+          }
+        />
+      </>
     )
   }
 
@@ -135,7 +216,7 @@ export function TransactionsTable({ rows }: Props) {
               <TableHead>Data</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Valor</TableHead>
-              <TableHead className="w-12"></TableHead>
+              {!readOnly && <TableHead className="w-12"></TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -146,6 +227,9 @@ export function TransactionsTable({ rows }: Props) {
               const partyName = isIncome
                 ? row.customer_name
                 : row.supplier_name
+              const desc = row.description || (isIncome ? "Receita" : "Despesa")
+              const showDetailLink =
+                desc.length > DESC_PREVIEW_LEN || row.source === "ofx_import"
 
               return (
                 <TableRow key={row.id}>
@@ -160,8 +244,19 @@ export function TransactionsTable({ rows }: Props) {
                       <Icon className="h-4 w-4" />
                     </div>
                   </TableCell>
-                  <TableCell className="font-medium">
-                    {row.description || (isIncome ? "Receita" : "Despesa")}
+                  <TableCell>
+                    <div className="max-w-[200px] md:max-w-[280px]">
+                      <p className="font-medium truncate">{desc}</p>
+                      {showDetailLink && (
+                        <button
+                          type="button"
+                          onClick={() => openDetail(row)}
+                          className="text-xs text-brand hover:text-brand-hover hover:underline mt-0.5"
+                        >
+                          Ver detalhes
+                        </button>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="hidden md:table-cell text-muted-foreground">
                     {partyName ? (
@@ -209,34 +304,36 @@ export function TransactionsTable({ rows }: Props) {
                     {isIncome ? "+" : "-"} {formatBRL(row.amount)}
                   </TableCell>
                   <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          disabled={isPending}
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {row.status !== "paid" && (
-                          <DropdownMenuItem
-                            onClick={() => handleMarkPaid(row)}
+                    {readOnly ? null : (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            disabled={isPending}
                           >
-                            <Check className="mr-2 h-4 w-4" />
-                            Marcar como pago
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {row.status !== "paid" && (
+                            <DropdownMenuItem
+                              onClick={() => handleMarkPaid(row)}
+                            >
+                              <Check className="mr-2 h-4 w-4" />
+                              Marcar como pago
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => setConfirmDelete(row)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Excluir
                           </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => setConfirmDelete(row)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </TableCell>
                 </TableRow>
               )
@@ -245,6 +342,13 @@ export function TransactionsTable({ rows }: Props) {
         </Table>
       </div>
 
+      <TransactionDetailDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        transaction={detailRow}
+      />
+
+      {!readOnly && (
       <AlertDialog
         open={!!confirmDelete}
         onOpenChange={(o) => !o && setConfirmDelete(null)}
@@ -267,6 +371,7 @@ export function TransactionsTable({ rows }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      )}
     </>
   )
 }

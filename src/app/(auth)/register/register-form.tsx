@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
@@ -21,6 +22,7 @@ import { Input } from "@/components/ui/input"
 import { registerSchema, type RegisterInput } from "@/lib/auth/schemas"
 import { signUpAction } from "@/lib/auth/actions"
 import { formatWhatsAppBR } from "@/lib/utils/format"
+import { LEGAL_PATHS } from "@/lib/legal/paths"
 
 export function RegisterForm() {
   const router = useRouter()
@@ -44,7 +46,7 @@ export function RegisterForm() {
       toast.success("Bem-vindo ao azul! 🎉", {
         description: "Sua conta foi criada e o trial de 7 dias está rodando.",
       })
-      router.push("/dashboard")
+      router.push("/onboarding")
       router.refresh()
     })
   }
@@ -153,8 +155,21 @@ export function RegisterForm() {
         </Button>
 
         <p className="text-xs text-center text-muted-foreground">
-          Ao continuar, você concorda com nossos termos de uso e política de
-          privacidade.
+          Ao continuar, você concorda com nossos{" "}
+          <Link
+            href={LEGAL_PATHS.terms}
+            className="text-brand hover:underline underline-offset-4"
+          >
+            Termos de uso
+          </Link>
+          {" e "}
+          <Link
+            href={LEGAL_PATHS.privacy}
+            className="text-brand hover:underline underline-offset-4"
+          >
+            Política de privacidade
+          </Link>
+          .
         </p>
       </form>
     </Form>

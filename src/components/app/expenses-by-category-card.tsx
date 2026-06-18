@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition, useEffect } from "react"
+import { useState, useTransition } from "react"
 import { PieChart as PieChartIcon, Loader2 } from "lucide-react"
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts"
 
@@ -16,6 +16,8 @@ import {
   ToggleGroupItem,
 } from "@/components/ui/toggle-group"
 import { formatBRL } from "@/lib/utils/currency"
+import { ChartPanel } from "@/components/app/chart-panel"
+import { useUpdateOnChange } from "@/hooks/use-update-on-change"
 
 import {
   fetchExpensesByCategoryAction,
@@ -71,18 +73,12 @@ export function ExpensesByCategoryCard({ initial }: Props) {
   const [range, setRange] = useState<"month" | "last30d">("month")
   const [data, setData] = useState<CategorySliceData[]>(initial)
   const [isPending, startTransition] = useTransition()
-  const [firstRender, setFirstRender] = useState(true)
 
-  useEffect(() => {
-    if (firstRender) {
-      setFirstRender(false)
-      return
-    }
+  useUpdateOnChange(() => {
     startTransition(async () => {
       const result = await fetchExpensesByCategoryAction(range)
       setData(result)
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range])
 
   const total = data.reduce((sum, d) => sum + d.total, 0)
@@ -136,8 +132,7 @@ export function ExpensesByCategoryCard({ initial }: Props) {
             </div>
           ) : (
             <div className="flex flex-col sm:grid sm:grid-cols-2 gap-4 min-h-[256px]">
-              {/* Gráfico */}
-              <div className="h-48 sm:h-full">
+              <ChartPanel className="h-48 sm:min-h-[14rem]">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -159,7 +154,7 @@ export function ExpensesByCategoryCard({ initial }: Props) {
                     <Tooltip content={<CustomTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
-              </div>
+              </ChartPanel>
 
               {/* Legenda */}
               <div className="flex flex-col justify-center gap-1.5 overflow-y-auto max-h-64 sm:max-h-none pr-1">

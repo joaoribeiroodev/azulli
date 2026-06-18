@@ -27,9 +27,14 @@ import {
 
 import { EmployeeDialog } from "@/app/(app)/funcionarios/_components/employee-dialog"
 import { deleteEmployeeAction } from "@/lib/employees/actions"
+import type { EmployeeDetail } from "@/lib/employees/payroll-queries"
 import type { EmployeeRow } from "@/lib/employees/queries"
 
-export function EmployeeHeader({ employee }: { employee: EmployeeRow }) {
+export function EmployeeHeader({
+  employee,
+}: {
+  employee: EmployeeDetail | EmployeeRow
+}) {
   const router = useRouter()
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)

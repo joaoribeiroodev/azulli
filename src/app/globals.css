@@ -154,4 +154,32 @@
   h1, h2, h3, h4 {
     @apply font-display tracking-tight text-brand-ink;
   }
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+}
+
+/* Landing — gradientes e glow (scoped) */
+.landing-hero-bg {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, color-mix(in oklch, var(--brand) 18%, transparent), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, color-mix(in oklch, var(--success) 8%, transparent), transparent);
+}
+.landing-hero-glow::before {
+  content: "";
+  position: absolute;
+  inset: -20% 10% auto;
+  height: 60%;
+  background: radial-gradient(circle, color-mix(in oklch, var(--brand) 22%, transparent), transparent 70%);
+  filter: blur(40px);
+  pointer-events: none;
+}
+.landing-cta-glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 50%, color-mix(in oklch, var(--brand) 12%, transparent), transparent 55%);
+  pointer-events: none;
 }

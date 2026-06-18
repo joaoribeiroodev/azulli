@@ -9,6 +9,7 @@ import {
   type CreateEmployeeInput,
   type UpdateEmployeeInput,
 } from "@/lib/employees/schemas"
+import { checkPlanLimit } from "@/lib/billing/plan-limits"
 
 type ActionResult<T = undefined> =
   | { success: true; data?: T }
@@ -42,6 +43,9 @@ export async function createEmployeeAction(
 
   const tenantId = await getCurrentTenantId()
   if (!tenantId) return { success: false, error: "Empresa não encontrada." }
+
+  const limit = await checkPlanLimit("employees")
+  if (!limit.allowed) return { success: false, error: limit.error }
 
   const supabase = await createClient()
   const d = parsed.data

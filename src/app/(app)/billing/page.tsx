@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
-import { AlertCircle, Clock, ExternalLink } from "lucide-react"
+import { AlertCircle, Clock, ExternalLink, LineChart, Mail, Sparkles } from "lucide-react"
 
 import { getBillingStateFull } from "@/lib/billing/queries"
 import { PLANS, type Plan, formatPlanPrice } from "@/lib/billing/plans"
@@ -19,11 +19,21 @@ import {
 
 export const metadata = { title: "Assinatura — Azulli" }
 
-export default async function BillingPage() {
+type SP = { upsell?: string }
+
+export default async function BillingPage({
+  searchParams,
+}: {
+  searchParams: Promise<SP>
+}) {
+  const sp = await searchParams
   const state = await getBillingStateFull()
   if (!state) redirect("/login")
 
   const plans = Object.values(PLANS) as Plan[]
+  const showAssistantUpsell = sp.upsell === "assistente"
+  const showForecastUpsell = sp.upsell === "previsao"
+  const showEmailsUpsell = sp.upsell === "emails"
 
   return (
     <main className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto space-y-6">
@@ -35,6 +45,52 @@ export default async function BillingPage() {
           Gerencie seu plano e forma de pagamento.
         </p>
       </header>
+
+      {showAssistantUpsell && (
+        <div className="flex items-start gap-3 rounded-lg border border-brand/30 bg-brand-soft px-4 py-3">
+          <Sparkles className="h-5 w-5 text-brand shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-medium text-brand-ink">
+              Assistente IA é uma feature do Empresarial
+            </p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Faça perguntas em linguagem natural sobre seu caixa, clientes e
+              padrões financeiros — com respostas em tempo real direto dos seus
+              dados.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {showForecastUpsell && (
+        <div className="flex items-start gap-3 rounded-lg border border-brand/30 bg-brand-soft px-4 py-3">
+          <LineChart className="h-5 w-5 text-brand shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-medium text-brand-ink">
+              Previsão de caixa e simulador — plano Empresarial
+            </p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Veja quantos dias de caixa você tem, projete o saldo futuro e teste
+              cenários «e se?» sem alterar seus lançamentos reais.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {showEmailsUpsell && (
+        <div className="flex items-start gap-3 rounded-lg border border-brand/30 bg-brand-soft px-4 py-3">
+          <Mail className="h-5 w-5 text-brand shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-medium text-brand-ink">
+              E-mails automáticos — plano Empresarial
+            </p>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              Insights semanais, lembretes de cobrança e alertas de vencidos
+              enviados automaticamente no seu e-mail.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── TRIAL ATIVO ── */}
       {state.effective_status === "trial_active" && (

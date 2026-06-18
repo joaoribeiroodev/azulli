@@ -1,4 +1,5 @@
 import "server-only"
+import { cache } from "react"
 import { createClient } from "@/lib/supabase/server"
 import { getNextAsaasPayment } from "@/lib/asaas/client"
 
@@ -131,7 +132,7 @@ function buildState(
 // getBillingStateLight — sem chamar Asaas (middleware, layouts)
 // ---------------------------------------------------------------------------
 
-export async function getBillingStateLight(): Promise<BillingState | null> {
+export const getBillingStateLight = cache(async (): Promise<BillingState | null> => {
   const supabase = await createClient()
 
   const {
@@ -161,7 +162,7 @@ export async function getBillingStateLight(): Promise<BillingState | null> {
     (subRes.data as SubscriptionRow | null) ?? null,
     null
   )
-}
+})
 
 // ---------------------------------------------------------------------------
 // getBillingStateFull — com invoice URL do Asaas (apenas página /billing)

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition, useEffect } from "react"
+import { useState, useTransition } from "react"
 import {
   BarChart,
   Bar,
@@ -24,6 +24,8 @@ import {
   ToggleGroupItem,
 } from "@/components/ui/toggle-group"
 import { formatBRL } from "@/lib/utils/currency"
+import { ChartPanel } from "@/components/app/chart-panel"
+import { useUpdateOnChange } from "@/hooks/use-update-on-change"
 
 import { fetchProductMonthlySeriesAction } from "@/lib/products/product-actions"
 import type { MonthlyBucket } from "@/lib/financial/queries"
@@ -58,19 +60,13 @@ export function ProductMonthlyChartCard({ productId, initial }: Props) {
   const [months, setMonths] = useState<3 | 6 | 12>(6)
   const [data, setData] = useState<MonthlyBucket[]>(initial)
   const [isPending, startTransition] = useTransition()
-  const [firstRender, setFirstRender] = useState(true)
 
-  useEffect(() => {
-    if (firstRender) {
-      setFirstRender(false)
-      return
-    }
+  useUpdateOnChange(() => {
     startTransition(async () => {
       const series = await fetchProductMonthlySeriesAction(productId, months)
       setData(series)
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [months])
+  }, [months, productId])
 
   const total = data.reduce((sum, d) => sum + d.total, 0)
 
@@ -110,7 +106,7 @@ export function ProductMonthlyChartCard({ productId, initial }: Props) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="relative h-48">
+        <ChartPanel className="h-48 relative">
           {isPending && (
             <div className="absolute inset-0 flex items-center justify-center bg-card/60 backdrop-blur-sm z-10 rounded-md">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -149,7 +145,7 @@ export function ProductMonthlyChartCard({ productId, initial }: Props) {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-        </div>
+        </ChartPanel>
       </CardContent>
     </Card>
   )

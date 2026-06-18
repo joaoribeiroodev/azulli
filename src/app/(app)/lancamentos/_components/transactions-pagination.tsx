@@ -8,9 +8,15 @@ type Props = {
   page: number
   totalPages: number
   total: number
+  basePath?: string
 }
 
-export function TransactionsPagination({ page, totalPages, total }: Props) {
+export function TransactionsPagination({
+  page,
+  totalPages,
+  total,
+  basePath = "/lancamentos",
+}: Props) {
   const router = useRouter()
   const sp = useSearchParams()
 
@@ -18,7 +24,7 @@ export function TransactionsPagination({ page, totalPages, total }: Props) {
     const params = new URLSearchParams(sp.toString())
     if (newPage <= 1) params.delete("page")
     else params.set("page", String(newPage))
-    router.push(`/lancamentos?${params.toString()}`)
+    router.push(`${basePath}?${params.toString()}`)
   }
 
   if (total === 0) return null

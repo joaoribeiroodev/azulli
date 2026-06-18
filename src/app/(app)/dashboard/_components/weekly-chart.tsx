@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts"
 import { formatBRL } from "@/lib/utils/currency"
+import { ChartPanel } from "@/components/app/chart-panel"
 import type { DailyBucket } from "@/lib/financial/queries"
 
 type Props = {
@@ -70,7 +71,7 @@ export function WeeklyChart({ data }: Props) {
   }
 
   return (
-    <div className="h-64 w-full">
+    <ChartPanel className="h-64">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}
@@ -124,6 +125,6 @@ export function WeeklyChart({ data }: Props) {
           />
         </BarChart>
       </ResponsiveContainer>
-    </div>
+    </ChartPanel>
   )
 }

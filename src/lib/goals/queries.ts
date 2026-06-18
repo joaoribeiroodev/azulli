@@ -1,4 +1,5 @@
 import "server-only"
+import { cache } from "react"
 import { createClient } from "@/lib/supabase/server"
 import { utcToLocalDateBR } from "@/lib/utils/date"
 import type { GoalKind } from "@/lib/goals/schemas"
@@ -20,9 +21,9 @@ export type GoalRow = {
   progress_percent: number // 0-100+
 }
 
-export async function listGoals(opts?: {
+export const listGoals = cache(async (opts?: {
   includeArchived?: boolean
-}): Promise<GoalRow[]> {
+}): Promise<GoalRow[]> => {
   const supabase = await createClient()
 
   let query = supabase
@@ -79,7 +80,7 @@ export async function listGoals(opts?: {
       progress_percent: percent,
     }
   })
-}
+})
 
 function computeProgress(
   kind: GoalKind,
@@ -126,9 +127,10 @@ export type GoalsStats = {
 }
 
 export async function getGoalsStats(): Promise<GoalsStats> {
-  const goals = await listGoals()
+  const goals = await listGoals({ includeArchived: true })
+  const active = goals.filter((g) => !g.is_archived)
   return {
-    totalActive: goals.length,
-    totalAchieved: goals.filter((g) => g.progress_percent >= 100).length,
+    totalActive: active.length,
+    totalAchieved: active.filter((g) => g.progress_percent >= 100).length,
   }
 }

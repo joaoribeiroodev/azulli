@@ -1,5 +1,39 @@
 export type PlanId = "trial" | "pro" | "enterprise"
 
+/** Funcionalidades premium (trial = degustação; Pro não inclui). */
+export function hasEnterpriseFeatures(tier: PlanId): boolean {
+  return tier === "trial" || tier === "enterprise"
+}
+
+/**
+ * Assistente IA: trial (degustação) e Empresarial.
+ */
+export function canUseAssistant(tier: PlanId): boolean {
+  return hasEnterpriseFeatures(tier)
+}
+
+/**
+ * Previsão de caixa, simulador e runway: trial e Empresarial.
+ */
+export function canUseForecast(tier: PlanId): boolean {
+  return hasEnterpriseFeatures(tier)
+}
+
+/**
+ * E-mails automáticos (insights, cobrança, vencidos): trial e Empresarial.
+ */
+export function canUseAutomatedEmails(tier: PlanId): boolean {
+  return hasEnterpriseFeatures(tier)
+}
+
+/** O que o trial de 7 dias inclui (espelha Empresarial para degustação). */
+export const TRIAL_FEATURE_HIGHLIGHTS = [
+  "Lançamentos, OFX e exportação Excel",
+  "Assistente IA e previsão de caixa",
+  "E-mails de insights e cobrança",
+  "Sem cartão de crédito no cadastro",
+] as const
+
 export type Plan = {
   id: Exclude<PlanId, "trial">
   name: string
@@ -25,13 +59,15 @@ export const PLANS: Record<"pro" | "enterprise", Plan> = {
     description: "Pra MEI e pequenas empresas que querem organizar tudo.",
     features: [
       "Lançamentos ilimitados",
-      "Até 500 clientes e fornecedores",
+      "Até 500 clientes, fornecedores e produtos",
+      "Até 5 funcionários",
       "Controle de estoque",
-      "Metas e lembretes",
-      "Exportação Excel",
-      "Importação automática de extrato bancário (OFX)",
+      "Importação OFX com categorização IA",
       "Detector de despesas recorrentes",
-      "Categorização automática com IA",
+      "Metas e lembretes",
+      "Exportação Excel formatada",
+      "Área do contador (convite + exportação)",
+      "Dashboard com gráficos e relatórios",
       "Suporte por e-mail",
     ],
     limits: {
@@ -51,12 +87,12 @@ export const PLANS: Record<"pro" | "enterprise", Plan> = {
     description: "Pra empresas com equipe e volume maior de operações.",
     features: [
       "Tudo do Pro",
-      "Clientes, fornecedores e produtos ilimitados",
-      "Funcionários ilimitados",
-      "Assistente IA conversacional (em breve)",
-      "Previsão de fluxo de caixa (em breve)",
-      "Régua de cobrança automatizada (em breve)",
-      "Insights semanais por e-mail (em breve)",
+      "Assistente IA conversacional",
+      "Previsão de fluxo de caixa e simulador «e se?»",
+      "Clientes, fornecedores, produtos e funcionários ilimitados",
+      "Insights semanais por e-mail",
+      "Régua de cobrança por e-mail",
+      "Alertas de lançamentos vencidos",
       "Suporte prioritário (WhatsApp)",
     ],
     limits: {

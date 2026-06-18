@@ -1,4 +1,5 @@
 import "server-only"
+import { cache } from "react"
 import { createClient } from "@/lib/supabase/server"
 import { getCurrentMonthRange } from "@/lib/utils/date"
 import type { MonthlyBucket } from "@/lib/financial/queries"
@@ -155,7 +156,7 @@ export type ProductLite = {
   unit: string
 }
 
-export async function getProductsLite(): Promise<ProductLite[]> {
+export const getProductsLite = cache(async (): Promise<ProductLite[]> => {
   const supabase = await createClient()
   const { data } = await supabase
     .from("products")
@@ -173,7 +174,7 @@ export async function getProductsLite(): Promise<ProductLite[]> {
     track_stock: p.track_stock,
     unit: p.unit,
   }))
-}
+})
 
 // ===========================================================================
 // Detalhes

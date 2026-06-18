@@ -11,6 +11,7 @@ import {
 } from "@/lib/financial/queries"
 
 import { CustomerHeader } from "./_components/customer-header"
+import { CustomerCollectionAction } from "./_components/customer-collection-action"
 import { CustomerKPICards } from "./_components/customer-kpi-cards"
 import { CustomerContactCard } from "./_components/customer-contact-card"
 import { CustomerTransactions } from "./_components/customer-transactions"
@@ -56,7 +57,12 @@ export default async function ClienteDetalhePage({
         Voltar para clientes
       </Link>
 
-      <CustomerHeader customer={customer} />
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <CustomerHeader customer={customer} />
+        <Suspense fallback={null}>
+          <CustomerCollectionAction customer={customer} />
+        </Suspense>
+      </div>
 
       <CustomerKPICards kpis={customer.kpis} />
 

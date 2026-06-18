@@ -1,6 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server"
 import * as XLSX from "xlsx"
 import { createClient } from "@/lib/supabase/server"
+import { applyTransactionDateRange } from "@/lib/financial/date-filters"
+import {
+  formatWorksheet,
+  writeWorkbookBuffer,
+  XLSX_BRL_FORMAT,
+} from "@/lib/export/xlsx-format"
 
 /**
  * GET /api/export/transactions?type=&status=&category=&from=&to=&month=
@@ -57,8 +63,14 @@ export async function GET(request: NextRequest) {
       query = query.eq("category", categoryFilter)
     }
   }
-  if (effFrom) query = query.gte("due_date", effFrom)
-  if (effTo) query = query.lte("due_date", effTo)
+  if (effFrom || effTo) {
+    query = applyTransactionDateRange(
+      query,
+      effFrom,
+      effTo,
+      (statusFilter as "pending" | "paid" | "overdue" | "all") ?? "all"
+    )
+  }
 
   const { data: rows, error } = await query.order("due_date", {
     ascending: false,
@@ -137,86 +149,49 @@ export async function GET(request: NextRequest) {
     ],
   })
 
-  // ------- Formatação de células -------
+  formatWorksheet(ws, {
+    colWidths: [10, 36, 22, 24, 24, 14, 12, 12, 12],
+    currencyColumns: [5],
+    dateColumns: [7, 8],
+    autofilter: true,
+    freezeHeader: true,
+  })
 
-  // Larguras de coluna (em "caracteres" do Excel)
-  ws["!cols"] = [
-    { wch: 10 }, // Tipo
-    { wch: 32 }, // Descrição
-    { wch: 22 }, // Categoria
-    { wch: 24 }, // Cliente
-    { wch: 24 }, // Fornecedor
-    { wch: 14 }, // Valor
-    { wch: 12 }, // Status
-    { wch: 12 }, // Vencimento
-    { wch: 12 }, // Pago em
-  ]
-
-  // Aplica formato BRL na coluna F (Valor) — pula header (linha 1)
   const range = XLSX.utils.decode_range(ws["!ref"] ?? "A1")
-  for (let R = 1; R <= range.e.r; R++) {
-    const cellAddr = XLSX.utils.encode_cell({ c: 5, r: R }) // coluna F = índice 5
-    const cell = ws[cellAddr]
-    if (cell && typeof cell.v === "number") {
-      cell.z = `"R$" #,##0.00`
-      cell.t = "n"
-    }
-  }
-
-  // Estilo do cabeçalho (negrito) — funciona em Excel, mas SheetJS Community
-  // não preserva estilos completos. Pra header em negrito real, precisamos
-  // do xlsx-style/xlsx-js-style. Como queremos zero dependências extras,
-  // deixamos sem estilo de header (Excel/LibreOffice exibem em negrito por
-  // ser primeira linha de tabela auto-detectada quando abre o arquivo).
-
-  // Linha de totais no rodapé (só se for tudo do mesmo tipo)
   if (sheetRows.length > 0) {
     const total = sheetRows.reduce((sum, r) => sum + (r.Valor ?? 0), 0)
-    const totalRow = range.e.r + 2 // pula 1 linha em branco
-    XLSX.utils.sheet_add_aoa(
-      ws,
-      [["", "", "", "", "Total:", total]],
-      { origin: { c: 0, r: totalRow } }
-    )
-    const totalCell = XLSX.utils.encode_cell({ c: 5, r: totalRow })
-    if (ws[totalCell]) {
-      ws[totalCell].z = `"R$" #,##0.00`
-      ws[totalCell].t = "n"
-    }
-    // Atualiza range pra incluir o rodapé
+    const totalRow = range.e.r + 2
+    const labelAddr = XLSX.utils.encode_cell({ c: 4, r: totalRow })
+    const totalAddr = XLSX.utils.encode_cell({ c: 5, r: totalRow })
+    ws[labelAddr] = { t: "s", v: "Total:" }
+    ws[totalAddr] = { t: "n", v: total, z: XLSX_BRL_FORMAT }
     ws["!ref"] = XLSX.utils.encode_range({
       s: { c: 0, r: 0 },
       e: { c: range.e.c, r: totalRow },
     })
   }
 
-  // Auto-filtro no cabeçalho
-  ws["!autofilter"] = { ref: `A1:I${range.e.r + 1}` }
-
-  // Freeze pane no header
-  ws["!freeze"] = { xSplit: 0, ySplit: 1 }
-
-  // ------- Workbook -------
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, "Lançamentos")
 
-  const buffer = XLSX.write(wb, {
-    type: "buffer",
-    bookType: "xlsx",
-    compression: true,
-  })
+  const buffer = writeWorkbookBuffer(wb)
 
   const filename = buildFilename(typeFilter, monthFilter, effFrom, effTo)
 
-  return new NextResponse(buffer, {
-    status: 200,
-    headers: {
-      "Content-Type":
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-      "Cache-Control": "no-store",
-    },
-  })
+  return new NextResponse(
+    new Blob([buffer.slice()], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    }),
+    {
+      status: 200,
+      headers: {
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Cache-Control": "no-store",
+      },
+    }
+  )
 }
 
 function buildFilename(

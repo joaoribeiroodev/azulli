@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server"
+import { isAppProductHost } from "@/lib/app/domain-hosts"
 import { updateSession } from "@/lib/supabase/middleware"
+import { isMissingDbColumn } from "@/lib/onboarding/db"
 
 const PUBLIC_ROUTES = [
   "/",
@@ -9,6 +11,18 @@ const PUBLIC_ROUTES = [
   "/reset-password",
   "/auth/callback",
   "/auth/confirm",
+  "/termos-de-uso",
+  "/politica-de-privacidade",
+]
+
+/**
+ * APIs com autenticação própria (CRON_SECRET, webhook token, etc.).
+ * Não exigem sessão Supabase — o proxy não deve redirecionar ao /login.
+ */
+const PUBLIC_API_PREFIXES = [
+  "/api/cron",
+  "/api/webhooks",
+  "/api/email/unsubscribe",
 ]
 
 // Rotas que usuários autenticados sempre podem acessar,
@@ -16,9 +30,12 @@ const PUBLIC_ROUTES = [
 const ALWAYS_ALLOWED_FOR_AUTHED = [
   "/billing",
   "/configuracoes",
+  "/contador",
+  "/onboarding",
   "/logout",
   "/api/webhooks",
   "/api/auth",
+  "/api/export",
 ]
 
 export async function proxy(request: NextRequest) {
@@ -26,9 +43,27 @@ export async function proxy(request: NextRequest) {
 
   const { response, user } = await updateSession(request)
 
-  const isPublic = PUBLIC_ROUTES.some(
-    (r) => pathname === r || pathname.startsWith(`${r}/`)
+  // Domínio do app (useazulli.app.br): `/` não é landing — login ou painel
+  if (pathname === "/" && isAppProductHost(request.nextUrl.hostname)) {
+    const url = request.nextUrl.clone()
+    if (user) {
+      const onboardingDone = await fetchOnboardingComplete(request)
+      url.pathname = onboardingDone ? "/dashboard" : "/onboarding"
+    } else {
+      url.pathname = "/login"
+    }
+    return NextResponse.redirect(url)
+  }
+
+  const isPublicApi = PUBLIC_API_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   )
+
+  const isPublic =
+    isPublicApi ||
+    PUBLIC_ROUTES.some(
+      (r) => pathname === r || pathname.startsWith(`${r}/`)
+    )
 
   // 1) Não autenticado tentando acessar rota privada → /login
   if (!user && !isPublic) {
@@ -38,34 +73,68 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // 2) Autenticado em rota pública de auth → /dashboard
-  // Exceção: reset-password permite acesso autenticado (link de email cria sessão temporária)
+  // 2) Autenticado em rota pública de auth → home do app
   if (
     user &&
     (pathname === "/login" ||
       pathname === "/register" ||
       pathname === "/forgot-password")
   ) {
+    const onboardingDone = await fetchOnboardingComplete(request)
     const url = request.nextUrl.clone()
-    url.pathname = "/dashboard"
+    url.pathname = onboardingDone ? "/dashboard" : "/onboarding"
     return NextResponse.redirect(url)
   }
 
-  // 3) Autenticado: verifica se tem acesso ativo (trial ou subscription)
+  // 2b) Onboarding: completo → dashboard; incompleto → bloqueia app
   if (user && !isPublic) {
+    const onboardingDone = await fetchOnboardingComplete(request)
+    const isOnboardingRoute =
+      pathname === "/onboarding" || pathname.startsWith("/onboarding/")
+
+    if (isOnboardingRoute && onboardingDone) {
+      const url = request.nextUrl.clone()
+      url.pathname = "/dashboard"
+      return NextResponse.redirect(url)
+    }
+
     const isAlwaysAllowed = ALWAYS_ALLOWED_FOR_AUTHED.some(
       (r) => pathname === r || pathname.startsWith(`${r}/`)
     )
 
-    if (!isAlwaysAllowed) {
-      const status = await fetchBillingStatus(request, user.id)
+    if (!onboardingDone && !isOnboardingRoute && !isAlwaysAllowed) {
+      const url = request.nextUrl.clone()
+      url.pathname = "/onboarding"
+      return NextResponse.redirect(url)
+    }
 
-      if (status) {
-        const hasAccess = hasActiveAccessSync(status)
+    if (!isAlwaysAllowed) {
+      const [role, billingStatus] = await Promise.all([
+        fetchUserRole(request, user.id),
+        fetchBillingStatus(request, user.id),
+      ])
+
+      if (role === "accountant") {
+        const accountantAllowed =
+          pathname === "/contador" ||
+          pathname.startsWith("/contador/") ||
+          pathname === "/configuracoes" ||
+          pathname.startsWith("/configuracoes/") ||
+          pathname === "/manual" ||
+          pathname.startsWith("/manual/")
+        if (!accountantAllowed) {
+          const url = request.nextUrl.clone()
+          url.pathname = "/contador"
+          return NextResponse.redirect(url)
+        }
+      }
+
+      if (billingStatus) {
+        const hasAccess = hasActiveAccessSync(billingStatus)
         if (!hasAccess) {
           const url = request.nextUrl.clone()
           url.pathname = "/billing"
-          url.searchParams.set("reason", getBlockReason(status))
+          url.searchParams.set("reason", getBlockReason(billingStatus))
           return NextResponse.redirect(url)
         }
       }
@@ -73,6 +142,34 @@ export async function proxy(request: NextRequest) {
   }
 
   return response
+}
+
+async function fetchUserRole(
+  request: NextRequest,
+  userId: string
+): Promise<string | null> {
+  const { createServerClient } = await import("@supabase/ssr")
+  const { env } = await import("@/lib/env")
+
+  const supabase = createServerClient(
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        getAll: () => request.cookies.getAll(),
+        setAll: () => {},
+      },
+    }
+  )
+
+  const { data } = await supabase
+    .from("tenant_users")
+    .select("role")
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle()
+
+  return (data?.role as string) ?? null
 }
 
 // ---------------------------------------------------------------------------
@@ -188,6 +285,40 @@ function hasActiveAccessSync(status: BillingStatus): boolean {
 
   // Sem subscription → depende exclusivamente do trial
   return trialActive
+}
+
+async function fetchOnboardingComplete(request: NextRequest): Promise<boolean> {
+  const { createServerClient } = await import("@supabase/ssr")
+  const { env } = await import("@/lib/env")
+
+  const supabase = createServerClient(
+    env.NEXT_PUBLIC_SUPABASE_URL,
+    env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        getAll: () => request.cookies.getAll(),
+        setAll: () => {
+          /* read-only */
+        },
+      },
+    }
+  )
+
+  const { data, error } = await supabase
+    .from("tenants")
+    .select("onboarding_completed_at")
+    .limit(1)
+    .maybeSingle()
+
+  if (error) {
+    if (isMissingDbColumn(error.message, "onboarding_completed_at")) {
+      return true
+    }
+    console.error("[proxy] fetchOnboardingComplete:", error.message)
+    return true
+  }
+
+  return Boolean(data?.onboarding_completed_at)
 }
 
 function getBlockReason(status: BillingStatus): string {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState, useTransition } from "react"
+import { useRef, useState, useTransition, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import {
   Upload,
@@ -17,6 +17,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -27,6 +28,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  TransactionDetailDialog,
+  type TransactionDetailData,
+} from "@/components/app/transaction-detail-dialog"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -321,18 +333,78 @@ function ReviewStep({
   onStartOver: () => void
 }) {
   const { statement } = parseData
-  const selectableRows = rows.filter((r) => !r.duplicate)
+  const [monthFilter, setMonthFilter] = useState<string>("all")
+  const [detailRow, setDetailRow] = useState<TransactionDetailData | null>(null)
+  const [detailOpen, setDetailOpen] = useState(false)
+
+  const monthOptions = useMemo(() => {
+    const fmt = new Intl.DateTimeFormat("pt-BR", {
+      month: "long",
+      year: "numeric",
+    })
+    const months = Array.from(
+      new Set(rows.map((r) => r.date.slice(0, 7)))
+    ).sort()
+    return months.map((value) => {
+      const [y, m] = value.split("-").map(Number)
+      const label = fmt
+        .format(new Date(y, m - 1, 1))
+        .replace(/^\w/, (c) => c.toUpperCase())
+      return { value, label }
+    })
+  }, [rows])
+
+  const rowDateRange = useMemo(() => {
+    if (rows.length === 0) return null
+    const sorted = [...rows].map((r) => r.date).sort()
+    return { start: sorted[0], end: sorted[sorted.length - 1] }
+  }, [rows])
+
+  const displayRows =
+    monthFilter === "all"
+      ? rows
+      : rows.filter((r) => r.date.startsWith(monthFilter))
+
+  const selectableRows = displayRows.filter((r) => !r.duplicate)
   const selectedCount = selectableRows.filter((r) => r.selected).length
   const allSelected =
     selectableRows.length > 0 && selectedCount === selectableRows.length
 
   function toggleAll(checked: boolean) {
-    setRows(rows.map((r) => (r.duplicate ? r : { ...r, selected: checked })))
+    const visibleIds = new Set(displayRows.map((r) => r.rowId))
+    setRows(
+      rows.map((r) =>
+        visibleIds.has(r.rowId) && !r.duplicate
+          ? { ...r, selected: checked }
+          : r
+      )
+    )
   }
 
   function patchRow(rowId: string, patch: Partial<EditableRow>) {
     setRows(rows.map((r) => (r.rowId === rowId ? { ...r, ...patch } : r)))
   }
+
+  function openDetail(row: EditableRow) {
+    setDetailRow({
+      type: row.type,
+      amount: row.amount,
+      status: "paid",
+      due_date: row.date,
+      paid_at: row.date,
+      description: row.description,
+      category: row.category || null,
+      source: "ofx_import",
+    })
+    setDetailOpen(true)
+  }
+
+  const periodLabel =
+    rowDateRange
+      ? `${formatDateBR(rowDateRange.start)} a ${formatDateBR(rowDateRange.end)}`
+      : statement.periodStart && statement.periodEnd
+        ? `${formatDateBR(statement.periodStart)} a ${formatDateBR(statement.periodEnd)}`
+        : "Período não informado"
 
   return (
     <div className="space-y-4">
@@ -350,27 +422,51 @@ function ReviewStep({
               <p className="text-xs text-muted-foreground mt-0.5">
                 {statement.bankId && `Banco ${statement.bankId} · `}
                 {statement.accountId && `Conta ${statement.accountId} · `}
-                {statement.periodStart && statement.periodEnd
-                  ? `${formatDateBR(statement.periodStart)} a ${formatDateBR(statement.periodEnd)}`
-                  : "Período não informado"}
+                {periodLabel}
               </p>
             </div>
             <div className="grid grid-cols-3 gap-4 text-center">
-              <Stat label="Lidos" value={statement.totalParsed} />
+              <Stat label="No filtro" value={displayRows.length} />
               <Stat
                 label="Duplicados"
-                value={statement.totalDuplicates}
+                value={displayRows.filter((r) => r.duplicate).length}
                 muted
               />
-              <Stat
-                label="Selecionados"
-                value={selectedCount}
-                highlight
-              />
+              <Stat label="Selecionados" value={selectedCount} highlight />
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {monthOptions.length > 1 && (
+        <div className="flex flex-wrap items-center gap-3">
+          <Label className="text-sm text-muted-foreground shrink-0">
+            Filtrar por mês do extrato
+          </Label>
+          <Select value={monthFilter} onValueChange={setMonthFilter}>
+            <SelectTrigger className="w-[220px]">
+              <SelectValue placeholder="Todos os meses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os meses</SelectItem>
+              {monthOptions.map((m) => (
+                <SelectItem key={m.value} value={m.value}>
+                  {m.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {monthFilter !== "all" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setMonthFilter("all")}
+            >
+              Limpar filtro
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Aviso de duplicatas */}
       {statement.totalDuplicates > 0 && (
@@ -404,7 +500,7 @@ function ReviewStep({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((row) => {
+              {displayRows.map((row) => {
                 const isIncome = row.type === "income"
                 const Icon = isIncome ? ArrowUpRight : ArrowDownRight
                 return (
@@ -443,6 +539,15 @@ function ReviewStep({
                       <p className="text-sm font-medium truncate">
                         {row.description}
                       </p>
+                      {row.description.length > 48 && (
+                        <button
+                          type="button"
+                          onClick={() => openDetail(row)}
+                          className="text-xs text-brand hover:underline mt-0.5"
+                        >
+                          Ver detalhes
+                        </button>
+                      )}
                       {row.duplicate && (
                         <Badge
                           variant="secondary"
@@ -507,6 +612,12 @@ function ReviewStep({
           )}
         </Button>
       </div>
+
+      <TransactionDetailDialog
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        transaction={detailRow}
+      />
     </div>
   )
 }

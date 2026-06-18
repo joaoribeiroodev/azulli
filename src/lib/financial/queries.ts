@@ -1,4 +1,5 @@
 import "server-only"
+import { cache } from "react"
 import { createClient } from "@/lib/supabase/server"
 import {
   getCurrentMonthRange,
@@ -6,6 +7,7 @@ import {
   getWeekdayLabel,
   utcToLocalDateBR,
 } from "@/lib/utils/date"
+import { applyTransactionDateRange } from "./date-filters"
 
 // ===========================================================================
 // Dashboard summary
@@ -23,25 +25,31 @@ export type DashboardSummary = {
 export async function getDashboardSummary(): Promise<DashboardSummary> {
   const supabase = await createClient()
   const { from, to } = getCurrentMonthRange()
-
-  const { data, error } = await supabase
-    .from("transactions_with_status")
-    .select("type, amount, status, due_date, paid_at")
-
-  if (error || !data) {
-    console.error("[queries] getDashboardSummary failed:", error)
-    return {
-      income: 0,
-      expense: 0,
-      profit: 0,
-      pendingCount: 0,
-      pendingAmount: 0,
-      overdueCount: 0,
-    }
-  }
-
   const fromDate = from.slice(0, 10)
   const toDate = to.slice(0, 10)
+  const fromTs = `${fromDate}T00:00:00-03:00`
+  const toTs = `${toDate}T23:59:59-03:00`
+
+  const [pendingRes, paidRes] = await Promise.all([
+    supabase
+      .from("transactions_with_status")
+      .select("type, amount, status")
+      .in("status", ["pending", "overdue"]),
+    supabase
+      .from("transactions_with_status")
+      .select("type, amount, paid_at, due_date")
+      .eq("status", "paid")
+      .or(
+        `and(paid_at.gte.${fromTs},paid_at.lte.${toTs}),and(paid_at.is.null,due_date.gte.${fromDate},due_date.lte.${toDate})`
+      ),
+  ])
+
+  if (pendingRes.error) {
+    console.error("[queries] getDashboardSummary pending failed:", pendingRes.error)
+  }
+  if (paidRes.error) {
+    console.error("[queries] getDashboardSummary paid failed:", paidRes.error)
+  }
 
   let income = 0
   let expense = 0
@@ -49,25 +57,22 @@ export async function getDashboardSummary(): Promise<DashboardSummary> {
   let pendingAmount = 0
   let overdueCount = 0
 
-  for (const row of data) {
+  for (const row of paidRes.data ?? []) {
     const amount = Number(row.amount)
-
-    if (row.status === "paid") {
-      // Usa paid_at se houver (data real do pagamento, BR), senão due_date
-      const refDate = row.paid_at
-        ? utcToLocalDateBR(row.paid_at)
-        : row.due_date
-      if (refDate >= fromDate && refDate <= toDate) {
-        if (row.type === "income") income += amount
-        else expense += amount
-      }
+    const refDate = row.paid_at
+      ? utcToLocalDateBR(row.paid_at)
+      : (row.due_date as string)
+    if (refDate >= fromDate && refDate <= toDate) {
+      if (row.type === "income") income += amount
+      else expense += amount
     }
+  }
 
-    if (row.status === "pending" || row.status === "overdue") {
-      pendingCount += 1
-      pendingAmount += amount
-      if (row.status === "overdue") overdueCount += 1
-    }
+  for (const row of pendingRes.data ?? []) {
+    const amount = Number(row.amount)
+    pendingCount += 1
+    pendingAmount += amount
+    if (row.status === "overdue") overdueCount += 1
   }
 
   return {
@@ -175,9 +180,9 @@ export async function getRecentTransactions(
   }))
 }
 
-export async function getCustomersLite(): Promise<
+export const getCustomersLite = cache(async (): Promise<
   { id: string; name: string }[]
-> {
+> => {
   const supabase = await createClient()
   const { data } = await supabase
     .from("customers")
@@ -185,11 +190,11 @@ export async function getCustomersLite(): Promise<
     .order("name", { ascending: true })
     .limit(200)
   return data ?? []
-}
+})
 
-export async function getSuppliersLite(): Promise<
+export const getSuppliersLite = cache(async (): Promise<
   { id: string; name: string }[]
-> {
+> => {
   const supabase = await createClient()
   const { data } = await supabase
     .from("suppliers")
@@ -197,11 +202,11 @@ export async function getSuppliersLite(): Promise<
     .order("name", { ascending: true })
     .limit(200)
   return data ?? []
-}
+})
 
-export async function getCategoriesUsed(
+export const getCategoriesUsed = cache(async (
   type?: "income" | "expense"
-): Promise<{ category: string; count: number }[]> {
+): Promise<{ category: string; count: number }[]> => {
   const supabase = await createClient()
   let query = supabase
     .from("transactions")
@@ -221,7 +226,7 @@ export async function getCategoriesUsed(
   return Array.from(counts.entries())
     .map(([category, count]) => ({ category, count }))
     .sort((a, b) => b.count - a.count)
-}
+})
 
 // ===========================================================================
 // Top 1 / Top 5
@@ -456,6 +461,7 @@ export type PaginatedTransactionRow = RecentTransaction & {
   raw_status: "pending" | "paid"
   customer_id: string | null
   supplier_id: string | null
+  source?: string | null
 }
 
 export type PaginatedTransactions = {
@@ -513,7 +519,7 @@ export async function listTransactions(
   let query = supabase
     .from("transactions_with_status")
     .select(
-      "id, type, amount, status, raw_status, due_date, paid_at, description, category, customer_id, supplier_id",
+      "id, type, amount, status, raw_status, due_date, paid_at, description, category, customer_id, supplier_id, source",
       { count: "exact" }
     )
 
@@ -527,8 +533,14 @@ export async function listTransactions(
       query = query.eq("category", filters.category)
     }
   }
-  if (filters.from) query = query.gte("due_date", filters.from)
-  if (filters.to) query = query.lte("due_date", filters.to)
+  if (filters.from || filters.to) {
+    query = applyTransactionDateRange(
+      query,
+      filters.from,
+      filters.to,
+      filters.status
+    )
+  }
 
   const { data, error, count } = await query
     .order("due_date", { ascending: false })
@@ -561,6 +573,7 @@ export async function listTransactions(
     supplier_name: r.supplier_id
       ? supplierMap.get(r.supplier_id) ?? null
       : null,
+    source: (r as { source?: string | null }).source ?? null,
   }))
 
   const total = count ?? 0
@@ -647,6 +660,35 @@ export async function listTransactionsByCustomer(
   pageSize = 15
 ): Promise<PaginatedTransactions> {
   return listTransactionsByParty("customer_id", customerId, page, pageSize)
+}
+
+export type CustomerCollectionTarget = {
+  amount: number
+  description: string | null
+  due_date: string
+}
+
+/** Primeira receita vencida do cliente (para cobrança WhatsApp). */
+export async function getCustomerOverdueCollectionTarget(
+  customerId: string
+): Promise<CustomerCollectionTarget | null> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("transactions_with_status")
+    .select("amount, description, due_date")
+    .eq("customer_id", customerId)
+    .eq("type", "income")
+    .eq("status", "overdue")
+    .order("due_date", { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
+  if (!data) return null
+  return {
+    amount: Number(data.amount),
+    description: data.description as string | null,
+    due_date: data.due_date as string,
+  }
 }
 
 // ===========================================================================

@@ -12,6 +12,8 @@
  *   5. Retorna lista ordenada por gasto mensal estimado (desc).
  */
 
+import { cache } from "react"
+
 import { createClient } from "@/lib/supabase/server"
 
 const LOOKBACK_MONTHS = 6
@@ -20,6 +22,7 @@ const PRICE_TOLERANCE = 0.15
 const STABLE_RATIO = 0.8
 const MIN_INTERVAL_DAYS = 22
 const MAX_INTERVAL_DAYS = 38
+const STALE_DAYS = 90
 
 export type RecurringExpense = {
   /** Fingerprint usado pra agrupar (não exibir na UI). */
@@ -34,6 +37,8 @@ export type RecurringExpense = {
   monthlyAmount: number
   /** Data (ISO) da ocorrência mais recente. */
   lastSeen: string
+  /** Sem movimentação há 90+ dias — possível corte de custo. */
+  possiblyCanceled: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -136,7 +141,7 @@ type RawTx = {
   due_date: string
 }
 
-export async function detectRecurringExpenses(): Promise<RecurringExpense[]> {
+export const detectRecurringExpenses = cache(async (): Promise<RecurringExpense[]> => {
   const supabase = await createClient()
 
   const cutoff = new Date()
@@ -178,10 +183,23 @@ export async function detectRecurringExpenses(): Promise<RecurringExpense[]> {
   const recurring: RecurringExpense[] = []
 
   for (const [fp, items] of groups) {
-    if (items.length < MIN_OCCURRENCES) continue
+    // Uma ocorrência por mês — evita inflar contagem após importação OFX em lote
+    const byMonth = new Map<string, RawTx>()
+    for (const item of items) {
+      const month = item.due_date.slice(0, 7)
+      const existing = byMonth.get(month)
+      if (!existing || item.due_date > existing.due_date) {
+        byMonth.set(month, item)
+      }
+    }
+    const deduped = [...byMonth.values()]
+    if (deduped.length < MIN_OCCURRENCES) continue
+
+    const calendarMonths = new Set(deduped.map((x) => x.due_date.slice(0, 7)))
+    if (calendarMonths.size < 2) continue
 
     // Valor estável?
-    const amounts = items.map((x) => x.amount)
+    const amounts = deduped.map((x) => x.amount)
     const med = median(amounts)
     if (med <= 0) continue
     const stable = amounts.filter(
@@ -190,7 +208,7 @@ export async function detectRecurringExpenses(): Promise<RecurringExpense[]> {
     if (stable / amounts.length < STABLE_RATIO) continue
 
     // Cadência mensal?
-    const sortedDates = items
+    const sortedDates = deduped
       .map((x) => x.due_date)
       .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
     const gaps: number[] = []
@@ -201,22 +219,25 @@ export async function detectRecurringExpenses(): Promise<RecurringExpense[]> {
     if (medGap < MIN_INTERVAL_DAYS || medGap > MAX_INTERVAL_DAYS) continue
 
     // Pega ocorrência mais recente como amostra
-    const latest = items.reduce((acc, cur) =>
+    const latest = deduped.reduce((acc, cur) =>
       cur.due_date > acc.due_date ? cur : acc
     )
+
+    const daysSinceLast = dayDiff(latest.due_date, new Date().toISOString().slice(0, 10))
 
     recurring.push({
       fingerprint: fp,
       sampleDescription: latest.description ?? fp,
       category: modeOrFirst(
-        items.map((x) => x.category).filter((c): c is string => Boolean(c))
+        deduped.map((x) => x.category).filter((c): c is string => Boolean(c))
       ),
-      count: items.length,
+      count: deduped.length,
       monthlyAmount: med,
       lastSeen: latest.due_date,
+      possiblyCanceled: daysSinceLast >= STALE_DAYS,
     })
   }
 
   recurring.sort((a, b) => b.monthlyAmount - a.monthlyAmount)
   return recurring
-}
+})

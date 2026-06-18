@@ -17,6 +17,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 
 import { SidebarNav } from "./sidebar-nav"
 import { UserMenu } from "./user-menu"
+import type { TenantRole } from "@/lib/team/queries"
 
 type Props = {
   userName: string
@@ -25,6 +26,7 @@ type Props = {
   tenantName?: string
   tenantTier?: "trial" | "pro" | "enterprise"
   trialEndsAt?: string
+  userRole?: TenantRole
 }
 
 export function MobileNav({
@@ -34,6 +36,7 @@ export function MobileNav({
   tenantName,
   tenantTier,
   trialEndsAt,
+  userRole = "owner",
 }: Props) {
   const [open, setOpen] = useState(false)
   const initials = getInitials(userName || userEmail)
@@ -62,7 +65,7 @@ export function MobileNav({
             className="flex-1 overflow-y-auto py-4"
             onClick={() => setOpen(false)}
           >
-            <SidebarNav />
+            <SidebarNav tier={tenantTier} role={userRole} />
           </div>
 
           {tenantTier === "trial" && trialEndsAt && (

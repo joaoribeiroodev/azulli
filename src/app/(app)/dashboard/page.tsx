@@ -55,8 +55,6 @@ export default async function DashboardPage() {
         <SummaryCards />
       </Suspense>
 
-      <DashboardTipCard />
-
       <Suspense fallback={<Skeleton className="h-16" />}>
         <HumanInsightCard />
       </Suspense>
@@ -84,6 +82,8 @@ export default async function DashboardPage() {
       <Suspense fallback={<Skeleton className="h-80" />}>
         <RecentTransactionsWrapper />
       </Suspense>
+
+      <DashboardTipCard />
 
       <DashboardTour />
     </div>

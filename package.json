@@ -14,7 +14,8 @@
     "test:asaas": "node scripts/test-asaas.mjs",
     "generate:secret": "node scripts/generate-secret.mjs",
     "generate:pwa-icons": "node scripts/generate-pwa-icons.mjs",
-    "validate:pwa": "node scripts/validate-pwa.mjs"
+    "validate:pwa": "node scripts/validate-pwa.mjs",
+    "test:production": "node scripts/test-production.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

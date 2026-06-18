@@ -2,7 +2,9 @@
 
 > **Comece por aqui se está confuso:** [`docs/FLUXO_DEPLOY.md`](./FLUXO_DEPLOY.md) — fluxo simples em 4 fases (Vercel + Registro.br).
 
-Guia passo a passo para colocar o Azulli no ar em `useazulli.app.br` (app) e `azulli.app.br` (marketing), com Asaas, Supabase, Resend e crons.
+Guia passo a passo para colocar o Azulli no ar em `use.azulli.app.br` (app) e `azulli.app.br` (marketing), com Asaas, Supabase, Resend e crons.
+
+**Pendências atuais:** [`docs/DEPLOY_PENDENTE.md`](./DEPLOY_PENDENTE.md) — checklist do que falta nos painéis.
 
 **Situação típica:** conta Asaas aprovada, API key e token de webhook já gerados, resto ainda não configurado.
 
@@ -25,7 +27,7 @@ Guia passo a passo para colocar o Azulli no ar em `useazulli.app.br` (app) e `az
 12. Teste de assinatura real (Asaas produção)
 ```
 
-Não configure o webhook Asaas **antes** do passo 9 — ele precisa de `https://useazulli.app.br` respondendo.
+Não configure o webhook Asaas **antes** do passo 9 — ele precisa de `https://use.azulli.app.br` respondendo.
 
 ---
 
@@ -39,7 +41,7 @@ Não configure o webhook Asaas **antes** do passo 9 — ele precisa de `https://
 | Service role key | Supabase → API → `service_role` (só servidor/Vercel) |
 | Gemini API key | [Google AI Studio](https://aistudio.google.com/apikey) |
 | Resend API key | [resend.com](https://resend.com) |
-| Domínios | `azulli.app.br` e `useazulli.app.br` no registrador |
+| Domínios | `azulli.app.br` e `use.azulli.app.br` no registrador |
 
 ---
 
@@ -123,7 +125,7 @@ Copie da tabela abaixo. Valores sensíveis **nunca** no Git.
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://xxxxx.supabase.co` | Sim |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon key | Sim |
 | `SUPABASE_SERVICE_ROLE_KEY` | service_role key | Sim (webhook Asaas) |
-| `NEXT_PUBLIC_APP_URL` | `https://useazulli.app.br` | Sim |
+| `NEXT_PUBLIC_APP_URL` | `https://use.azulli.app.br` | Sim |
 | `ASAAS_API_KEY` | `aact_prod_...` **sem** `$` | Sim |
 | `ASAAS_BASE_URL` | `https://api.asaas.com/v3` | Sim |
 | `ASAAS_WEBHOOK_TOKEN` | token que você gerou | Sim |
@@ -189,7 +191,7 @@ Para ir ao ar **sem** brigar com apex + www:
 
 | Passo | Na Vercel digite | O que fazer no modal |
 |-------|------------------|----------------------|
-| 1 | `useazulli.app.br` | Confirmar. Anotar DNS: **CNAME** `useazulli` → valor da Vercel |
+| 1 | `use.azulli.app.br` | Confirmar. Anotar DNS: **CNAME** `use` → valor da Vercel |
 | 2 | `azulli.app.br` | Se perguntar sobre `www`, escolha **só o domínio digitado** / **Add only** — **não** adicione www agora |
 
 Resultado: **2 linhas** na lista de domínios, ambas com status verde (Valid Configuration).
@@ -213,14 +215,14 @@ Se `www` ficou como “principal” e o apex redireciona ao www: edite a linha d
 
 | Domínio | Função |
 |---------|--------|
-| `useazulli.app.br` | App (login, dashboard, billing) |
+| `use.azulli.app.br` | App (login, dashboard, billing) |
 | `azulli.app.br` | Landing marketing em `/` |
 
 **Não adicione** (evita conflito na Vercel e no DNS):
 
 | Evitar | Por quê |
 |--------|---------|
-| `www.useazulli.app.br` | `useazulli` já é subdomínio; `www` em cima é redundante |
+| `www.use.azulli.app.br` | `use` já é subdomínio; `www` em cima é redundante |
 | Apex + www manual duplicado | Vercel mostra “sobreposição” se apex e www competem na mesma linha DNS |
 
 Para o **www do marketing** (`www.azulli.app.br`):
@@ -232,9 +234,9 @@ Para o **www do marketing** (`www.azulli.app.br`):
 Se já adicionou apex + www e aparece **“sobreposição”**:
 
 1. Vercel → Domains → remova **todos** os custom domains do projeto.
-2. Adicione `useazulli.app.br` → aguarde instruções DNS.
+2. Adicione `use.azulli.app.br` → aguarde instruções DNS.
 3. Adicione `azulli.app.br` → configure redirect www na UI da Vercel (não duplique entradas).
-4. No registrador, apague registros antigos de `@` / `www` / `useazulli` antes de criar os novos.
+4. No registrador, apague registros antigos de `@` / `www` / `use` (e `useazulli` legado) antes de criar os novos.
 
 ### 6.2 DNS no registrador (zona `azulli.app.br`)
 
@@ -244,7 +246,7 @@ Use **um registro por nome** — tipos diferentes, sem duplicar o mesmo nome:
 |------|-------------|--------|--------|
 | **A** | `@` (apex) | `76.76.21.21` * | `azulli.app.br` |
 | **CNAME** | `www` | `cname.vercel-dns.com` * | `www.azulli.app.br` |
-| **CNAME** | `useazulli` | `cname.vercel-dns.com` * | `useazulli.app.br` |
+| **CNAME** | `use` | `cname.vercel-dns.com` * | `use.azulli.app.br` |
 
 \* Valores exatos: copie da Vercel em **Domains → cada domínio → DNS Records** (podem ser `cname.vercel-dns-0.com` etc.).
 
@@ -256,14 +258,14 @@ Use **um registro por nome** — tipos diferentes, sem duplicar o mesmo nome:
 - **CNAME no `@** quando o registrador já tem A/MX do e-mail — mantenha MX do e-mail; apex só com **A** da Vercel.
 - Domínio já em **outro projeto** Vercel — remova do projeto antigo primeiro.
 
-`useazulli` é **subdomínio** (CNAME). `www` é outro subdomínio. O apex `@` é **A record** — não misture com CNAME no mesmo `@`.
+`use` é **subdomínio** (CNAME). `www` é outro subdomínio. O apex `@` é **A record** — não misture com CNAME no mesmo `@`.
 
 ### 6.3 Propagação
 
 Pode levar de minutos a 48h. Teste:
 
 ```text
-https://useazulli.app.br/login
+https://use.azulli.app.br/login
 https://azulli.app.br
 https://www.azulli.app.br   → deve redirecionar a azulli.app.br
 ```
@@ -273,8 +275,8 @@ https://www.azulli.app.br   → deve redirecionar a azulli.app.br
 | URL | Host | Comportamento |
 |-----|------|----------------|
 | `azulli.app.br/` | marketing | Landing |
-| `useazulli.app.br/` | app | Redirect → `/login` ou `/dashboard` |
-| `useazulli.app.br/billing` | app | Planos / assinatura |
+| `use.azulli.app.br/` | app | Redirect → `/login` ou `/dashboard` |
+| `use.azulli.app.br/billing` | app | Planos / assinatura |
 
 Definido em `src/lib/app/domain-hosts.ts` e `src/proxy.ts`.
 
@@ -286,13 +288,13 @@ Supabase Dashboard → **Authentication → URL Configuration**
 
 | Campo | Valor |
 |-------|--------|
-| **Site URL** | `https://useazulli.app.br` |
+| **Site URL** | `https://use.azulli.app.br` |
 | **Redirect URLs** (adicione todas) | |
 
 ```
-https://useazulli.app.br/**
-https://useazulli.app.br/auth/callback
-https://useazulli.app.br/auth/confirm
+https://use.azulli.app.br/**
+https://use.azulli.app.br/auth/callback
+https://use.azulli.app.br/auth/confirm
 ```
 
 Opcional (marketing não faz login, mas não atrapalha):
@@ -303,7 +305,7 @@ https://azulli.app.br/**
 
 ### E-mail de recuperação de senha
 
-O link do e-mail Supabase usa `Site URL` + `/auth/confirm`. Por isso `Site URL` deve ser `useazulli.app.br`.
+O link do e-mail Supabase usa `Site URL` + `/auth/confirm`. Por isso `Site URL` deve ser `use.azulli.app.br`.
 
 Fluxo: e-mail → `/auth/confirm?token_hash=...&type=recovery&next=/reset-password` → sessão → reset.
 
@@ -313,7 +315,7 @@ Fluxo: e-mail → `/auth/confirm?token_hash=...&type=recovery&next=/reset-passwo
 
 Se você alterou `NEXT_PUBLIC_APP_URL` ou domínios após o primeiro deploy:
 
-1. Confirme `NEXT_PUBLIC_APP_URL=https://useazulli.app.br` na Vercel
+1. Confirme `NEXT_PUBLIC_APP_URL=https://use.azulli.app.br` na Vercel
 2. **Deployments → Redeploy** (último deployment, Production)
 
 `NEXT_PUBLIC_*` é embutido no build — mudança exige novo build.
@@ -322,13 +324,13 @@ Se você alterou `NEXT_PUBLIC_APP_URL` ou domínios após o primeiro deploy:
 
 ## Passo 9 — Webhook Asaas (produção)
 
-Só agora — com `useazulli.app.br` no ar.
+Só agora — com `use.azulli.app.br` no ar.
 
 Asaas [asaas.com](https://www.asaas.com) → **Integrações → Webhooks → Adicionar**
 
 | Campo | Valor |
 |-------|--------|
-| **URL** | `https://useazulli.app.br/api/webhooks/asaas` |
+| **URL** | `https://use.azulli.app.br/api/webhooks/asaas` |
 | **Token de autenticação** | igual `ASAAS_WEBHOOK_TOKEN` na Vercel |
 | **Método** | POST |
 
@@ -395,7 +397,7 @@ Com `CRON_SECRET` na Vercel, a Vercel envia `Authorization: Bearer <CRON_SECRET>
 
 ```bash
 curl -H "Authorization: Bearer SEU_CRON_SECRET" \
-  "https://useazulli.app.br/api/cron/trial-ending?dryRun=1"
+  "https://use.azulli.app.br/api/cron/trial-ending?dryRun=1"
 ```
 
 Esperado: JSON com `ok: true`, sem 401/500.
@@ -411,12 +413,12 @@ Use o checklist em `SMOKE_TEST.md`, adaptado para produção:
 ### Rotas críticas (sem 500)
 
 - [ ] `https://azulli.app.br` — landing
-- [ ] `https://useazulli.app.br/login`
-- [ ] `https://useazulli.app.br/register`
-- [ ] `https://useazulli.app.br/dashboard` (logado)
-- [ ] `https://useazulli.app.br/configuracoes`
-- [ ] `https://useazulli.app.br/termos-de-uso`
-- [ ] `https://useazulli.app.br/politica-de-privacidade`
+- [ ] `https://use.azulli.app.br/login`
+- [ ] `https://use.azulli.app.br/register`
+- [ ] `https://use.azulli.app.br/dashboard` (logado)
+- [ ] `https://use.azulli.app.br/configuracoes`
+- [ ] `https://use.azulli.app.br/termos-de-uso`
+- [ ] `https://use.azulli.app.br/politica-de-privacidade`
 
 ### Auth
 
@@ -443,7 +445,7 @@ Use o checklist em `SMOKE_TEST.md`, adaptado para produção:
 | ⬜ | Vercel: repo importado |
 | ⬜ | Todas env vars Production configuradas |
 | ⬜ | Deploy verde |
-| ⬜ | `useazulli.app.br` + `azulli.app.br` no ar |
+| ⬜ | `use.azulli.app.br` + `azulli.app.br` no ar |
 | ⬜ | Supabase Site URL + Redirect URLs |
 | ⬜ | Redeploy após `NEXT_PUBLIC_APP_URL` |
 | ⬜ | Webhook Asaas com URL + token + eventos |

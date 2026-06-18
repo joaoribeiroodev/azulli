@@ -1,6 +1,6 @@
 # Tutorial: conta Asaas de produção (Azulli)
 
-Guia para abrir a conta real no Asaas, ativar, integrar com o Azulli em `useazulli.app.br` e receber assinaturas (Pro R$ 29,99 · Empresarial R$ 47,99).
+Guia para abrir a conta real no Asaas, ativar, integrar com o Azulli em `use.azulli.app.br` e receber assinaturas (Pro R$ 29,99 · Empresarial R$ 47,99).
 
 > Já testou no sandbox? Ver `docs/ASAAS_SANDBOX.md`. Sandbox e produção **não compartilham** login, clientes nem assinaturas.
 
@@ -56,7 +56,7 @@ Referência: [Como fazer a ativação da minha conta?](https://central.ajuda.asa
 | Razão social / nome | Nome legal da empresa |
 | CNPJ | CNPJ da empresa que opera o Azulli |
 | Atividade | Software / serviços de tecnologia |
-| Site | `https://azulli.app.br` ou `https://useazulli.app.br` |
+| Site | `https://azulli.app.br` ou `https://use.azulli.app.br` |
 | E-mail comercial | E-mail de suporte/cobrança |
 | Telefone | Mesmo usado na ativação SMS |
 
@@ -143,7 +143,7 @@ Anote em lugar seguro — você usará na Vercel e no painel Asaas.
 
 O webhook precisa de URL pública. Ordem recomendada:
 
-1. Deploy do Azulli na Vercel com domínio `useazulli.app.br`.
+1. Deploy do Azulli na Vercel com domínio `use.azulli.app.br`.
 2. DNS apontando para Vercel (`CNAME` → `cname.vercel-dns.com`).
 3. Variáveis na Vercel (Production):
 
@@ -152,7 +152,7 @@ ASAAS_API_KEY=aact_prod_xxxxxxxx
 ASAAS_BASE_URL=https://api.asaas.com/v3
 ASAAS_WEBHOOK_TOKEN=<token gerado no passo 6>
 SUPABASE_SERVICE_ROLE_KEY=<service role do Supabase>
-NEXT_PUBLIC_APP_URL=https://useazulli.app.br
+NEXT_PUBLIC_APP_URL=https://use.azulli.app.br
 ```
 
 4. Redeploy após salvar as vars.
@@ -177,7 +177,7 @@ Produção **só na Vercel** — não precisa trocar o `.env.local` se não quis
 
 | Campo | Valor |
 |--------|--------|
-| **URL** | `https://useazulli.app.br/api/webhooks/asaas` |
+| **URL** | `https://use.azulli.app.br/api/webhooks/asaas` |
 | **Token de autenticação** | Igual `ASAAS_WEBHOOK_TOKEN` na Vercel |
 | **Método** | POST |
 
@@ -231,7 +231,7 @@ Esperado: `Ambiente: PRODUÇÃO` e `✅ Asaas API OK`.
 | ⬜ | PIX, boleto e cartão habilitados |
 | ⬜ | API Key produção gerada |
 | ⬜ | `ASAAS_*` na Vercel |
-| ⬜ | `useazulli.app.br` no ar |
+| ⬜ | `use.azulli.app.br` no ar |
 | ⬜ | Webhook com URL + token + eventos |
 | ⬜ | `SUPABASE_SERVICE_ROLE_KEY` na Vercel |
 | ⬜ | Teste de assinatura real OK |
@@ -259,7 +259,7 @@ Esperado: `Ambiente: PRODUÇÃO` e `✅ Asaas API OK`.
 | API | `https://api-sandbox.asaas.com/v3` | `https://api.asaas.com/v3` |
 | Chave | `aact_hmlg_...` | `aact_prod_...` |
 | Pagamentos | Fictícios | **Reais** |
-| Webhook | ngrok / teste | `https://useazulli.app.br/api/webhooks/asaas` |
+| Webhook | ngrok / teste | `https://use.azulli.app.br/api/webhooks/asaas` |
 | Uso no Azulli | `.env.local` | Vercel Production |
 
 ---

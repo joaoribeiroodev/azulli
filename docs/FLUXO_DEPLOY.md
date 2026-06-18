@@ -9,7 +9,7 @@ Um caminho só, do zero até o site no ar. Detalhes extras ficam em `DEPLOY_PROD
 | URL | O que o usuário vê |
 |-----|-------------------|
 | `https://azulli.app.br` | Site marketing (landing) |
-| `https://useazulli.app.br` | App Azulli (login, dashboard, billing) |
+| `https://use.azulli.app.br` | App Azulli (login, dashboard, billing) |
 
 Tudo roda no **mesmo projeto** na Vercel.
 
@@ -24,7 +24,7 @@ Tudo roda no **mesmo projeto** na Vercel.
 ├─────────────────┤         ├──────────────────┤
 │ • Deploy do app │         │ • Registro A     │
 │ • Lista domínios│  copia  │ • Registro CNAME │
-│ • Mostra DNS    │ ──────► │   useazulli      │
+│ • Mostra DNS    │ ──────► │   use            │
 │   que criar     │  valores│                  │
 └─────────────────┘         └──────────────────┘
 ```
@@ -48,7 +48,7 @@ Tudo roda no **mesmo projeto** na Vercel.
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → API |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → API |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → service_role |
-| `NEXT_PUBLIC_APP_URL` | `https://useazulli.app.br` |
+| `NEXT_PUBLIC_APP_URL` | `https://use.azulli.app.br` |
 | `ASAAS_API_KEY` | `aact_prod_...` |
 | `ASAAS_BASE_URL` | `https://api.asaas.com/v3` |
 | `ASAAS_WEBHOOK_TOKEN` | token que você gerou |
@@ -61,17 +61,17 @@ Não precisa de `GOOGLE_GENERATIVE_AI_ASSISTANT_KEY`.
 
 ---
 
-### Fase B — Domínio do APP (`useazulli.app.br`)
+### Fase B — Domínio do APP (`use.azulli.app.br`)
 
 **B1. Vercel**
 
 1. Projeto azulli → **Settings** → **Domains**
-2. Campo Add → digite: `useazulli.app.br` → Add
+2. Campo Add → digite: `use.azulli.app.br` → Add
 3. A Vercel mostra algo como:
 
    ```text
    Tipo: CNAME
-   Nome: useazulli
+   Nome: use
    Valor: cname.vercel-dns.com  (ou parecido — use o da sua tela)
    ```
 
@@ -82,21 +82,21 @@ Não precisa de `GOOGLE_GENERATIVE_AI_ASSISTANT_KEY`.
 1. Login → seu domínio `azulli.app.br` → **DNS** / **Editar zona**
 2. **Nova entrada**:
    - Tipo: **CNAME**
-   - Nome: `useazulli` (só isso — **não** `useazulli.app.br`)
+   - Nome: `use` (só isso — **não** `use.azulli.app.br`)
    - Destino: valor que a Vercel mostrou (ex. `cname.vercel-dns.com`)
 3. Salvar
-4. **Teste DNS** (no PC, após 15 min): `nslookup useazulli.app.br` deve retornar um IP, não “não encontrado”
+4. **Teste DNS** (no PC, após 15 min): `nslookup use.azulli.app.br` deve retornar um IP, não “não encontrado”
 
-**Erro comum no Registro.br:** nome `useazulli.azulli.app.br` ou `useazulli.azulli` no campo Nome.
+**Erro comum no Registro.br:** nome `use.azulli.app.br` completo no campo Nome (o painel já mostra `.azulli.app.br` ao lado).
 
-O certo é só `useazulli` → gera `useazulli.app.br`. Nome errado = `nslookup useazulli.app.br` falha para todo mundo.
+O certo é só `use` → gera `use.azulli.app.br`. Nome errado = `nslookup use.azulli.app.br` falha para todo mundo.
 
 
 **B3. Voltar na Vercel**
 
 - Aguarde alguns minutos
-- A linha `useazulli.app.br` deve ficar **Valid** / verde
-- Teste: `https://useazulli.app.br/login`
+- A linha `use.azulli.app.br` deve ficar **Valid** / verde
+- Teste: `https://use.azulli.app.br/login`
 
 ---
 
@@ -136,9 +136,9 @@ O certo é só `useazulli` → gera `useazulli.app.br`. Nome errado = `nslookup 
 
 | # | Onde | O que fazer |
 |---|------|-------------|
-| 1 | Supabase | Auth → Site URL = `https://useazulli.app.br` + Redirect URLs |
+| 1 | Supabase | Auth → Site URL = `https://use.azulli.app.br` + Redirect URLs |
 | 2 | Vercel | Redeploy (se mudou `NEXT_PUBLIC_APP_URL`) |
-| 3 | Asaas | Webhook → `https://useazulli.app.br/api/webhooks/asaas` |
+| 3 | Asaas | Webhook → `https://use.azulli.app.br/api/webhooks/asaas` |
 | 4 | Resend | Verificar domínio `azulli.app.br` (e-mail) |
 
 ---
@@ -147,7 +147,7 @@ O certo é só `useazulli` → gera `useazulli.app.br`. Nome errado = `nslookup 
 
 | ❌ Não | ✅ Em vez disso |
 |--------|----------------|
-| Adicionar `www.useazulli.app.br` | Só `useazulli.app.br` |
+| Adicionar `www.use.azulli.app.br` | Só `use.azulli.app.br` |
 | Adicionar apex + www juntos no primeiro try | Só `azulli.app.br`; www depois (opcional) |
 | CNAME no `@` no Registro.br | **A** no `@` |
 | A + CNAME no mesmo `@` | Só **A** no `@` |
@@ -159,7 +159,7 @@ O certo é só `useazulli` → gera `useazulli.app.br`. Nome errado = `nslookup 
 ## www.azulli.app.br (opcional — pode ignorar no go-live)
 
 Quem digita `www.azulli.app.br` pode não abrir até você configurar www.  
-`azulli.app.br` e `useazulli.app.br` são suficientes para lançar.
+`azulli.app.br` e `use.azulli.app.br` são suficientes para lançar.
 
 Quando quiser www:
 
@@ -175,46 +175,46 @@ Quando quiser www:
 |----------|-----------|
 | Vercel “Invalid Configuration” | Registro.br: registro errado ou ainda propagando (espere 15–60 min) |
 | “Sobreposição” na Vercel | Remova todos os domínios, recomece Fase B e C |
-| `useazulli` abre landing em vez do app | `NEXT_PUBLIC_APP_URL` + redeploy |
+| `use` abre landing em vez do app | `NEXT_PUBLIC_APP_URL` + redeploy |
 | Login quebrado | Supabase Redirect URLs (Fase D) |
 
 ---
 
-## Problema: useazulli mostra landing
+## Problema: app host mostra landing
 
-**Causa:** `NEXT_PUBLIC_APP_URL` na Vercel diferente de `https://useazulli.app.br` (ex.: `azulli.app.br` ou `localhost`).
+**Causa:** `NEXT_PUBLIC_APP_URL` na Vercel diferente de `https://use.azulli.app.br` (ex.: `azulli.app.br` ou `localhost`).
 
 **Correção:**
 
 1. Vercel → Settings → Environment Variables  
-2. `NEXT_PUBLIC_APP_URL` = `https://useazulli.app.br` (sem barra no final)  
+2. `NEXT_PUBLIC_APP_URL` = `https://use.azulli.app.br` (sem barra no final)  
 3. **Redeploy** obrigatório (`NEXT_PUBLIC_*` entra no build)
 
-O código também reconhece `useazulli.app.br` fixo — após push + deploy, `/` redireciona a `/login` mesmo se a env estiver errada.
+O código também reconhece `use.azulli.app.br` fixo — após push + deploy, `/` redireciona a `/login` mesmo se a env estiver errada.
 
 ---
 
-## Problema: nslookup não encontra useazulli.app.br
+## Problema: nslookup não encontra use.azulli.app.br
 
-**Causa:** falta CNAME `useazulli` no Registro.br (teste global ainda retorna “domínio não existe”).
+**Causa:** falta CNAME `use` no Registro.br (teste global ainda retorna “domínio não existe”).
 
 **Correção no Registro.br:**
 
 1. Domínio `azulli.app.br` → **DNS**
-2. Nova linha: **CNAME** | nome `useazulli` | destino `cname.vercel-dns.com` (valor da Vercel)
+2. Nova linha: **CNAME** | nome `use` | destino `cname.vercel-dns.com` (valor da Vercel)
 3. Salvar → aguardar 15–60 min
-4. `nslookup useazulli.app.br 8.8.8.8` deve mostrar IP, não erro
+4. `nslookup use.azulli.app.br 8.8.8.8` deve mostrar IP, não erro
 
-**Confira a barra do navegador:** se mostra `azulli.app.br`, é landing (correto). Só `useazulli.app.br` é o app.
+**Confira a barra do navegador:** se mostra `azulli.app.br`, é landing (correto). Só `use.azulli.app.br` é o app.
 
 ---
 
 
 ```
 □ Deploy verde na Vercel
-□ useazulli.app.br → verde na Vercel + CNAME no Registro.br
+□ use.azulli.app.br → verde na Vercel + CNAME no Registro.br
 □ azulli.app.br → verde na Vercel + A no Registro.br
-□ https://useazulli.app.br/login abre
+□ https://use.azulli.app.br/login abre
 □ https://azulli.app.br abre landing
 □ Supabase Auth URLs
 □ Webhook Asaas
@@ -222,4 +222,4 @@ O código também reconhece `useazulli.app.br` fixo — após push + deploy, `/`
 
 ---
 
-*Guia detalhado: `docs/DEPLOY_PRODUCAO.md`*
+**Pendências:** [`docs/DEPLOY_PENDENTE.md`](./DEPLOY_PENDENTE.md)

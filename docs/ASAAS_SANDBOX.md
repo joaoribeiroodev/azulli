@@ -89,7 +89,7 @@ ASAAS_WEBHOOK_TOKEN=...
 
 Reinicie o dev server e rode `npm run test:asaas` para confirmar sandbox.
 
-**Produção fica só na Vercel** quando `useazulli.app.br` estiver no ar — ver `docs/ASAAS_PRODUCAO.md`.
+**Produção fica só na Vercel** quando `use.azulli.app.br` estiver no ar — ver `docs/ASAAS_PRODUCAO.md`.
 
 ---
 

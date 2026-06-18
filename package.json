@@ -12,6 +12,7 @@
     "lint": "eslint",
     "test:weekly-insights": "node scripts/test-weekly-insights.mjs",
     "test:asaas": "node scripts/test-asaas.mjs",
+    "test:asaas-webhook": "node scripts/test-asaas-webhook.mjs",
     "generate:secret": "node scripts/generate-secret.mjs",
     "generate:pwa-icons": "node scripts/generate-pwa-icons.mjs",
     "validate:pwa": "node scripts/validate-pwa.mjs",

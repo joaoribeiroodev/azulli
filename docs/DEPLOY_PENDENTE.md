@@ -117,14 +117,28 @@ Só configure com `https://use.azulli.app.br` no ar.
 
 **Teste:** painel Asaas “Testar webhook” → esperado **200**. **401** = token diferente entre Asaas e Vercel.
 
-Teste local do token (sem expor no chat):
+**Teste manual (PowerShell):**
 
-```bash
-# PowerShell — substitua TOKEN
-Invoke-WebRequest -Uri "https://use.azulli.app.br/api/webhooks/asaas" -Method POST -Headers @{ "asaas-access-token" = "TOKEN" } -Body "{}" -UseBasicParsing
+```powershell
+$body = '{"id":"test_manual","event":"WEBHOOK_TEST","dateCreated":"2026-06-17T12:00:00"}'
+Invoke-WebRequest -Uri "https://use.azulli.app.br/api/webhooks/asaas" -Method POST `
+  -Headers @{ "asaas-access-token" = "SEU_TOKEN"; "Content-Type" = "application/json" } `
+  -Body $body -UseBasicParsing
 ```
 
-401 sem token correto é esperado; 200 no teste do painel Asaas confirma alinhamento.
+Ou no projeto (lê token do ambiente):
+
+```bash
+ASAAS_WEBHOOK_TOKEN=seu_token npm run test:asaas-webhook
+```
+
+| HTTP | Significado |
+|------|-------------|
+| **401** | Token Asaas ≠ `ASAAS_WEBHOOK_TOKEN` na Vercel |
+| **400** | Token **provavelmente OK** — corpo vazio `{}` sem `id` e `event` |
+| **200** | Endpoint + token OK |
+
+**Não use** `-Body "{}"` — isso sempre retorna 400, mesmo com token correto.
 
 ---
 

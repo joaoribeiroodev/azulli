@@ -5,6 +5,7 @@ import { SidebarNav } from "@/components/app/sidebar-nav"
 import { UserMenu } from "@/components/app/user-menu"
 import { MobileNav } from "@/components/app/mobile-nav"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { AnnouncementsBell } from "@/components/app/announcements-bell"
 import { RegisterServiceWorker } from "@/components/pwa/register-sw"
 
 import { getCurrentMembership } from "@/lib/team/queries"
@@ -56,7 +57,10 @@ export default async function AppLayout({
           >
             Azulli
           </Link>
-          <ThemeToggle />
+          <div className="flex items-center gap-1">
+            <AnnouncementsBell />
+            <ThemeToggle />
+          </div>
         </div>
         {tenant?.name && (
           <p className="px-5 pt-2 text-xs text-muted-foreground truncate">

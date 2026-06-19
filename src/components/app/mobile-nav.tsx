@@ -14,6 +14,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { AnnouncementsBell } from "@/components/app/announcements-bell"
 
 import { SidebarNav } from "./sidebar-nav"
 import { UserMenu } from "./user-menu"
@@ -115,6 +116,7 @@ export function MobileNav({
       </Link>
 
       <div className="flex items-center gap-1 shrink-0">
+        <AnnouncementsBell />
         <ThemeToggle />
         <Avatar className="h-8 w-8 border border-border">
           {avatarUrl ? (

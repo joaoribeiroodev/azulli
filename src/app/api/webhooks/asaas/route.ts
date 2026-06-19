@@ -216,6 +216,34 @@ async function handlePaymentConfirmed(supabase: any, payload: AsaasWebhookBody) 
 
   if (tenantError) throw tenantError
 
+  const payment = payload.payment
+  if (payment?.id && payment.value) {
+    const { data: subRow } = await supabase
+      .from("subscriptions")
+      .select("lead_id")
+      .eq("id", sub.id)
+      .maybeSingle()
+
+    await supabase.from("billing_payments").upsert(
+      {
+        tenant_id: sub.tenant_id,
+        lead_id: subRow?.lead_id ?? null,
+        asaas_payment_id: payment.id,
+        amount: payment.value,
+        status: payment.status ?? "CONFIRMED",
+        paid_at: confirmedDate,
+      },
+      { onConflict: "asaas_payment_id" }
+    )
+
+    if (subRow?.lead_id) {
+      await supabase
+        .from("inbound_leads")
+        .update({ status: "CONVERTED", tenant_id: sub.tenant_id })
+        .eq("id", subRow.lead_id)
+    }
+  }
+
   console.log(
     `[webhook/asaas] CONFIRMED sub=${asaasSubId} tenant=${sub.tenant_id} plan=${sub.plan_id}`
   )

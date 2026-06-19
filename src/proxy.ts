@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { isAppProductHost } from "@/lib/app/domain-hosts"
+import { isAppProductHost, isAdminHost } from "@/lib/app/domain-hosts"
 import { updateSession } from "@/lib/supabase/middleware"
 import { isMissingDbColumn } from "@/lib/onboarding/db"
 
@@ -25,6 +25,8 @@ const PUBLIC_API_PREFIXES = [
   "/api/email/unsubscribe",
 ]
 
+const ADMIN_ROUTE_PREFIX = "/admin"
+
 // Rotas que usuários autenticados sempre podem acessar,
 // mesmo com trial expirado ou sem subscription ativa.
 const ALWAYS_ALLOWED_FOR_AUTHED = [
@@ -40,8 +42,31 @@ const ALWAYS_ALLOWED_FOR_AUTHED = [
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
+  const hostname = request.nextUrl.hostname
+  const isAdmin = isAdminHost(hostname)
 
   const { response, user } = await updateSession(request)
+
+  // Subdomínio admin: raiz → painel admin
+  if (isAdmin && pathname === "/") {
+    const url = request.nextUrl.clone()
+    url.pathname = ADMIN_ROUTE_PREFIX
+    return NextResponse.redirect(url)
+  }
+
+  // Subdomínio admin: bloqueia rotas do app principal (exceto auth e APIs)
+  if (
+    isAdmin &&
+    !pathname.startsWith(ADMIN_ROUTE_PREFIX) &&
+    !pathname.startsWith("/api/") &&
+    !pathname.startsWith("/login") &&
+    !pathname.startsWith("/auth/") &&
+    pathname !== "/register"
+  ) {
+    const url = request.nextUrl.clone()
+    url.pathname = ADMIN_ROUTE_PREFIX
+    return NextResponse.redirect(url)
+  }
 
   // Domínio do app (use.azulli.app.br): `/` não é landing — login ou painel
   if (pathname === "/" && isAppProductHost(request.nextUrl.hostname)) {
@@ -73,21 +98,25 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // 2) Autenticado em rota pública de auth → home do app
+  // 2) Autenticado em rota pública de auth → home do app ou admin
   if (
     user &&
     (pathname === "/login" ||
       pathname === "/register" ||
       pathname === "/forgot-password")
   ) {
-    const onboardingDone = await fetchOnboardingComplete(request)
     const url = request.nextUrl.clone()
-    url.pathname = onboardingDone ? "/dashboard" : "/onboarding"
+    if (isAdmin) {
+      url.pathname = ADMIN_ROUTE_PREFIX
+    } else {
+      const onboardingDone = await fetchOnboardingComplete(request)
+      url.pathname = onboardingDone ? "/dashboard" : "/onboarding"
+    }
     return NextResponse.redirect(url)
   }
 
   // 2b) Onboarding: completo → dashboard; incompleto → bloqueia app
-  if (user && !isPublic) {
+  if (user && !isPublic && !isAdmin && !pathname.startsWith(ADMIN_ROUTE_PREFIX)) {
     const onboardingDone = await fetchOnboardingComplete(request)
     const isOnboardingRoute =
       pathname === "/onboarding" || pathname.startsWith("/onboarding/")

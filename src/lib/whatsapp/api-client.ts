@@ -11,9 +11,13 @@ function getProvider(): "evolution" | "zapi" {
   return "evolution"
 }
 
+function normalizeBaseUrl(raw: string): string {
+  const trimmed = raw.trim().replace(/\/$/, "")
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  return `https://${trimmed}`
+}
+
 /**
- * Envia texto via Evolution API ou Z-API.
- */
 export async function sendWhatsAppText(params: SendTextParams): Promise<void> {
   const provider = getProvider()
   const phone = params.phone.replace(/\D/g, "")
@@ -21,7 +25,7 @@ export async function sendWhatsAppText(params: SendTextParams): Promise<void> {
   if (provider === "zapi") {
     const instance = process.env.ZAPI_INSTANCE_ID
     const token = process.env.ZAPI_TOKEN
-    const base = process.env.ZAPI_BASE_URL ?? "https://api.z-api.io"
+    const base = normalizeBaseUrl(process.env.ZAPI_BASE_URL ?? "https://api.z-api.io")
     if (!instance || !token) {
       throw new Error("[whatsapp] ZAPI_INSTANCE_ID ou ZAPI_TOKEN não configurados.")
     }
@@ -38,7 +42,7 @@ export async function sendWhatsAppText(params: SendTextParams): Promise<void> {
     return
   }
 
-  const base = process.env.EVOLUTION_API_URL?.replace(/\/$/, "")
+  const base = normalizeBaseUrl(process.env.EVOLUTION_API_URL ?? "")
   const instance = process.env.EVOLUTION_INSTANCE_NAME
   const apiKey = process.env.EVOLUTION_API_KEY
   if (!base || !instance || !apiKey) {

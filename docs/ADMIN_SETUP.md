@@ -33,39 +33,11 @@ select id from auth.users where email = 'seu@email.com';
 
 ## Migration
 
-Aplicar migrations até `00026_leads.sql` (inclui `leads` para captura n8n).
+Aplicar `supabase/migrations/00025_growth_platform.sql` (tabelas `platform_admins`, `system_announcements`, `announcement_reads`).
 
 ## Funcionalidades
 
 - **Painel** (`/admin`): empresas, usuários, MAU/DAU, assinaturas, MRR, receita, cadastros recentes
 - **Trials expirando**: lista com botões WhatsApp e e-mail (próximos 3 dias)
 - **Export Excel**: `/api/admin/tenants/export` ou botão no painel (`.xlsx` formatado)
-- **Oportunidades** (`/admin/leads`): leads de campanhas (Kanban + tabela, UTMs, status)
 - **Avisos** (`/admin/announcements`): publicar avisos → sininho no app
-
-## Webhook de leads (n8n)
-
-Variável na Vercel (e `.env.local`):
-
-```
-LEADS_WEBHOOK_API_KEY=<gere com npm run generate:secret>
-```
-
-| Campo | Valor |
-|-------|-------|
-| URL | `https://use.azulli.app.br/api/webhooks/leads` |
-| Método | `POST` |
-| Header | `x-api-key: <LEADS_WEBHOOK_API_KEY>` |
-| Body (JSON) | ver exemplo abaixo |
-
-```json
-{
-  "nome": "Maria Silva",
-  "email": "maria@empresa.com",
-  "cnpj": "12.345.678/0001-90",
-  "utm_source": "instagram",
-  "utm_campaign": "trial-marco"
-}
-```
-
-Resposta sucesso: `200` + `{ "ok": true, "id": "uuid" }`.

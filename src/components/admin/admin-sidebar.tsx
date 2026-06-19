@@ -2,13 +2,12 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BarChart3, LogOut, Megaphone, Users } from "lucide-react"
+import { BarChart3, LogOut, Megaphone } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Painel", icon: BarChart3, exact: true },
-  { href: "/admin/leads", label: "Oportunidades", icon: Users, exact: false },
   { href: "/admin/announcements", label: "Avisos", icon: Megaphone, exact: false },
 ] as const
 

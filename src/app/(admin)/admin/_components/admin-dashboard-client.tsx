@@ -87,14 +87,14 @@ export function AdminDashboardClient() {
 
   return (
     <div className="space-y-8 xl:space-y-10">
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <Button asChild variant="outline" size="sm">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap lg:justify-end gap-2">
+        <Button asChild variant="outline" size="sm" className="w-full sm:w-auto min-h-11">
           <a href="/api/admin/tenants/export" download>
             <Download className="h-4 w-4 mr-2" />
             Exportar Excel
           </a>
         </Button>
-        <Button asChild variant="outline" size="sm">
+        <Button asChild variant="outline" size="sm" className="w-full sm:w-auto min-h-11">
           <Link href="/admin/announcements">
             <Megaphone className="h-4 w-4 mr-2" />
             Novo aviso
@@ -133,8 +133,8 @@ export function AdminDashboardClient() {
               Trials expirando nos próximos 3 dias
             </CardTitle>
           </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <CardContent className="overflow-x-auto overscroll-x-contain -mx-1 px-1 sm:mx-0 sm:px-0">
+            <table className="w-full text-sm min-w-[min(100%,320px)]">
               <thead>
                 <tr className="text-left text-muted-foreground border-b">
                   <th className="pb-2 pr-4">Empresa</th>
@@ -160,9 +160,9 @@ export function AdminDashboardClient() {
                         </div>
                       </td>
                       <td className="py-2">
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-col sm:flex-row flex-wrap gap-2">
                           {wa ? (
-                            <Button asChild size="sm" variant="outline">
+                            <Button asChild size="sm" variant="outline" className="min-h-10">
                               <a href={wa} target="_blank" rel="noopener noreferrer">
                                 <MessageCircle className="h-3.5 w-3.5 mr-1" />
                                 WhatsApp
@@ -170,7 +170,7 @@ export function AdminDashboardClient() {
                             </Button>
                           ) : null}
                           {mail ? (
-                            <Button asChild size="sm" variant="ghost">
+                            <Button asChild size="sm" variant="ghost" className="min-h-10">
                               <a href={mail}>
                                 <Mail className="h-3.5 w-3.5 mr-1" />
                                 E-mail
@@ -242,8 +242,8 @@ export function AdminDashboardClient() {
         <CardHeader className="border-b bg-muted/30">
           <CardTitle className="text-base">Empresas recentes</CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto p-0 sm:p-6">
-          <table className="w-full text-sm min-w-[640px]">
+        <CardContent className="overflow-x-auto overscroll-x-contain p-4 sm:p-6">
+          <table className="w-full text-sm min-w-[min(100%,480px)] sm:min-w-[640px]">
             <thead>
               <tr className="text-left text-muted-foreground border-b">
                 <th className="pb-2 pr-4">Empresa</th>

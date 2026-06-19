@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import { LEGAL_PATHS } from "@/lib/legal/paths"
@@ -30,11 +31,14 @@ function persistConsent() {
 }
 
 export function CookieConsentBanner() {
+  const pathname = usePathname()
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
     if (!hasConsent()) setVisible(true)
   }, [])
+
+  if (pathname.startsWith("/admin")) return null
 
   if (!visible) return null
 

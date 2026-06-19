@@ -20,15 +20,15 @@ export default async function AdminAnnouncementsPage() {
 
   return (
     <div className="w-full space-y-6 xl:space-y-8">
-      <header className="border-b border-border/60 pb-6">
-        <h1 className="text-2xl xl:text-3xl font-display font-bold text-brand-ink flex items-center gap-2">
+      <div className="border-b border-border/60 pb-6">
+        <h1 className="text-xl sm:text-2xl xl:text-3xl font-display font-bold text-brand-ink flex items-center gap-2">
           <Megaphone className="h-6 w-6 text-brand shrink-0" />
           Avisos globais
         </h1>
         <p className="text-sm text-muted-foreground mt-2 max-w-3xl">
           Mensagens exibidas no sininho de notificações do app.
         </p>
-      </header>
+      </div>
       <AdminAnnouncementsClient />
     </div>
   )

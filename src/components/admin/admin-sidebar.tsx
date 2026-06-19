@@ -63,37 +63,62 @@ export function AdminSidebar() {
   )
 }
 
+const MOBILE_HEADER_HEIGHT =
+  "calc(3.5rem + env(safe-area-inset-top, 0px))"
+
 export function AdminMobileNav() {
   const pathname = usePathname()
 
   return (
-    <header className="lg:hidden border-b bg-background/95 backdrop-blur sticky top-0 z-10">
-      <div className="px-4 h-14 flex items-center justify-between gap-3">
-        <Link href="/admin" className="font-display font-bold text-brand-ink truncate">
-          Azulli Admin
-        </Link>
-        <nav className="flex items-center gap-1 shrink-0">
-          {NAV_ITEMS.map((item) => {
-            const active = isActive(pathname, item.href, item.exact)
-            const Icon = item.icon
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "inline-flex items-center justify-center rounded-lg p-2 transition-colors",
-                  active
-                    ? "bg-brand/10 text-brand"
-                    : "text-muted-foreground hover:bg-muted"
-                )}
-                aria-label={item.label}
-              >
-                <Icon className="h-5 w-5" />
-              </Link>
-            )
-          })}
-        </nav>
-      </div>
-    </header>
+    <>
+      <header
+        className="lg:hidden fixed inset-x-0 top-0 z-40 border-b bg-background pt-safe shadow-sm"
+        style={{ height: MOBILE_HEADER_HEIGHT }}
+      >
+        <div className="px-3 sm:px-4 h-14 flex items-center justify-between gap-2 min-w-0">
+          <Link
+            href="/admin"
+            className="font-display font-bold text-brand-ink truncate min-w-0 touch-manipulation"
+          >
+            Azulli Admin
+          </Link>
+          <nav className="flex items-center gap-0.5 shrink-0">
+            {NAV_ITEMS.map((item) => {
+              const active = isActive(pathname, item.href, item.exact)
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "inline-flex items-center justify-center rounded-lg min-h-11 min-w-11 touch-manipulation transition-colors",
+                    active
+                      ? "bg-brand/10 text-brand"
+                      : "text-muted-foreground hover:bg-muted active:bg-muted"
+                  )}
+                  aria-label={item.label}
+                  aria-current={active ? "page" : undefined}
+                >
+                  <Icon className="h-5 w-5" />
+                </Link>
+              )
+            })}
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center rounded-lg min-h-11 min-w-11 text-muted-foreground hover:bg-muted active:bg-muted touch-manipulation transition-colors"
+              aria-label="Sair"
+            >
+              <LogOut className="h-5 w-5" />
+            </Link>
+          </nav>
+        </div>
+      </header>
+      {/* Reserva espaço do header fixo — evita sobreposição e cliques bloqueados */}
+      <div
+        className="lg:hidden shrink-0"
+        style={{ height: MOBILE_HEADER_HEIGHT }}
+        aria-hidden
+      />
+    </>
   )
 }

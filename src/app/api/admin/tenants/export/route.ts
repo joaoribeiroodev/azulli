@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server"
 
 import { requirePlatformAdmin } from "@/lib/admin/platform-admin"
+import { fetchTenantDirectory } from "@/lib/admin/tenant-directory"
 import {
-  buildTenantsCsv,
-  fetchTenantDirectory,
-} from "@/lib/admin/tenant-directory"
+  buildTenantsXlsxBuffer,
+  tenantsExportFilename,
+} from "@/lib/admin/tenants-export"
 
 export const runtime = "nodejs"
 
@@ -16,16 +17,23 @@ export async function GET() {
 
   try {
     const rows = await fetchTenantDirectory()
-    const csv = buildTenantsCsv(rows)
-    const date = new Date().toISOString().slice(0, 10)
+    const buffer = buildTenantsXlsxBuffer(rows)
+    const filename = tenantsExportFilename()
 
-    return new NextResponse(csv, {
-      status: 200,
-      headers: {
-        "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="azulli-empresas-${date}.csv"`,
-      },
-    })
+    return new NextResponse(
+      new Blob([buffer.slice()], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      }),
+      {
+        status: 200,
+        headers: {
+          "Content-Type":
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "Content-Disposition": `attachment; filename="${filename}"`,
+          "Cache-Control": "no-store",
+        },
+      }
+    )
   } catch (err) {
     console.error("[admin/tenants/export]", err)
     return NextResponse.json(

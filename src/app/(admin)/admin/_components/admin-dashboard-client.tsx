@@ -91,7 +91,7 @@ export function AdminDashboardClient() {
         <Button asChild variant="outline" size="sm">
           <a href="/api/admin/tenants/export" download>
             <Download className="h-4 w-4 mr-2" />
-            Exportar CSV
+            Exportar Excel
           </a>
         </Button>
         <Button asChild variant="outline" size="sm">

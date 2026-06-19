@@ -39,5 +39,5 @@ Aplicar `supabase/migrations/00025_growth_platform.sql` (tabelas `platform_admin
 
 - **Painel** (`/admin`): empresas, usuários, MAU/DAU, assinaturas, MRR, receita, cadastros recentes
 - **Trials expirando**: lista com botões WhatsApp e e-mail (próximos 3 dias)
-- **Export CSV**: `/api/admin/tenants/export` ou botão no painel
+- **Export Excel**: `/api/admin/tenants/export` ou botão no painel (`.xlsx` formatado)
 - **Avisos** (`/admin/announcements`): publicar avisos → sininho no app

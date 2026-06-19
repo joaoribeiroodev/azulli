@@ -40,7 +40,7 @@ export function CookieConsentBanner() {
 
   return (
     <div
-      className="fixed bottom-0 inset-x-0 z-[100] p-4 sm:p-5 animate-in slide-in-from-bottom-4 duration-300"
+      className="fixed bottom-0 inset-x-0 z-[100] px-4 pt-4 pb-safe sm:px-5 animate-in slide-in-from-bottom-4 duration-300"
       role="dialog"
       aria-label="Consentimento de cookies"
     >

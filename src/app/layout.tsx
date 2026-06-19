@@ -19,6 +19,8 @@ const poppins = Poppins({
 })
 
 export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
   themeColor: "#050a30",
   viewportFit: "cover",
 }
@@ -70,7 +72,14 @@ export default function RootLayout({
         >
           {children}
           <CookieConsentBanner />
-          <Toaster richColors position="top-right" />
+          <Toaster
+            richColors
+            position="top-right"
+            offset={{
+              top: "max(1rem, env(safe-area-inset-top, 0px))",
+              right: "max(1rem, env(safe-area-inset-right, 0px))",
+            }}
+          />
         </ThemeProvider>
       </body>
     </html>

@@ -43,15 +43,14 @@ export function MobileNav({
 
   return (
     <header
-      className="lg:hidden sticky top-0 z-30 w-full shrink-0 flex min-h-14 items-center justify-between gap-2 border-b bg-card px-4 py-3"
-      style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top, 0px))" }}
+      className="lg:hidden sticky top-0 z-30 w-full shrink-0 flex min-h-14 items-center justify-between gap-2 border-b bg-card px-4 pb-3 pt-safe"
     >
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
           <Button
             variant="ghost"
             size="icon"
-            className="shrink-0"
+            className="shrink-0 h-9 w-9"
             aria-label="Abrir menu"
             data-tour="dashboard-sidebar"
           >
@@ -60,9 +59,9 @@ export function MobileNav({
         </SheetTrigger>
         <SheetContent
           side="left"
-          className="w-72 max-w-[85vw] p-0 flex flex-col"
+          className="w-72 max-w-[85vw] gap-0 flex flex-col px-0"
         >
-          <SheetHeader className="px-5 py-4 border-b shrink-0">
+          <SheetHeader className="px-5 py-4 border-b shrink-0 space-y-1 pr-12">
             <SheetTitle className="text-xl font-display font-bold text-brand-ink text-left">
               Azulli
             </SheetTitle>

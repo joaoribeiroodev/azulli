@@ -328,7 +328,7 @@ export function ChatShell({
       </div>
 
       {/* Input */}
-      <div className="border-t bg-background/95 backdrop-blur sticky bottom-0 pb-[env(safe-area-inset-bottom,0px)]">
+      <div className="border-t bg-background/95 backdrop-blur sticky bottom-0 pb-safe">
         <form
           onSubmit={handleSubmit}
           className="max-w-3xl mx-auto px-4 sm:px-6 py-4"

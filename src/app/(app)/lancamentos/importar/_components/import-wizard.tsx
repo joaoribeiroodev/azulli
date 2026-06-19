@@ -219,9 +219,8 @@ function UploadStep({
 
   return (
     <Card>
-      <CardContent className="p-8">
-        <label
-          htmlFor="ofx-file"
+      <CardContent className="p-4 sm:p-8">
+        <div
           onDragOver={(e) => {
             e.preventDefault()
             setDragOver(true)
@@ -233,16 +232,29 @@ function UploadStep({
             const file = e.dataTransfer.files?.[0]
             if (file) onFile(file)
           }}
-          className={`flex flex-col items-center justify-center gap-4 border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-colors ${
+          className={`relative flex flex-col items-center justify-center gap-4 border-2 border-dashed rounded-xl min-h-[min(320px,50vh)] w-full p-8 sm:p-12 text-center transition-colors ${
             dragOver
               ? "border-brand bg-brand-soft/40"
               : "border-border hover:border-brand/40 hover:bg-muted/30"
           }`}
         >
+          <input
+            ref={inputRef}
+            id="ofx-file"
+            type="file"
+            accept=".ofx,.qfx"
+            disabled={isParsing}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) onFile(file)
+              e.target.value = ""
+            }}
+          />
           {isParsing ? (
             <>
-              <Loader2 className="h-10 w-10 text-brand animate-spin" />
-              <div>
+              <Loader2 className="h-10 w-10 text-brand animate-spin pointer-events-none" />
+              <div className="pointer-events-none">
                 <p className="font-medium">Lendo seu extrato…</p>
                 <p className="text-sm text-muted-foreground mt-1">
                   Categorizando automaticamente com IA. Pode levar alguns segundos.
@@ -251,36 +263,25 @@ function UploadStep({
             </>
           ) : (
             <>
-              <div className="h-14 w-14 rounded-full bg-brand-soft flex items-center justify-center">
+              <div className="h-14 w-14 rounded-full bg-brand-soft flex items-center justify-center pointer-events-none">
                 <Upload className="h-6 w-6 text-brand" />
               </div>
-              <div>
+              <div className="pointer-events-none">
                 <p className="font-medium">
-                  Arraste o arquivo OFX aqui ou clique para selecionar
+                  Arraste o arquivo OFX aqui ou toque para selecionar
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
                   Aceita .ofx e .qfx até {MAX_FILE_SIZE_MB}MB
                 </p>
               </div>
-              <Button type="button" variant="outline" size="sm">
+              <span
+                className="pointer-events-none inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-xs"
+              >
                 Selecionar arquivo
-              </Button>
+              </span>
             </>
           )}
-          <input
-            ref={inputRef}
-            id="ofx-file"
-            type="file"
-            accept=".ofx,.qfx"
-            disabled={isParsing}
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) onFile(file)
-              e.target.value = ""
-            }}
-          />
-        </label>
+        </div>
 
         <div className="mt-6 grid sm:grid-cols-3 gap-3 text-sm text-muted-foreground">
           <div className="flex gap-2">

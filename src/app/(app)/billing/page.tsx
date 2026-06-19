@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation"
 import { AlertCircle, Clock, ExternalLink, LineChart, Mail, Sparkles } from "lucide-react"
 
+import { BackLink } from "@/components/app/back-link"
+
 import { getBillingStateFull } from "@/lib/billing/queries"
 import { PLANS, type Plan, formatPlanPrice } from "@/lib/billing/plans"
 import { formatDateBR } from "@/lib/utils/date"
@@ -38,6 +40,9 @@ export default async function BillingPage({
   return (
     <main className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto space-y-6">
       <header>
+        <BackLink href="/dashboard" className="mb-2">
+          Voltar ao painel
+        </BackLink>
         <h1 className="text-2xl lg:text-3xl font-display font-bold text-brand-ink">
           Assinatura
         </h1>

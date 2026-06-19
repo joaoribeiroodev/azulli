@@ -2,6 +2,7 @@ import { Suspense } from "react"
 import Link from "next/link"
 
 import { Skeleton } from "@/components/ui/skeleton"
+import { BackLink } from "@/components/app/back-link"
 import { getCurrentMembership } from "@/lib/team/queries"
 import { listTransactions } from "@/lib/financial/queries"
 import { AccountantExportCard } from "@/app/(app)/configuracoes/_components/accountant-export-card"
@@ -37,6 +38,9 @@ export default async function ContadorPage({
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       <header className="space-y-1">
+        <BackLink href="/dashboard" className="mb-2">
+          Voltar ao painel
+        </BackLink>
         <h1 className="text-2xl lg:text-3xl font-display font-bold text-brand-ink">
           Área do contador
         </h1>

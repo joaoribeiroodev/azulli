@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation"
 import { User, Building2, CreditCard, Bell, Calculator } from "lucide-react"
+
+import { BackLink } from "@/components/app/back-link"
 import {
   Tabs,
   TabsContent,
@@ -57,6 +59,9 @@ export default async function ConfiguracoesPage({
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
       <header className="mb-4 sm:mb-6">
+        <BackLink href="/dashboard" className="mb-2">
+          Voltar ao painel
+        </BackLink>
         <h1 className="text-2xl lg:text-3xl font-display font-bold text-brand-ink">
           Configurações
         </h1>

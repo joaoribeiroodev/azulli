@@ -171,6 +171,12 @@ export async function updateTransactionAction(
     parsed.data
   const supabase = await createClient()
 
+  const { data: existing } = await supabase
+    .from("transactions")
+    .select("customer_id, supplier_id")
+    .eq("id", id)
+    .maybeSingle()
+
   const updates: Record<string, unknown> = { ...rest }
   if (type) updates.type = type
 
@@ -210,6 +216,20 @@ export async function updateTransactionAction(
 
   revalidatePath("/dashboard")
   revalidatePath("/lancamentos")
+  revalidatePath("/clientes")
+  revalidatePath("/fornecedores")
+  if (existing?.customer_id) {
+    revalidatePath(`/clientes/${existing.customer_id}`)
+  }
+  if (existing?.supplier_id) {
+    revalidatePath(`/fornecedores/${existing.supplier_id}`)
+  }
+  if (customer_id) {
+    revalidatePath(`/clientes/${customer_id}`)
+  }
+  if (supplier_id) {
+    revalidatePath(`/fornecedores/${supplier_id}`)
+  }
   return { success: true }
 }
 

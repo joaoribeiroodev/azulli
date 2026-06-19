@@ -1,17 +1,22 @@
 import { Suspense } from "react"
 import { notFound } from "next/navigation"
-import Link from "next/link"
-import { ChevronLeft } from "lucide-react"
 
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   getCustomerDetails,
   listTransactionsByCustomer,
   getMonthlySeriesByParty,
+  getCustomersLite,
+  getSuppliersLite,
+  getCategoriesUsed,
 } from "@/lib/financial/queries"
+import { getProductsLite } from "@/lib/products/queries"
+
+import { BackLink } from "@/components/app/back-link"
 
 import { CustomerHeader } from "./_components/customer-header"
 import { CustomerCollectionAction } from "./_components/customer-collection-action"
+import { PartyTransactionActions } from "@/components/app/party-transaction-actions"
 import { CustomerKPICards } from "./_components/customer-kpi-cards"
 import { CustomerContactCard } from "./_components/customer-contact-card"
 import { CustomerTransactions } from "./_components/customer-transactions"
@@ -45,23 +50,46 @@ export default async function ClienteDetalhePage({
   const customer = await getCustomerDetails(id)
   if (!customer) notFound()
 
-  const initialSeries = await getMonthlySeriesByParty(customer.id, "customer", 6)
+  const [initialSeries, partyData] = await Promise.all([
+    getMonthlySeriesByParty(customer.id, "customer", 6),
+    Promise.all([
+      getCustomersLite(),
+      getSuppliersLite(),
+      getProductsLite(),
+      getCategoriesUsed("income"),
+      getCategoriesUsed("expense"),
+    ]),
+  ])
+
+  const [
+    customers,
+    suppliers,
+    products,
+    incomeCategories,
+    expenseCategories,
+  ] = partyData
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-      <Link
-        href="/clientes"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ChevronLeft className="h-4 w-4" />
-        Voltar para clientes
-      </Link>
+      <BackLink href="/clientes">Voltar para clientes</BackLink>
 
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <CustomerHeader customer={customer} />
-        <Suspense fallback={null}>
-          <CustomerCollectionAction customer={customer} />
-        </Suspense>
+        <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:items-center">
+          <PartyTransactionActions
+            customers={customers}
+            suppliers={suppliers}
+            products={products}
+            recentIncomeCategories={incomeCategories.map((c) => c.category)}
+            recentExpenseCategories={expenseCategories.map((c) => c.category)}
+            defaultCustomerId={customer.id}
+            showIncome
+            showExpense={false}
+          />
+          <Suspense fallback={null}>
+            <CustomerCollectionAction customer={customer} />
+          </Suspense>
+        </div>
       </div>
 
       <CustomerKPICards kpis={customer.kpis} />
@@ -82,6 +110,11 @@ export default async function ClienteDetalhePage({
               customerId={customer.id}
               customerName={customer.name}
               page={sp.page ? parseInt(sp.page, 10) : 1}
+              customers={customers}
+              suppliers={suppliers}
+              products={products}
+              recentIncomeCategories={incomeCategories.map((c) => c.category)}
+              recentExpenseCategories={expenseCategories.map((c) => c.category)}
             />
           </Suspense>
         </div>
@@ -98,10 +131,20 @@ async function TransactionsSection({
   customerId,
   customerName,
   page,
+  customers,
+  suppliers,
+  products,
+  recentIncomeCategories,
+  recentExpenseCategories,
 }: {
   customerId: string
   customerName: string
   page: number
+  customers: Awaited<ReturnType<typeof getCustomersLite>>
+  suppliers: Awaited<ReturnType<typeof getSuppliersLite>>
+  products: Awaited<ReturnType<typeof getProductsLite>>
+  recentIncomeCategories: string[]
+  recentExpenseCategories: string[]
 }) {
   const result = await listTransactionsByCustomer(customerId, page)
   return (
@@ -109,6 +152,11 @@ async function TransactionsSection({
       customerId={customerId}
       customerName={customerName}
       result={result}
+      customers={customers}
+      suppliers={suppliers}
+      products={products}
+      recentIncomeCategories={recentIncomeCategories}
+      recentExpenseCategories={recentExpenseCategories}
     />
   )
 }

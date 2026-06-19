@@ -1,14 +1,19 @@
 import { Suspense } from "react"
 import { notFound } from "next/navigation"
-import Link from "next/link"
-import { ChevronLeft } from "lucide-react"
 
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   getSupplierDetails,
   listTransactionsBySupplier,
   getMonthlySeriesByParty,
+  getCustomersLite,
+  getSuppliersLite,
+  getCategoriesUsed,
 } from "@/lib/financial/queries"
+import { getProductsLite } from "@/lib/products/queries"
+
+import { BackLink } from "@/components/app/back-link"
+import { PartyTransactionActions } from "@/components/app/party-transaction-actions"
 
 import { SupplierHeader } from "./_components/supplier-header"
 import { SupplierKPICards } from "./_components/supplier-kpi-cards"
@@ -44,19 +49,42 @@ export default async function FornecedorDetalhePage({
   const supplier = await getSupplierDetails(id)
   if (!supplier) notFound()
 
-  const initialSeries = await getMonthlySeriesByParty(supplier.id, "supplier", 6)
+  const [initialSeries, partyData] = await Promise.all([
+    getMonthlySeriesByParty(supplier.id, "supplier", 6),
+    Promise.all([
+      getCustomersLite(),
+      getSuppliersLite(),
+      getProductsLite(),
+      getCategoriesUsed("income"),
+      getCategoriesUsed("expense"),
+    ]),
+  ])
+
+  const [
+    customers,
+    suppliers,
+    products,
+    incomeCategories,
+    expenseCategories,
+  ] = partyData
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-      <Link
-        href="/fornecedores"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ChevronLeft className="h-4 w-4" />
-        Voltar para fornecedores
-      </Link>
+      <BackLink href="/fornecedores">Voltar para fornecedores</BackLink>
 
-      <SupplierHeader supplier={supplier} />
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <SupplierHeader supplier={supplier} />
+        <PartyTransactionActions
+          customers={customers}
+          suppliers={suppliers}
+          products={products}
+          recentIncomeCategories={incomeCategories.map((c) => c.category)}
+          recentExpenseCategories={expenseCategories.map((c) => c.category)}
+          defaultSupplierId={supplier.id}
+          showIncome={false}
+          showExpense
+        />
+      </div>
 
       <SupplierKPICards kpis={supplier.kpis} />
 
@@ -76,6 +104,11 @@ export default async function FornecedorDetalhePage({
               supplierId={supplier.id}
               supplierName={supplier.name}
               page={sp.page ? parseInt(sp.page, 10) : 1}
+              customers={customers}
+              suppliers={suppliers}
+              products={products}
+              recentIncomeCategories={incomeCategories.map((c) => c.category)}
+              recentExpenseCategories={expenseCategories.map((c) => c.category)}
             />
           </Suspense>
         </div>
@@ -92,10 +125,20 @@ async function TransactionsSection({
   supplierId,
   supplierName,
   page,
+  customers,
+  suppliers,
+  products,
+  recentIncomeCategories,
+  recentExpenseCategories,
 }: {
   supplierId: string
   supplierName: string
   page: number
+  customers: Awaited<ReturnType<typeof getCustomersLite>>
+  suppliers: Awaited<ReturnType<typeof getSuppliersLite>>
+  products: Awaited<ReturnType<typeof getProductsLite>>
+  recentIncomeCategories: string[]
+  recentExpenseCategories: string[]
 }) {
   const result = await listTransactionsBySupplier(supplierId, page)
   return (
@@ -103,6 +146,11 @@ async function TransactionsSection({
       supplierId={supplierId}
       supplierName={supplierName}
       result={result}
+      customers={customers}
+      suppliers={suppliers}
+      products={products}
+      recentIncomeCategories={recentIncomeCategories}
+      recentExpenseCategories={recentExpenseCategories}
     />
   )
 }

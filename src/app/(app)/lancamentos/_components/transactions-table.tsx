@@ -8,6 +8,7 @@ import {
   Check,
   Trash2,
   Receipt,
+  Pencil,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -43,28 +44,21 @@ import { formatDateBR } from "@/lib/utils/date"
 import { ListEmptyState } from "@/components/app/list-empty-state"
 import { TransactionDialog } from "@/components/app/transaction-dialog"
 import {
+  EditTransactionDialog,
+  type EditableTransaction,
+} from "@/components/app/edit-transaction-dialog"
+import {
   TransactionDetailDialog,
   type TransactionDetailData,
 } from "@/components/app/transaction-detail-dialog"
 import type { ProductLite } from "@/lib/products/queries"
+import type { PaginatedTransactionRow } from "@/lib/financial/queries"
 import {
   deleteTransactionAction,
   markAsPaidAction,
 } from "@/lib/financial/transactions.actions"
 
-type Row = {
-  id: string
-  type: "income" | "expense"
-  amount: number
-  status: "pending" | "paid" | "overdue"
-  due_date: string
-  paid_at?: string | null
-  description: string | null
-  category: string | null
-  customer_name: string | null
-  supplier_name: string | null
-  source?: string | null
-}
+type Row = PaginatedTransactionRow
 
 type Party = { id: string; name: string }
 
@@ -115,6 +109,8 @@ export function TransactionsTable({
   const [createOpen, setCreateOpen] = useState<"income" | "expense" | null>(
     null
   )
+  const [editTransaction, setEditTransaction] =
+    useState<EditableTransaction | null>(null)
   const [isPending, startTransition] = useTransition()
 
   function openDetail(row: Row) {
@@ -310,12 +306,32 @@ export function TransactionsTable({
                           <Button
                             variant="ghost"
                             size="icon"
+                            className="h-9 w-9"
                             disabled={isPending}
                           >
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() =>
+                              setEditTransaction({
+                                id: row.id,
+                                type: row.type,
+                                amount: row.amount,
+                                due_date: row.due_date,
+                                description: row.description,
+                                category: row.category,
+                                customer_id: row.customer_id,
+                                supplier_id: row.supplier_id,
+                                status: row.status,
+                                raw_status: row.raw_status,
+                              })
+                            }
+                          >
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Editar
+                          </DropdownMenuItem>
                           {row.status !== "paid" && (
                             <DropdownMenuItem
                               onClick={() => handleMarkPaid(row)}
@@ -347,6 +363,21 @@ export function TransactionsTable({
         onOpenChange={setDetailOpen}
         transaction={detailRow}
       />
+
+      {!readOnly && (
+        <EditTransactionDialog
+          open={editTransaction !== null}
+          onOpenChange={(o) => !o && setEditTransaction(null)}
+          transaction={editTransaction}
+          customers={customers}
+          suppliers={suppliers}
+          recentCategories={
+            editTransaction?.type === "income"
+              ? recentIncomeCategories
+              : recentExpenseCategories
+          }
+        />
+      )}
 
       {!readOnly && (
       <AlertDialog

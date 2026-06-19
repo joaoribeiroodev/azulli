@@ -1,7 +1,5 @@
 import { Suspense } from "react"
 import { notFound } from "next/navigation"
-import Link from "next/link"
-import { ChevronLeft } from "lucide-react"
 
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -13,6 +11,8 @@ import {
   getEmployeePayrollSeries,
   listPayrollTransactionsByEmployee,
 } from "@/lib/employees/payroll-queries"
+
+import { BackLink } from "@/components/app/back-link"
 
 import { EmployeeHeader } from "./_components/employee-header"
 import { EmployeeKPICards } from "./_components/employee-kpi-cards"
@@ -60,13 +60,7 @@ export default async function FuncionarioDetailPage({
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-      <Link
-        href="/funcionarios"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ChevronLeft className="h-4 w-4" />
-        Voltar para funcionários
-      </Link>
+      <BackLink href="/funcionarios">Voltar para funcionários</BackLink>
 
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <EmployeeHeader employee={employee} />

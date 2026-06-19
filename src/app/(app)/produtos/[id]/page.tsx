@@ -1,7 +1,5 @@
 import { Suspense } from "react"
 import { notFound } from "next/navigation"
-import Link from "next/link"
-import { ChevronLeft } from "lucide-react"
 
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -9,6 +7,8 @@ import {
   listStockMovements,
   getMonthlySeriesByProduct,
 } from "@/lib/products/queries"
+
+import { BackLink } from "@/components/app/back-link"
 
 import { ProductHeader } from "./_components/product-header"
 import { ProductKPICards } from "./_components/product-kpi-cards"
@@ -41,13 +41,7 @@ export default async function ProdutoDetalhePage({
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-      <Link
-        href="/produtos"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ChevronLeft className="h-4 w-4" />
-        Voltar para produtos
-      </Link>
+      <BackLink href="/produtos">Voltar para produtos</BackLink>
 
       <ProductHeader product={product} />
 

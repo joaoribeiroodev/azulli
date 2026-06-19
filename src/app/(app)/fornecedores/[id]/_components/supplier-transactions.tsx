@@ -13,15 +13,32 @@ import {
 import { Button } from "@/components/ui/button"
 
 import { TransactionsTable } from "@/app/(app)/lancamentos/_components/transactions-table"
+import { PartyTransactionActions } from "@/components/app/party-transaction-actions"
 import type { PaginatedTransactions } from "@/lib/financial/queries"
+import type { ProductLite } from "@/lib/products/queries"
+
+type Party = { id: string; name: string }
 
 type Props = {
   supplierId: string
   supplierName: string
   result: PaginatedTransactions
+  customers: Party[]
+  suppliers: Party[]
+  products: ProductLite[]
+  recentIncomeCategories: string[]
+  recentExpenseCategories: string[]
 }
 
-export function SupplierTransactions({ result }: Props) {
+export function SupplierTransactions({
+  supplierId,
+  result,
+  customers,
+  suppliers,
+  products,
+  recentIncomeCategories,
+  recentExpenseCategories,
+}: Props) {
   const router = useRouter()
   const sp = useSearchParams()
 
@@ -34,18 +51,37 @@ export function SupplierTransactions({ result }: Props) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Histórico de despesas</CardTitle>
-        <CardDescription>
-          {result.total === 0
-            ? "Sem despesas registradas com este fornecedor ainda"
-            : `${result.total} ${
-                result.total === 1 ? "despesa" : "despesas"
-              }`}
-        </CardDescription>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <CardTitle className="text-base">Histórico de despesas</CardTitle>
+          <CardDescription>
+            {result.total === 0
+              ? "Sem despesas registradas com este fornecedor ainda"
+              : `${result.total} ${
+                  result.total === 1 ? "despesa" : "despesas"
+                }`}
+          </CardDescription>
+        </div>
+        <PartyTransactionActions
+          customers={customers}
+          suppliers={suppliers}
+          products={products}
+          recentIncomeCategories={recentIncomeCategories}
+          recentExpenseCategories={recentExpenseCategories}
+          defaultSupplierId={supplierId}
+          showIncome={false}
+          showExpense
+        />
       </CardHeader>
       <CardContent className="space-y-4">
-        <TransactionsTable rows={result.rows} />
+        <TransactionsTable
+          rows={result.rows}
+          customers={customers}
+          suppliers={suppliers}
+          products={products}
+          recentIncomeCategories={recentIncomeCategories}
+          recentExpenseCategories={recentExpenseCategories}
+        />
 
         {result.totalPages > 1 && (
           <div className="flex items-center justify-between text-sm pt-2">

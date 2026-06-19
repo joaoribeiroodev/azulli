@@ -8,6 +8,8 @@ import {
 } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 
+import { BackLink } from "@/components/app/back-link"
+
 import { listGoals } from "@/lib/goals/queries"
 import { listReminders } from "@/lib/reminders/queries"
 
@@ -28,6 +30,9 @@ export default async function MetasELembretesPage({
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
       <header className="mb-4 sm:mb-6">
+        <BackLink href="/dashboard" className="mb-2">
+          Voltar ao painel
+        </BackLink>
         <h1 className="text-2xl lg:text-3xl font-display font-bold text-brand-ink">
           Metas e lembretes
         </h1>

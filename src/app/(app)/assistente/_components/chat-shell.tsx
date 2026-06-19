@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Send, Sparkles, Loader2, AlertCircle } from "lucide-react"
+import { Send, Sparkles, Loader2, AlertCircle, ChevronLeft } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -253,6 +254,15 @@ export function ChatShell({
     <div className="flex flex-col min-h-0 flex-1">
       {/* Header */}
       <div className="border-b px-4 sm:px-6 py-4">
+        {conversationId && (
+          <Link
+            href="/assistente"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors min-h-9 -ml-1 px-1 mb-2"
+          >
+            <ChevronLeft className="h-4 w-4 shrink-0" />
+            Voltar ao assistente
+          </Link>
+        )}
         <h1 className="text-xl font-display font-bold text-brand-ink flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-brand" />
           Assistente IA

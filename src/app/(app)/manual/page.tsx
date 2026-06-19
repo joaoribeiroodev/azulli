@@ -2,6 +2,7 @@ import { BookOpen, Download, ExternalLink } from "lucide-react"
 import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
+import { BackLink } from "@/components/app/back-link"
 import {
   Card,
   CardDescription,
@@ -23,6 +24,9 @@ export default function ManualPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto">
       <header className="mb-6 sm:mb-8">
+        <BackLink href="/dashboard" className="mb-3">
+          Voltar ao painel
+        </BackLink>
         <div className="flex items-start gap-3">
           <div className="rounded-lg bg-brand-soft p-2.5 shrink-0">
             <BookOpen className="h-6 w-6 text-brand" aria-hidden />

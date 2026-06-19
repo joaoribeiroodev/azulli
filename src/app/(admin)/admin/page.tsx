@@ -26,7 +26,7 @@ export default async function AdminHomePage() {
           Painel Admin Azulli
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Marketing, financeiro e saúde do produto em tempo real.
+          Saúde do SaaS: usuários, assinaturas, receita e cadastros recentes.
         </p>
       </header>
       <AdminDashboardClient />

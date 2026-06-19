@@ -3,29 +3,40 @@ import "server-only"
 import { PLANS } from "@/lib/billing/plans"
 import { createServiceRoleClient } from "@/lib/supabase/service-role"
 
+export type RecentTenantRow = {
+  id: string
+  name: string
+  tier: string
+  subscriptionStatus: string
+  trialEndsAt: string | null
+  createdAt: string
+  ownerEmail: string | null
+}
+
 export type AdminMetrics = {
   product: {
     totalUsers: number
     mau: number
     dau: number
-    planDistribution: Record<string, number>
     totalTenants: number
-    activeTenants: number
+    newTenantsLast7Days: number
+    newTenantsLast30Days: number
+    planDistribution: Record<string, number>
+  }
+  subscriptions: {
+    active: number
+    pastDue: number
+    canceled: number
+    trialsActive: number
+    trialsEndingSoon: number
   }
   financial: {
-    grossRevenue: number
     mrr: number
-    totalAdSpend: number
-    cac: number | null
-    roi: number | null
+    revenueLast30Days: number
+    revenueAllTime: number
     churnRate: number | null
   }
-  marketing: {
-    totalInboundLeads: number
-    convertedLeads: number
-    conversionRate: number | null
-    leadsByStatus: Record<string, number>
-  }
+  recentTenants: RecentTenantRow[]
   generatedAt: string
 }
 
@@ -39,35 +50,39 @@ export async function computeAdminMetrics(): Promise<AdminMetrics> {
   const supabase = createServiceRoleClient()
   const now = new Date()
   const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
   const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+  const trialSoon = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000)
 
-  const [
-    tenantsRes,
-    subsRes,
-    paymentsRes,
-    adSpendRes,
-    leadsRes,
-    usersRes,
-  ] = await Promise.all([
-    supabase.from("tenants").select("id, tier, subscription_status, created_at"),
+  const [tenantsRes, subsRes, paymentsRes, usersRes, ownersRes] = await Promise.all([
     supabase
-      .from("subscriptions")
-      .select("plan_id, status, tenant_id"),
+      .from("tenants")
+      .select("id, name, tier, subscription_status, trial_ends_at, created_at")
+      .order("created_at", { ascending: false }),
+    supabase.from("subscriptions").select("plan_id, status"),
     supabase
       .from("billing_payments")
       .select("amount, paid_at, status")
       .not("paid_at", "is", null),
-    supabase.from("ad_spend").select("amount_spent"),
-    supabase.from("inbound_leads").select("id, status"),
     supabase.auth.admin.listUsers({ perPage: 1000 }),
+    supabase
+      .from("tenant_users")
+      .select("tenant_id, user_id")
+      .eq("role", "owner"),
   ])
 
   const tenants = tenantsRes.data ?? []
   const subs = subsRes.data ?? []
   const payments = paymentsRes.data ?? []
-  const adRows = adSpendRes.data ?? []
-  const leads = leadsRes.data ?? []
   const authUsers = usersRes.data?.users ?? []
+  const owners = ownersRes.data ?? []
+
+  const emailByUserId = new Map(
+    authUsers.map((u) => [u.id, u.email ?? null])
+  )
+  const ownerByTenantId = new Map(
+    owners.map((o) => [o.tenant_id as string, o.user_id as string])
+  )
 
   const totalUsers = authUsers.length
   const mau = authUsers.filter((u) => {
@@ -85,74 +100,78 @@ export async function computeAdminMetrics(): Promise<AdminMetrics> {
     planDistribution[tier] = (planDistribution[tier] ?? 0) + 1
   }
 
+  const newTenantsLast7Days = tenants.filter(
+    (t) => new Date(t.created_at as string) >= weekAgo
+  ).length
+  const newTenantsLast30Days = tenants.filter(
+    (t) => new Date(t.created_at as string) >= monthAgo
+  ).length
+
+  const trialsActive = tenants.filter((t) => t.tier === "trial").length
+  const trialsEndingSoon = tenants.filter((t) => {
+    if (t.tier !== "trial") return false
+    const ends = new Date(t.trial_ends_at as string)
+    return ends >= now && ends <= trialSoon
+  }).length
+
   const activeSubs = subs.filter((s) => s.status === "active")
   const mrr = activeSubs.reduce(
     (sum, s) => sum + planMonthlyPrice(s.plan_id as string),
     0
   )
 
-  const grossRevenue = payments.reduce(
+  const confirmedPayments = payments.filter(
+    (p) => (p.status as string)?.toUpperCase() === "CONFIRMED" || !p.status
+  )
+
+  const revenueAllTime = confirmedPayments.reduce(
     (sum, p) => sum + Number(p.amount),
     0
   )
-
-  const totalAdSpend = adRows.reduce(
-    (sum, r) => sum + Number(r.amount_spent),
-    0
-  )
-
-  const convertedLeads = leads.filter((l) => l.status === "CONVERTED").length
-  const totalInboundLeads = leads.length
-  const conversionRate =
-    totalInboundLeads > 0 ? convertedLeads / totalInboundLeads : null
-
-  const cac =
-    convertedLeads > 0 ? totalAdSpend / convertedLeads : null
-
-  const roi =
-    totalAdSpend > 0 ? (grossRevenue - totalAdSpend) / totalAdSpend : null
+  const revenueLast30Days = confirmedPayments
+    .filter((p) => p.paid_at && new Date(p.paid_at as string) >= monthAgo)
+    .reduce((sum, p) => sum + Number(p.amount), 0)
 
   const canceledSubs = subs.filter((s) => s.status === "canceled").length
-  const churnRate =
-    subs.length > 0 ? canceledSubs / subs.length : null
+  const churnRate = subs.length > 0 ? canceledSubs / subs.length : null
 
-  const leadsByStatus: Record<string, number> = {}
-  for (const l of leads) {
-    const st = l.status as string
-    leadsByStatus[st] = (leadsByStatus[st] ?? 0) + 1
-  }
-
-  const activeTenants = tenants.filter(
-    (t) =>
-      t.subscription_status === "active" ||
-      t.tier === "trial" ||
-      t.tier === "pro" ||
-      t.tier === "enterprise"
-  ).length
+  const recentTenants: RecentTenantRow[] = tenants.slice(0, 12).map((t) => {
+    const ownerId = ownerByTenantId.get(t.id as string)
+    return {
+      id: t.id as string,
+      name: t.name as string,
+      tier: t.tier as string,
+      subscriptionStatus: t.subscription_status as string,
+      trialEndsAt: (t.trial_ends_at as string) ?? null,
+      createdAt: t.created_at as string,
+      ownerEmail: ownerId ? emailByUserId.get(ownerId) ?? null : null,
+    }
+  })
 
   return {
     product: {
       totalUsers,
       mau,
       dau,
-      planDistribution,
       totalTenants: tenants.length,
-      activeTenants,
+      newTenantsLast7Days,
+      newTenantsLast30Days,
+      planDistribution,
+    },
+    subscriptions: {
+      active: subs.filter((s) => s.status === "active").length,
+      pastDue: subs.filter((s) => s.status === "past_due").length,
+      canceled: canceledSubs,
+      trialsActive,
+      trialsEndingSoon,
     },
     financial: {
-      grossRevenue,
       mrr,
-      totalAdSpend,
-      cac,
-      roi,
+      revenueLast30Days,
+      revenueAllTime,
       churnRate,
     },
-    marketing: {
-      totalInboundLeads,
-      convertedLeads,
-      conversionRate,
-      leadsByStatus,
-    },
+    recentTenants,
     generatedAt: now.toISOString(),
   }
 }

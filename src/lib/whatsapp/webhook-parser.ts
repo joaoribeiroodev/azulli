@@ -12,6 +12,8 @@ export function normalizePhone(raw: string): string {
 export type ParsedWhatsAppEvent = {
   eventId: string
   phone: string
+  /** Número ou JID completo para Evolution sendText (quando disponível). */
+  evolutionSendNumber?: string
   name: string | null
   text: string
   fromMe: boolean
@@ -21,6 +23,106 @@ export type ParsedWhatsAppEvent = {
     campaign?: string
     content?: string
   }
+}
+
+type MessageKey = {
+  remoteJid?: string
+  remoteJidAlt?: string
+  participant?: string
+  participantAlt?: string
+  fromMe?: boolean
+  id?: string
+}
+
+function isLidJid(jid: string): boolean {
+  return jid.includes("@lid")
+}
+
+function isPhoneJid(jid: string): boolean {
+  return (
+    jid.includes("@s.whatsapp.net") ||
+    jid.includes("@c.us") ||
+    jid.includes("@whatsapp.net")
+  )
+}
+
+function phoneDigitsFromJid(jid: string): string | null {
+  if (!jid || isLidJid(jid) || !isPhoneJid(jid)) return null
+  const user = jid.split("@")[0]?.split(":")[0] ?? ""
+  const digits = user.replace(/\D/g, "")
+  if (digits.length < 10) return null
+  return normalizePhone(digits)
+}
+
+function resolveSenderPhone(
+  body: Record<string, unknown>,
+  key: MessageKey | undefined
+): { phone: string; evolutionSendNumber?: string } | null {
+  const jidCandidates = [
+    key?.remoteJidAlt,
+    key?.remoteJid,
+    key?.participantAlt,
+    key?.participant,
+  ]
+
+  for (const jid of jidCandidates) {
+    if (!jid) continue
+    const digits = phoneDigitsFromJid(jid)
+    if (digits) {
+      return { phone: digits, evolutionSendNumber: jid.split(":")[0] }
+    }
+  }
+
+  const sender = body.sender
+  if (typeof sender === "string") {
+    if (sender.includes("@")) {
+      const digits = phoneDigitsFromJid(sender)
+      if (digits) return { phone: digits, evolutionSendNumber: sender.split(":")[0] }
+    } else {
+      const digits = sender.replace(/\D/g, "")
+      if (digits.length >= 10) return { phone: normalizePhone(digits) }
+    }
+  }
+
+  // Último recurso: LID sem telefone resolvido — Evolution sendText falha com @lid
+  const lidJid = jidCandidates.find((j) => j && isLidJid(j))
+  if (lidJid) {
+    console.warn(
+      "[webhook-parser] remoteJid @lid sem remoteJidAlt — mensagem ignorada:",
+      lidJid
+    )
+    return null
+  }
+
+  return null
+}
+
+function extractMessageText(message: Record<string, unknown> | undefined): string {
+  if (!message) return ""
+
+  if (typeof message.conversation === "string") return message.conversation
+
+  const extended = message.extendedTextMessage as { text?: string } | undefined
+  if (extended?.text) return extended.text
+
+  const image = message.imageMessage as { caption?: string } | undefined
+  if (image?.caption) return image.caption
+
+  const video = message.videoMessage as { caption?: string } | undefined
+  if (video?.caption) return video.caption
+
+  const document = message.documentMessage as { caption?: string } | undefined
+  if (document?.caption) return document.caption
+
+  const buttons = message.buttonsResponseMessage as {
+    selectedDisplayText?: string
+  } | undefined
+  if (buttons?.selectedDisplayText) return buttons.selectedDisplayText
+
+  const list = message.listResponseMessage as { title?: string } | undefined
+  if (list?.title) return list.title
+
+  return ""
 }
 
 /**
@@ -45,27 +147,22 @@ export function parseWhatsAppWebhook(body: Record<string, unknown>): ParsedWhats
   // Evolution API v2 — messages.upsert
   const data = body.data as Record<string, unknown> | undefined
   if (data && typeof data === "object") {
-    const key = data.key as { remoteJid?: string; fromMe?: boolean } | undefined
+    const key = data.key as MessageKey | undefined
     const message = data.message as Record<string, unknown> | undefined
     const pushName = data.pushName as string | undefined
 
-    const remoteJid = key?.remoteJid ?? ""
-    const phoneRaw = remoteJid.split("@")[0] ?? ""
-    if (!phoneRaw) return null
+    const resolved = resolveSenderPhone(body, key)
+    if (!resolved) return null
 
     const fromMe = Boolean(key?.fromMe)
-    const text =
-      (message?.conversation as string) ??
-      (message?.extendedTextMessage as { text?: string })?.text ??
-      ""
+    const text = extractMessageText(message)
 
     if (!text.trim()) return null
 
     return {
-      eventId: String(
-        (key as { id?: string })?.id ?? `${phoneRaw}-${Date.now()}`
-      ),
-      phone: normalizePhone(phoneRaw),
+      eventId: String(key?.id ?? `${resolved.phone}-${Date.now()}`),
+      phone: resolved.phone,
+      evolutionSendNumber: resolved.evolutionSendNumber,
       name: pushName ?? null,
       text: text.trim(),
       fromMe,

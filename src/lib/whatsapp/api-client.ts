@@ -3,6 +3,8 @@ import "server-only"
 type SendTextParams = {
   phone: string
   message: string
+  /** Evolution: dígitos ou JID (5511...@s.whatsapp.net). */
+  evolutionNumber?: string
 }
 
 function getProvider(): "evolution" | "zapi" {
@@ -42,14 +44,28 @@ export async function sendWhatsAppText(params: SendTextParams): Promise<void> {
     return
   }
 
-  const base = normalizeBaseUrl(process.env.EVOLUTION_API_URL ?? "")
+  const rawUrl = process.env.EVOLUTION_API_URL?.trim() ?? ""
   const instance = process.env.EVOLUTION_INSTANCE_NAME
   const apiKey = process.env.EVOLUTION_API_KEY
-  if (!base || !instance || !apiKey) {
+  if (!rawUrl || !instance || !apiKey) {
     throw new Error(
       "[whatsapp] EVOLUTION_API_URL, EVOLUTION_INSTANCE_NAME ou EVOLUTION_API_KEY não configurados."
     )
   }
+  const base = normalizeBaseUrl(rawUrl)
+  if (!/^https?:\/\/[^/]+/i.test(base)) {
+    throw new Error(`[whatsapp] EVOLUTION_API_URL inválida: ${rawUrl}`)
+  }
+
+  const sendNumber =
+    params.evolutionNumber?.includes("@")
+      ? params.evolutionNumber.split(":")[0]
+      : (params.evolutionNumber ?? params.phone).replace(/\D/g, "")
+
+  if (!sendNumber) {
+    throw new Error("[whatsapp] Número de destino vazio para Evolution sendText.")
+  }
+
   const url = `${base}/message/sendText/${instance}`
   const res = await fetch(url, {
     method: "POST",
@@ -58,7 +74,7 @@ export async function sendWhatsAppText(params: SendTextParams): Promise<void> {
       apikey: apiKey,
     },
     body: JSON.stringify({
-      number: phone,
+      number: sendNumber,
       text: params.message,
     }),
   })

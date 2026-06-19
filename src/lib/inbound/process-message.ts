@@ -64,7 +64,9 @@ export async function processInboundWhatsAppMessage(
 
   // IA de vendas (não bloqueia webhook se falhar envio WhatsApp depois)
   try {
-    await runInboundSalesAgent(leadId)
+    await runInboundSalesAgent(leadId, {
+      evolutionSendNumber: event.evolutionSendNumber,
+    })
   } catch (err) {
     console.error("[inbound] sales agent error:", err)
     await supabase.from("inbound_messages").insert({

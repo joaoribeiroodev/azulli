@@ -17,7 +17,10 @@ Regras:
 - Não invente funcionalidades que o Azulli não tem.
 - Se o lead já está convertido, agradeça e ofereça suporte pelo app.`
 
-export async function runInboundSalesAgent(leadId: string): Promise<void> {
+export async function runInboundSalesAgent(
+  leadId: string,
+  options?: { evolutionSendNumber?: string }
+): Promise<void> {
   const supabase = createServiceRoleClient()
 
   const { data: lead } = await supabase
@@ -62,5 +65,9 @@ export async function runInboundSalesAgent(leadId: string): Promise<void> {
     content: reply,
   })
 
-  await sendWhatsAppText({ phone: lead.phone, message: reply })
+  await sendWhatsAppText({
+    phone: lead.phone,
+    message: reply,
+    evolutionNumber: options?.evolutionSendNumber,
+  })
 }

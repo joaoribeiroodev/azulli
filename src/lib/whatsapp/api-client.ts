@@ -17,7 +17,7 @@ function normalizeBaseUrl(raw: string): string {
   return `https://${trimmed}`
 }
 
-/**
+/** Envia texto via Evolution API ou Z-API. */
 export async function sendWhatsAppText(params: SendTextParams): Promise<void> {
   const provider = getProvider()
   const phone = params.phone.replace(/\D/g, "")

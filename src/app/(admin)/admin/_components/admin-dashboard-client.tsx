@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import Link from "next/link"
-import { Download, Mail, Megaphone, MessageCircle, LogOut } from "lucide-react"
+import { Download, Mail, Megaphone, MessageCircle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -86,8 +86,8 @@ export function AdminDashboardClient() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap gap-2">
+    <div className="space-y-8 xl:space-y-10">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <Button asChild variant="outline" size="sm">
           <a href="/api/admin/tenants/export" download>
             <Download className="h-4 w-4 mr-2" />
@@ -97,16 +97,14 @@ export function AdminDashboardClient() {
         <Button asChild variant="outline" size="sm">
           <Link href="/admin/announcements">
             <Megaphone className="h-4 w-4 mr-2" />
-            Avisos globais
+            Novo aviso
           </Link>
         </Button>
       </div>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          Visão geral
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="space-y-4">
+        <SectionTitle>Visão geral</SectionTitle>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-4">
           <MetricCard title="Empresas" value={String(metrics.product.totalTenants)} />
           <MetricCard title="Usuários" value={String(metrics.product.totalUsers)} />
           <MetricCard title="MAU" value={String(metrics.product.mau)} />
@@ -114,11 +112,9 @@ export function AdminDashboardClient() {
         </div>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          Assinaturas
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <section className="space-y-4">
+        <SectionTitle>Assinaturas</SectionTitle>
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
           <MetricCard title="Ativas" value={String(metrics.subscriptions.active)} />
           <MetricCard title="Trials" value={String(metrics.subscriptions.trialsActive)} />
           <MetricCard
@@ -197,10 +193,8 @@ export function AdminDashboardClient() {
         </Card>
       )}
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-          Financeiro
-        </h2>
+      <section className="space-y-4">
+        <SectionTitle>Financeiro</SectionTitle>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <MetricCard title="MRR estimado" value={formatBRL(metrics.financial.mrr)} />
           <MetricCard
@@ -215,8 +209,8 @@ export function AdminDashboardClient() {
         </div>
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
+      <div className="grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
+        <Card className="2xl:col-span-1">
           <CardHeader>
             <CardTitle className="text-base">Novos cadastros</CardTitle>
           </CardHeader>
@@ -230,7 +224,7 @@ export function AdminDashboardClient() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="2xl:col-span-1">
           <CardHeader>
             <CardTitle className="text-base">Planos (empresas)</CardTitle>
           </CardHeader>
@@ -244,12 +238,12 @@ export function AdminDashboardClient() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="overflow-hidden">
+        <CardHeader className="border-b bg-muted/30">
           <CardTitle className="text-base">Empresas recentes</CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <CardContent className="overflow-x-auto p-0 sm:p-6">
+          <table className="w-full text-sm min-w-[640px]">
             <thead>
               <tr className="text-left text-muted-foreground border-b">
                 <th className="pb-2 pr-4">Empresa</th>
@@ -278,20 +272,19 @@ export function AdminDashboardClient() {
             </tbody>
           </table>
           {metrics.recentTenants.length === 0 && (
-            <p className="text-sm text-muted-foreground">Nenhuma empresa cadastrada.</p>
+            <p className="text-sm text-muted-foreground p-6">Nenhuma empresa cadastrada.</p>
           )}
         </CardContent>
       </Card>
-
-      <div className="flex flex-wrap gap-2">
-        <Button asChild variant="ghost">
-          <Link href="/login">
-            <LogOut className="h-4 w-4 mr-2" />
-            Sair
-          </Link>
-        </Button>
-      </div>
     </div>
+  )
+}
+
+function SectionTitle({ children }: { children: ReactNode }) {
+  return (
+    <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+      {children}
+    </h2>
   )
 }
 

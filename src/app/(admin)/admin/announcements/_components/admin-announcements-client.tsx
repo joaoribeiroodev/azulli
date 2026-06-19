@@ -50,7 +50,7 @@ export function AdminAnnouncementsClient() {
         <CardTitle className="text-base">Novo aviso global</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4 max-w-lg">
+        <form onSubmit={handleSubmit} className="space-y-4 max-w-xl">
           <Input
             placeholder="Título (ex: Manutenção programada)"
             value={title}

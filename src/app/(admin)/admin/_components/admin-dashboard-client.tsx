@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Megaphone, LogOut } from "lucide-react"
+import { Download, Mail, Megaphone, MessageCircle, LogOut } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { formatBRL } from "@/lib/utils/currency"
 import type { AdminMetrics } from "@/lib/admin/metrics"
+import type { TenantDirectoryRow } from "@/lib/admin/tenant-directory"
 
 function pct(n: number | null) {
   return n === null ? "—" : `${(n * 100).toFixed(1)}%`
@@ -21,11 +22,38 @@ function formatDate(iso: string) {
   })
 }
 
+function formatTrialEnds(iso: string) {
+  return new Date(iso).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+}
+
 function tierLabel(tier: string) {
   if (tier === "trial") return "Trial"
   if (tier === "pro") return "Pro"
   if (tier === "enterprise") return "Empresarial"
   return tier
+}
+
+function trialWhatsAppUrl(row: TenantDirectoryRow): string | null {
+  const phone = row.ownerPhone
+  if (!phone) return null
+  const name = row.name
+  const text = `Olá! Aqui é do Azulli. O trial da empresa ${name} está chegando ao fim — quer ajuda para continuar usando o sistema?`
+  return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
+}
+
+function trialMailtoUrl(row: TenantDirectoryRow): string | null {
+  const email = row.ownerEmail ?? row.tenantEmail
+  if (!email) return null
+  const subject = encodeURIComponent(`Azulli — seu trial está terminando`)
+  const body = encodeURIComponent(
+    `Olá!\n\nO período de trial da ${row.name} no Azulli está chegando ao fim. Se quiser, podemos ajudar você a escolher o plano e continuar organizando as finanças.\n\nEquipe Azulli`
+  )
+  return `mailto:${email}?subject=${subject}&body=${body}`
 }
 
 export function AdminDashboardClient() {
@@ -59,6 +87,21 @@ export function AdminDashboardClient() {
 
   return (
     <div className="space-y-8">
+      <div className="flex flex-wrap gap-2">
+        <Button asChild variant="outline" size="sm">
+          <a href="/api/admin/tenants/export" download>
+            <Download className="h-4 w-4 mr-2" />
+            Exportar CSV
+          </a>
+        </Button>
+        <Button asChild variant="outline" size="sm">
+          <Link href="/admin/announcements">
+            <Megaphone className="h-4 w-4 mr-2" />
+            Avisos globais
+          </Link>
+        </Button>
+      </div>
+
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
           Visão geral
@@ -87,6 +130,73 @@ export function AdminDashboardClient() {
         </div>
       </section>
 
+      {metrics.trialsEndingSoon.length > 0 && (
+        <Card className="border-amber-200/80 bg-amber-50/40">
+          <CardHeader>
+            <CardTitle className="text-base">
+              Trials expirando nos próximos 3 dias
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-muted-foreground border-b">
+                  <th className="pb-2 pr-4">Empresa</th>
+                  <th className="pb-2 pr-4">Expira</th>
+                  <th className="pb-2 pr-4">Contato</th>
+                  <th className="pb-2">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {metrics.trialsEndingSoon.map((row) => {
+                  const wa = trialWhatsAppUrl(row)
+                  const mail = trialMailtoUrl(row)
+                  return (
+                    <tr key={row.id} className="border-b border-border/50">
+                      <td className="py-2 pr-4 font-medium">{row.name}</td>
+                      <td className="py-2 pr-4">
+                        {row.trialEndsAt ? formatTrialEnds(row.trialEndsAt) : "—"}
+                      </td>
+                      <td className="py-2 pr-4 text-muted-foreground">
+                        <div className="space-y-0.5">
+                          <p>{row.ownerEmail ?? row.tenantEmail ?? "—"}</p>
+                          <p>{row.ownerPhone ?? "—"}</p>
+                        </div>
+                      </td>
+                      <td className="py-2">
+                        <div className="flex flex-wrap gap-2">
+                          {wa ? (
+                            <Button asChild size="sm" variant="outline">
+                              <a href={wa} target="_blank" rel="noopener noreferrer">
+                                <MessageCircle className="h-3.5 w-3.5 mr-1" />
+                                WhatsApp
+                              </a>
+                            </Button>
+                          ) : null}
+                          {mail ? (
+                            <Button asChild size="sm" variant="ghost">
+                              <a href={mail}>
+                                <Mail className="h-3.5 w-3.5 mr-1" />
+                                E-mail
+                              </a>
+                            </Button>
+                          ) : null}
+                          {!wa && !mail && (
+                            <span className="text-xs text-muted-foreground">
+                              Sem contato
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      )}
+
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
           Financeiro
@@ -111,8 +221,12 @@ export function AdminDashboardClient() {
             <CardTitle className="text-base">Novos cadastros</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p>Últimos 7 dias: <strong>{metrics.product.newTenantsLast7Days}</strong></p>
-            <p>Últimos 30 dias: <strong>{metrics.product.newTenantsLast30Days}</strong></p>
+            <p>
+              Últimos 7 dias: <strong>{metrics.product.newTenantsLast7Days}</strong>
+            </p>
+            <p>
+              Últimos 30 dias: <strong>{metrics.product.newTenantsLast30Days}</strong>
+            </p>
           </CardContent>
         </Card>
 
@@ -140,6 +254,7 @@ export function AdminDashboardClient() {
               <tr className="text-left text-muted-foreground border-b">
                 <th className="pb-2 pr-4">Empresa</th>
                 <th className="pb-2 pr-4">E-mail</th>
+                <th className="pb-2 pr-4">Telefone</th>
                 <th className="pb-2 pr-4">Plano</th>
                 <th className="pb-2 pr-4">Status</th>
                 <th className="pb-2">Cadastro</th>
@@ -151,6 +266,9 @@ export function AdminDashboardClient() {
                   <td className="py-2 pr-4 font-medium">{row.name}</td>
                   <td className="py-2 pr-4 text-muted-foreground">
                     {row.ownerEmail ?? "—"}
+                  </td>
+                  <td className="py-2 pr-4 text-muted-foreground">
+                    {row.ownerPhone ?? "—"}
                   </td>
                   <td className="py-2 pr-4">{tierLabel(row.tier)}</td>
                   <td className="py-2 pr-4">{row.subscriptionStatus}</td>
@@ -166,12 +284,6 @@ export function AdminDashboardClient() {
       </Card>
 
       <div className="flex flex-wrap gap-2">
-        <Button asChild variant="outline">
-          <Link href="/admin/announcements">
-            <Megaphone className="h-4 w-4 mr-2" />
-            Avisos globais
-          </Link>
-        </Button>
         <Button asChild variant="ghost">
           <Link href="/login">
             <LogOut className="h-4 w-4 mr-2" />

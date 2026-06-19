@@ -2,16 +2,13 @@ import "server-only"
 
 import { PLANS } from "@/lib/billing/plans"
 import { createServiceRoleClient } from "@/lib/supabase/service-role"
+import {
+  fetchTenantDirectory,
+  filterTrialsEndingSoon,
+  type TenantDirectoryRow,
+} from "@/lib/admin/tenant-directory"
 
-export type RecentTenantRow = {
-  id: string
-  name: string
-  tier: string
-  subscriptionStatus: string
-  trialEndsAt: string | null
-  createdAt: string
-  ownerEmail: string | null
-}
+export type RecentTenantRow = TenantDirectoryRow
 
 export type AdminMetrics = {
   product: {
@@ -37,6 +34,7 @@ export type AdminMetrics = {
     churnRate: number | null
   }
   recentTenants: RecentTenantRow[]
+  trialsEndingSoon: RecentTenantRow[]
   generatedAt: string
 }
 
@@ -52,37 +50,20 @@ export async function computeAdminMetrics(): Promise<AdminMetrics> {
   const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
   const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-  const trialSoon = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000)
 
-  const [tenantsRes, subsRes, paymentsRes, usersRes, ownersRes] = await Promise.all([
-    supabase
-      .from("tenants")
-      .select("id, name, tier, subscription_status, trial_ends_at, created_at")
-      .order("created_at", { ascending: false }),
+  const [directory, subsRes, paymentsRes, usersRes] = await Promise.all([
+    fetchTenantDirectory(),
     supabase.from("subscriptions").select("plan_id, status"),
     supabase
       .from("billing_payments")
       .select("amount, paid_at, status")
       .not("paid_at", "is", null),
     supabase.auth.admin.listUsers({ perPage: 1000 }),
-    supabase
-      .from("tenant_users")
-      .select("tenant_id, user_id")
-      .eq("role", "owner"),
   ])
 
-  const tenants = tenantsRes.data ?? []
   const subs = subsRes.data ?? []
   const payments = paymentsRes.data ?? []
   const authUsers = usersRes.data?.users ?? []
-  const owners = ownersRes.data ?? []
-
-  const emailByUserId = new Map(
-    authUsers.map((u) => [u.id, u.email ?? null])
-  )
-  const ownerByTenantId = new Map(
-    owners.map((o) => [o.tenant_id as string, o.user_id as string])
-  )
 
   const totalUsers = authUsers.length
   const mau = authUsers.filter((u) => {
@@ -95,24 +76,19 @@ export async function computeAdminMetrics(): Promise<AdminMetrics> {
   }).length
 
   const planDistribution: Record<string, number> = {}
-  for (const t of tenants) {
-    const tier = t.tier as string
-    planDistribution[tier] = (planDistribution[tier] ?? 0) + 1
+  for (const t of directory) {
+    planDistribution[t.tier] = (planDistribution[t.tier] ?? 0) + 1
   }
 
-  const newTenantsLast7Days = tenants.filter(
-    (t) => new Date(t.created_at as string) >= weekAgo
+  const newTenantsLast7Days = directory.filter(
+    (t) => new Date(t.createdAt) >= weekAgo
   ).length
-  const newTenantsLast30Days = tenants.filter(
-    (t) => new Date(t.created_at as string) >= monthAgo
+  const newTenantsLast30Days = directory.filter(
+    (t) => new Date(t.createdAt) >= monthAgo
   ).length
 
-  const trialsActive = tenants.filter((t) => t.tier === "trial").length
-  const trialsEndingSoon = tenants.filter((t) => {
-    if (t.tier !== "trial") return false
-    const ends = new Date(t.trial_ends_at as string)
-    return ends >= now && ends <= trialSoon
-  }).length
+  const trialsActive = directory.filter((t) => t.tier === "trial").length
+  const trialsEndingSoonList = filterTrialsEndingSoon(directory, 3)
 
   const activeSubs = subs.filter((s) => s.status === "active")
   const mrr = activeSubs.reduce(
@@ -135,25 +111,12 @@ export async function computeAdminMetrics(): Promise<AdminMetrics> {
   const canceledSubs = subs.filter((s) => s.status === "canceled").length
   const churnRate = subs.length > 0 ? canceledSubs / subs.length : null
 
-  const recentTenants: RecentTenantRow[] = tenants.slice(0, 12).map((t) => {
-    const ownerId = ownerByTenantId.get(t.id as string)
-    return {
-      id: t.id as string,
-      name: t.name as string,
-      tier: t.tier as string,
-      subscriptionStatus: t.subscription_status as string,
-      trialEndsAt: (t.trial_ends_at as string) ?? null,
-      createdAt: t.created_at as string,
-      ownerEmail: ownerId ? emailByUserId.get(ownerId) ?? null : null,
-    }
-  })
-
   return {
     product: {
       totalUsers,
       mau,
       dau,
-      totalTenants: tenants.length,
+      totalTenants: directory.length,
       newTenantsLast7Days,
       newTenantsLast30Days,
       planDistribution,
@@ -163,7 +126,7 @@ export async function computeAdminMetrics(): Promise<AdminMetrics> {
       pastDue: subs.filter((s) => s.status === "past_due").length,
       canceled: canceledSubs,
       trialsActive,
-      trialsEndingSoon,
+      trialsEndingSoon: trialsEndingSoonList.length,
     },
     financial: {
       mrr,
@@ -171,7 +134,8 @@ export async function computeAdminMetrics(): Promise<AdminMetrics> {
       revenueAllTime,
       churnRate,
     },
-    recentTenants,
+    recentTenants: directory.slice(0, 12),
+    trialsEndingSoon: trialsEndingSoonList,
     generatedAt: now.toISOString(),
   }
 }

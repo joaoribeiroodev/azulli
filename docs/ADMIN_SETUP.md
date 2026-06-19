@@ -38,4 +38,6 @@ Aplicar `supabase/migrations/00025_growth_platform.sql` (tabelas `platform_admin
 ## Funcionalidades
 
 - **Painel** (`/admin`): empresas, usuários, MAU/DAU, assinaturas, MRR, receita, cadastros recentes
+- **Trials expirando**: lista com botões WhatsApp e e-mail (próximos 3 dias)
+- **Export CSV**: `/api/admin/tenants/export` ou botão no painel
 - **Avisos** (`/admin/announcements`): publicar avisos → sininho no app

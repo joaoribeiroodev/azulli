@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og"
 
-export const runtime = "edge"
+/** Node.js evita limite de 1 MB de Edge Functions no plano Vercel. */
+export const runtime = "nodejs"
 export const alt = "Azulli — Sua empresa no azul"
 export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"

@@ -8,7 +8,7 @@ function notFound(_req, res) {
 
 function errorHandler(err, req, res, _next) {
   const status = err.status || err.statusCode || 500;
-  console.error(`[err ${status}] ${req.method} ${req.originalUrl}: ${err.message}`);
+  console.error(`[err ${status}] ${req.method} ${req.originalUrl || req.path}: ${err.message}`);
   if (env.nodeEnv !== 'production') {
     console.error(err.stack);
   }

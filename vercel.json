@@ -1,4 +1,10 @@
 {
+  "functions": {
+    "src/app/api/finder/**/*.ts": {
+      "maxDuration": 120,
+      "memory": 1024
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/weekly-insights",

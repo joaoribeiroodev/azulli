@@ -1,31 +1,26 @@
 'use strict';
 
 const env = require('../config/env');
-
-function getPuppeteer() {
-  // Lazy load — evita falha no build/deploy quando Chromium não está disponível
-  return require('puppeteer');
-}
+const { launchBrowser, isServerlessRuntime } = require('./browser');
 
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
   '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
-const LAUNCH_ARGS = [
-  '--no-sandbox',
-  '--disable-setuid-sandbox',
-  '--disable-dev-shm-usage',
-  '--disable-gpu',
-  '--no-first-run',
-  '--no-default-browser-check',
-  '--disable-default-apps',
-  '--disable-sync',
-  '--disable-extensions',
-  '--lang=pt-BR'
-];
-
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function scrapeLimits() {
+  if (isServerlessRuntime()) {
+    return { scrolls: 3, scrollPauseMs: 500, pageTimeoutMs: 25_000, feedWaitMs: 10_000 };
+  }
+  return {
+    scrolls: 6,
+    scrollPauseMs: 900,
+    pageTimeoutMs: env.scrape.timeoutMs,
+    feedWaitMs: 15_000
+  };
 }
 
 /**
@@ -37,12 +32,11 @@ async function buscarLeadsGoogleMaps(termo, localizacao) {
     throw new Error('termo e localizacao são obrigatórios');
   }
 
+  const limits = scrapeLimits();
   let browser = null;
+
   try {
-    browser = await getPuppeteer().launch({
-      headless: env.scrape.headless ? 'new' : false,
-      args: LAUNCH_ARGS
-    });
+    browser = await launchBrowser();
 
     const page = await browser.newPage();
     await page.setUserAgent(USER_AGENT);
@@ -52,26 +46,24 @@ async function buscarLeadsGoogleMaps(termo, localizacao) {
     const searchQuery = encodeURIComponent(`${termo} ${localizacao}`);
     const mapsUrl = `https://www.google.com/maps/search/${searchQuery}?hl=pt-BR`;
 
-    console.log(`[scraper] >> ${mapsUrl}`);
+    console.log(`[scraper] >> ${mapsUrl} (serverless=${isServerlessRuntime()})`);
 
     await page.goto(mapsUrl, {
       waitUntil: 'domcontentloaded',
-      timeout: env.scrape.timeoutMs
+      timeout: limits.pageTimeoutMs
     });
 
-    // Aguardar o feed lateral
     await page
-      .waitForSelector('div[role="feed"], [role="main"]', { timeout: 15_000 })
+      .waitForSelector('div[role="feed"], [role="main"]', { timeout: limits.feedWaitMs })
       .catch(() => console.warn('[scraper] feed lateral não detectado, seguindo assim mesmo'));
 
-    // Scroll para carregar mais resultados (lazy loading)
-    for (let i = 0; i < 6; i += 1) {
+    for (let i = 0; i < limits.scrolls; i += 1) {
       await page.evaluate(() => {
         const feed = document.querySelector('div[role="feed"]');
         if (feed) feed.scrollBy(0, 1200);
         else window.scrollBy(0, 1200);
       });
-      await sleep(900);
+      await sleep(limits.scrollPauseMs);
     }
 
     const leads = await page.evaluate(() => {
@@ -91,7 +83,6 @@ async function buscarLeadsGoogleMaps(termo, localizacao) {
 
           const mapsUrl = link ? new URL(link.href, location.origin).toString() : null;
 
-          // avaliação
           let avaliacao = null;
           let totalAvaliacoes = null;
           const ratingNode = el.querySelector('span[role="img"][aria-label*="estrela"]');
@@ -127,7 +118,6 @@ async function buscarLeadsGoogleMaps(termo, localizacao) {
           }
 
           if (!endereco) {
-            // fallback: penúltima linha textual longa
             const candidatos = linhas.filter((l) => l.length > 8 && !/\d+\s*(avaliações|reviews)/i.test(l));
             if (candidatos.length > 1) endereco = candidatos[1];
           }
@@ -149,7 +139,6 @@ async function buscarLeadsGoogleMaps(termo, localizacao) {
       return out;
     });
 
-    // Dedup por nome+endereço normalizado
     const seen = new Set();
     const unique = [];
     for (const l of leads) {
@@ -163,7 +152,16 @@ async function buscarLeadsGoogleMaps(termo, localizacao) {
     return unique;
   } catch (err) {
     console.error('[scraper] ERRO:', err.message);
-    throw new Error(`Falha no scraping do Google Maps: ${err.message}`);
+    const hint = isServerlessRuntime()
+      ? ' O scraping roda em ambiente serverless; tente novamente ou use termo/localização mais específicos.'
+      : '';
+    const errObj = new Error(`Falha no scraping do Google Maps: ${err.message}.${hint}`);
+    errObj.status = /timeout|timed out/i.test(err.message) ? 504 : 503;
+    errObj.publicMessage =
+      errObj.status === 504
+        ? 'A busca demorou demais e expirou. Tente uma região menor (ex.: bairro + cidade) ou aguarde e tente de novo.'
+        : `Não foi possível coletar dados do Google Maps.${hint}`;
+    throw errObj;
   } finally {
     if (browser) await browser.close().catch(() => {});
   }

@@ -4,13 +4,18 @@ const nextConfig: NextConfig = {
   serverExternalPackages: [
     "pdf-lib",
     "puppeteer",
+    "puppeteer-core",
+    "@sparticuz/chromium-min",
     "pg",
     "bcryptjs",
     "jsonwebtoken",
     "openai",
   ],
   outputFileTracingIncludes: {
-    "/api/finder/[[...slug]]": ["./apps/finder/**/*"],
+    "/api/finder/[[...slug]]": [
+      "./apps/finder/**/*",
+      "./node_modules/@sparticuz/chromium-min/**",
+    ],
     "/api/internal/finder/convert-lead": ["./apps/finder/**/*"],
   },
   images: {

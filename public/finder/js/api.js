@@ -55,7 +55,12 @@ const API = (() => {
     }
 
     if (!res.ok) {
-      throw new ApiError(payload?.erro || `HTTP ${res.status}`, res.status, payload);
+      const fallback504 =
+        'A busca excedeu o tempo limite do servidor (504). Tente bairro + cidade ou aguarde e tente novamente.';
+      const msg =
+        payload?.erro ||
+        (res.status === 504 ? fallback504 : `HTTP ${res.status}`);
+      throw new ApiError(msg, res.status, payload);
     }
 
     return payload;

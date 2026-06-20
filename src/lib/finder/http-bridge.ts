@@ -142,7 +142,11 @@ function runHandler(
     }
 
     const next = (err?: unknown) => {
-      if (options.middleware) finish(err)
+      if (err) {
+        finish(err)
+        return
+      }
+      if (options.middleware) finish()
     }
 
     try {
@@ -192,6 +196,24 @@ function buildMockReq(
   }
 }
 
+function errorStatus(err: unknown): number {
+  if (err && typeof err === "object") {
+    const e = err as { status?: number; statusCode?: number }
+    if (typeof e.status === "number") return e.status
+    if (typeof e.statusCode === "number") return e.statusCode
+  }
+  return 500
+}
+
+function errorMessage(err: unknown): string {
+  if (err && typeof err === "object") {
+    const e = err as { publicMessage?: string; message?: string }
+    if (e.publicMessage) return e.publicMessage
+    if (e.message) return e.message
+  }
+  return "Erro interno do servidor"
+}
+
 async function withAuth(
   mods: FinderModules,
   req: MockReq,
@@ -200,14 +222,19 @@ async function withAuth(
 ): Promise<NextResponse> {
   const authMw = mods.finderAuth.requireAuth
 
-  await runHandler(authMw, req, res, { middleware: true })
-  if (res.body !== null) {
-    return NextResponse.json(res.body, { status: res.statusCode })
-  }
+  try {
+    await runHandler(authMw, req, res, { middleware: true })
+    if (res.body !== null) {
+      return NextResponse.json(res.body, { status: res.statusCode })
+    }
 
-  const inner = createMockRes()
-  await runHandler(handler, req, inner)
-  return NextResponse.json(inner.body ?? {}, { status: inner.statusCode })
+    const inner = createMockRes()
+    await runHandler(handler, req, inner)
+    return NextResponse.json(inner.body ?? {}, { status: inner.statusCode })
+  } catch (err) {
+    console.error("[finder/api] handler", err)
+    return NextResponse.json({ erro: errorMessage(err) }, { status: errorStatus(err) })
+  }
 }
 
 async function withRole(
@@ -220,20 +247,25 @@ async function withRole(
   const authMw = mods.finderAuth.requireAuth
   const roleMw = mods.requireRoleFactory(...roles)
 
-  await runHandler(authMw, req, res, { middleware: true })
-  if (res.body !== null) {
-    return NextResponse.json(res.body, { status: res.statusCode })
-  }
+  try {
+    await runHandler(authMw, req, res, { middleware: true })
+    if (res.body !== null) {
+      return NextResponse.json(res.body, { status: res.statusCode })
+    }
 
-  const roleRes = createMockRes()
-  await runHandler(roleMw, req, roleRes, { middleware: true })
-  if (roleRes.body !== null) {
-    return NextResponse.json(roleRes.body, { status: roleRes.statusCode })
-  }
+    const roleRes = createMockRes()
+    await runHandler(roleMw, req, roleRes, { middleware: true })
+    if (roleRes.body !== null) {
+      return NextResponse.json(roleRes.body, { status: roleRes.statusCode })
+    }
 
-  const inner = createMockRes()
-  await runHandler(handler, req, inner)
-  return NextResponse.json(inner.body ?? {}, { status: inner.statusCode })
+    const inner = createMockRes()
+    await runHandler(handler, req, inner)
+    return NextResponse.json(inner.body ?? {}, { status: inner.statusCode })
+  } catch (err) {
+    console.error("[finder/api] handler", err)
+    return NextResponse.json({ erro: errorMessage(err) }, { status: errorStatus(err) })
+  }
 }
 
 export async function handleFinderApi(

@@ -336,7 +336,7 @@ async function dispatchFinderApi(
             status: "degraded",
             erro: message,
             hint:
-              "Use a connection string do Supabase (Connect → URI). Em serverless, prefira o Session pooler (porta 5432).",
+              "Supabase: use Transaction pooler (porta 6543) na DATABASE_URL para serverless/Vercel. Session pooler (5432) limita ~15 conexões totais.",
           },
           { status: 503 }
         )

@@ -40,6 +40,20 @@ Router.register('buscar', {
       <div id="resultados-wrapper"></div>
     `;
 
+    // Aviso se busca não estiver configurada (ex.: falta GOOGLE_PLACES_API_KEY na Vercel)
+    API.config().then((cfg) => {
+      if (cfg.search && !cfg.search.configured) {
+        const banner = document.createElement('div');
+        banner.className = 'mb-4 p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-900 text-sm';
+        banner.innerHTML = `
+          <strong>Busca indisponível em produção.</strong>
+          Configure <code class="text-xs bg-amber-100 px-1 rounded">GOOGLE_PLACES_API_KEY</code>
+          na Vercel (Places API New no Google Cloud) para habilitar a prospecção.
+        `;
+        container.insertBefore(banner, container.firstChild);
+      }
+    }).catch(() => {});
+
     const form = document.getElementById('form-buscar');
     const wrapper = document.getElementById('resultados-wrapper');
 

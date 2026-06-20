@@ -4,6 +4,7 @@ const express = require('express');
 const env = require('../config/env');
 const aiService = require('../services/aiService');
 const azulliCore = require('../services/azulliCore');
+const { searchProvider, isSearchConfigured } = require('../scrapers/searchLeads');
 const { PLANS } = require('../config/plans');
 const { requireAuth } = require('../middleware/auth');
 
@@ -14,6 +15,10 @@ router.get('/', requireAuth, (_req, res) => {
     app: 'Azulli Finder',
     plans: Object.values(PLANS),
     ai: aiService.isEnabled(),
+    search: {
+      configured: isSearchConfigured(),
+      provider: searchProvider()
+    },
     integration: {
       azulliCore: azulliCore.isConfigured()
     },

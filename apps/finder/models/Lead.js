@@ -33,19 +33,32 @@ function normalizeEndereco(endereco) {
  * Upsert por (lower(nome), lower(endereço normalizado)).
  * Quando há conflito, faz merge dos campos mais ricos (não sobrescreve com null).
  */
-async function upsertFromScrape({ searchId, nome, telefone, endereco, avaliacao, mapsUrl }) {
+async function upsertFromScrape({
+  searchId, nome, telefone, endereco, avaliacao, totalAvaliacoes, mapsUrl, website
+}) {
   const enderecoNorm = normalizeEndereco(endereco);
   const { rows } = await db.query(
-    `INSERT INTO leads (search_id, nome, telefone, endereco, avaliacao, maps_url)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO leads (search_id, nome, telefone, endereco, avaliacao, total_avaliacoes, maps_url, website)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT (lower(nome), lower(coalesce(endereco, '')))
      DO UPDATE SET
-       telefone     = COALESCE(EXCLUDED.telefone,  leads.telefone),
-       avaliacao    = COALESCE(EXCLUDED.avaliacao, leads.avaliacao),
-       maps_url     = COALESCE(EXCLUDED.maps_url,  leads.maps_url),
-       updated_at   = NOW()
+       telefone          = COALESCE(EXCLUDED.telefone,          leads.telefone),
+       avaliacao         = COALESCE(EXCLUDED.avaliacao,         leads.avaliacao),
+       total_avaliacoes  = COALESCE(EXCLUDED.total_avaliacoes,  leads.total_avaliacoes),
+       maps_url          = COALESCE(EXCLUDED.maps_url,          leads.maps_url),
+       website           = COALESCE(EXCLUDED.website,           leads.website),
+       updated_at        = NOW()
      RETURNING *`,
-    [searchId, nome, telefone || null, enderecoNorm || null, avaliacao || null, mapsUrl || null]
+    [
+      searchId,
+      nome,
+      telefone || null,
+      enderecoNorm || null,
+      avaliacao || null,
+      totalAvaliacoes ?? null,
+      mapsUrl || null,
+      website || null
+    ]
   );
   return rows[0];
 }

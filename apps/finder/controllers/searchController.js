@@ -1,6 +1,6 @@
 'use strict';
 
-const { buscarLeadsGoogleMaps } = require('../scrapers/googleMaps');
+const { buscarLeads } = require('../scrapers/searchLeads');
 const Search = require('../models/Search');
 const Lead = require('../models/Lead');
 const enrichment = require('../services/leadEnrichment');
@@ -18,7 +18,7 @@ async function buscar(req, res, next) {
   try {
     search = await Search.create({ userId, termo: termo.trim(), localizacao: localizacao.trim() });
 
-    const scraped = await buscarLeadsGoogleMaps(termo.trim(), localizacao.trim());
+    const scraped = await buscarLeads(termo.trim(), localizacao.trim());
 
     const persisted = [];
     for (const l of scraped) {
@@ -29,7 +29,9 @@ async function buscar(req, res, next) {
           telefone: l.telefone,
           endereco: l.endereco,
           avaliacao: l.avaliacao,
-          mapsUrl: l.mapsUrl
+          totalAvaliacoes: l.totalAvaliacoes,
+          mapsUrl: l.mapsUrl,
+          website: l.website
         });
         persisted.push(lead);
       } catch (e) {

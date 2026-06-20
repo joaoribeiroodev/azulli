@@ -14,6 +14,7 @@ const authCtrl = require("../../../apps/finder/controllers/authController.js")
 const userCtrl = require("../../../apps/finder/controllers/userController.js")
 const searchCtrl = require("../../../apps/finder/controllers/searchController.js")
 const leadCtrl = require("../../../apps/finder/controllers/leadController.js")
+const searchLeads = require("../../../apps/finder/scrapers/searchLeads.js")
 const finderAuth = require("../../../apps/finder/middleware/auth.js")
 const requireRoleFactory = require("../../../apps/finder/middleware/requireRole.js")
 
@@ -348,6 +349,10 @@ async function dispatchFinderApi(
           app: "Azulli Finder",
           plans: Object.values(PLANS),
           ai: aiService.isEnabled(),
+          search: {
+            configured: searchLeads.isSearchConfigured(),
+            provider: searchLeads.searchProvider(),
+          },
           integration: { azulliCore: azulliCore.isConfigured() },
           urls: {
             admin: finderEnv.urls.admin,

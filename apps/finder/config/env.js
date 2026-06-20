@@ -65,6 +65,11 @@ const env = Object.freeze({
     model: optional('OPENAI_MODEL', 'gpt-4o-mini')
   }),
 
+  googlePlaces: Object.freeze({
+    apiKey: optional('GOOGLE_PLACES_API_KEY', optional('GOOGLE_MAPS_API_KEY', null)),
+    allowPuppeteerFallback: bool('FINDER_ALLOW_PUPPETEER', true)
+  }),
+
   scrape: Object.freeze({
     headless: bool('PUPPETEER_HEADLESS', true),
     timeoutMs: int('SCRAPE_TIMEOUT_MS', 30000)

@@ -4,6 +4,7 @@ const { buscarLeads } = require('../scrapers/searchLeads');
 const Search = require('../models/Search');
 const Lead = require('../models/Lead');
 const enrichment = require('../services/leadEnrichment');
+const icpQualification = require('../services/icpQualification');
 
 async function buscar(req, res, next) {
   const { termo, localizacao } = req.body || {};
@@ -19,9 +20,10 @@ async function buscar(req, res, next) {
     search = await Search.create({ userId, termo: termo.trim(), localizacao: localizacao.trim() });
 
     const scraped = await buscarLeads(termo.trim(), localizacao.trim());
+    const { aceitos, excluidos } = icpQualification.filtrarLeadsParaIcp(scraped);
 
     const persisted = [];
-    for (const l of scraped) {
+    for (const l of aceitos) {
       try {
         const lead = await Lead.upsertFromScrape({
           searchId: search.id,
@@ -56,6 +58,8 @@ async function buscar(req, res, next) {
       sucesso: true,
       searchId: search.id,
       total: persisted.length,
+      excluidos_icp: excluidos.length,
+      foco: 'MEI e pequenas empresas (Simples Nacional) — redes nacionais filtradas',
       dados: persisted
     });
   } catch (err) {

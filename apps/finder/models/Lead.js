@@ -187,11 +187,12 @@ async function changeStatus(id, novoStatus, { userId, motivo = null } = {}) {
   });
 }
 
-async function applyEnrichment(id, { segmento, icpScore, pitchWhatsapp, pitchEmail, validado }) {
+async function applyEnrichment(id, { segmento, icpScore, pitchWhatsapp, pitchEmail, validado, porte }) {
   const sets = ['enriquecido_em = NOW()'];
   const params = [];
   if (segmento !== undefined)      { params.push(segmento);       sets.push(`segmento = $${params.length}`); }
   if (icpScore !== undefined)      { params.push(icpScore);       sets.push(`icp_score = $${params.length}`); }
+  if (porte !== undefined)         { params.push(porte);          sets.push(`porte = $${params.length}`); }
   if (pitchWhatsapp !== undefined) { params.push(pitchWhatsapp);  sets.push(`pitch_whatsapp = $${params.length}`); }
   if (pitchEmail !== undefined)    { params.push(pitchEmail);     sets.push(`pitch_email = $${params.length}`); }
   if (validado !== undefined)      { params.push(Boolean(validado)); sets.push(`validado = $${params.length}`); }

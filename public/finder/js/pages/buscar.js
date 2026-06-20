@@ -6,7 +6,7 @@
 Router.register('buscar', {
   navKey: 'buscar',
   title: 'Buscar leads',
-  subtitle: 'Encontre MEIs e pequenas empresas por segmento e localização',
+  subtitle: 'MEIs e pequenas empresas no Simples Nacional — redes nacionais são filtradas automaticamente',
   async render({ container }) {
     container.innerHTML = `
       <div class="bg-white border border-slate-200 rounded-2xl p-6 mb-6">
@@ -73,7 +73,10 @@ Router.register('buscar', {
       try {
         const res = await API.searches.create(termo, localizacao);
         renderResultados(wrapper, res.dados);
-        UI.toast(`${res.total} potenciais assinantes encontrados.`, 'success');
+        const msg = res.excluidos_icp
+          ? `${res.total} leads salvos (${res.excluidos_icp} redes nacionais filtradas).`
+          : `${res.total} potenciais assinantes encontrados.`;
+        UI.toast(msg, 'success');
       } catch (err) {
         wrapper.innerHTML = `<div class="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg text-sm">Erro: ${UI.escapeHtml(err.message)}</div>`;
         UI.toast(err.message, 'error');
@@ -92,7 +95,7 @@ Router.register('buscar', {
     if (!params.get('termo')) {
       wrapper.innerHTML = UI.emptyHTML({
         titulo: 'Pronto para prospectar',
-        descricao: 'Escolha um segmento com bom fit de ICP e uma região onde o Azulli tem demanda. Os leads encontrados entram automaticamente na sua base com enriquecimento por IA em segundo plano (se OpenAI estiver configurada).',
+        descricao: 'Escolha um segmento com bom fit de ICP (MEI / Simples Nacional) e uma região. Lojas de rede nacional (ex.: grandes materiais de construção) são excluídas da base.',
         icone: '🎯'
       });
     }
@@ -149,7 +152,7 @@ function renderResultados(wrapper, leads) {
       <div class="p-5 border-b border-slate-200 flex items-center justify-between">
         <div>
           <h3 class="text-sm font-bold text-slate-900">${leads.length} potenciais assinantes encontrados</h3>
-          <p class="text-xs text-slate-500 mt-0.5">Já salvos na base. Segmento e ICP são calculados em segundo plano (usa o termo da busca).</p>
+          <p class="text-xs text-slate-500 mt-0.5">Foco MEI / Simples Nacional. Segmento, porte e ICP calculados em segundo plano.</p>
         </div>
         <div class="flex gap-2">
           <button id="btn-exportar" class="btn-secondary">

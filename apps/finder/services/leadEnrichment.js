@@ -2,6 +2,7 @@
 
 const aiService = require('./aiService');
 const Lead = require('../models/Lead');
+const icpQualification = require('./icpQualification');
 const { scheduleAfter } = require('../lib/afterScope');
 const { parseEndereco, normalizarTelefone, whatsappLink } = require('../utils/endereco');
 
@@ -46,13 +47,21 @@ async function enriquecerLead(lead, { userId, gerarPitch = true, searchContext =
   }
 
   try {
-    const ai = await aiService.enriquecerLead(contextualizado, { userId, gerarPitch, searchContext });
+    const qual = icpQualification.qualificarLead(contextualizado);
+    const ai = await aiService.enriquecerLead(
+      { ...contextualizado, porte: qual.porte, regime_provavel: qual.regime_provavel },
+      { userId, gerarPitch, searchContext }
+    );
+    const icpScore = ai.icpScore != null
+      ? Math.max(0, Math.min(100, Math.round(ai.icpScore + (qual.ajuste_icp || 0))))
+      : ai.icpScore;
     atual = await Lead.applyEnrichment(atual.id, {
       segmento: ai.segmento,
-      icpScore: ai.icpScore,
+      icpScore,
+      porte: qual.porte,
       pitchWhatsapp: ai.pitchWhatsapp,
       pitchEmail: ai.pitchEmail,
-      validado: ai.validado
+      validado: ai.validado && qual.foco_azulli
     });
   } catch (e) {
     console.warn(`[enrichment] IA falhou para lead ${lead.id}: ${e.message}`);
@@ -88,14 +97,17 @@ async function enriquecerLeadsPosBusca(leads, { userId, searchContext = {} } = {
 
   for (const lead of contextualizados) {
     try {
+      const qual = icpQualification.qualificarLead(lead);
       const segmento = segmentos[lead.id] || lead.segmento || 'outros';
-      const enriched = { ...lead, segmento };
-      const icpScore = await aiService.calcularIcpScore(enriched, { userId, searchContext });
+      const enriched = { ...lead, segmento, porte: qual.porte, regime_provavel: qual.regime_provavel };
+      let icpScore = await aiService.calcularIcpScore(enriched, { userId, searchContext });
+      icpScore = Math.max(0, Math.min(100, Math.round(icpScore + (qual.ajuste_icp || 0))));
 
       await Lead.applyEnrichment(lead.id, {
         segmento,
         icpScore,
-        validado: true
+        porte: qual.porte,
+        validado: qual.foco_azulli
       });
     } catch (e) {
       console.warn(`[enrichment] lead ${lead.id}:`, e.message);

@@ -22,13 +22,18 @@ Oferta comercial:
 `.trim();
 
 const ICP_DESCRICAO = `
-Perfil ideal de assinante do Azulli:
-- MEI, ME ou pequena empresa brasileira (até ~30 funcionários)
-- Operação com cobrança recorrente, controle manual ou planilha
-- Segmentos prioritários: serviços, beleza, automotivo, alimentação local,
-  saúde de bairro, varejo de bairro, pet, cowork, oficinas
-- Sinais positivos: avaliações Google ≥ 3.8, telefone visível, presença local
-- Anti-perfil: grandes redes, franquias nacionais, multinacionais
+Perfil ideal de assinante do Azulli (prioridade comercial):
+- MEI (Microempreendedor Individual) ou pequena empresa no Simples Nacional
+- ME com operação enxuta (até ~9 colaboradores) também é forte candidata
+- Evitar: redes nacionais, franquias de grande porte, multinacionais, bancos, hospitais de rede
+- Operação local de bairro: controle financeiro manual/planilha, fluxo de caixa recorrente
+- Segmentos prioritários: serviços, beleza, automotivo, alimentação local, construção/varejo de bairro,
+  saúde de bairro, pet, oficinas
+- Sinais positivos: avaliações Google 3.8–4.8 com volume moderado (3–150), telefone local, endereço de rua
+- Anti-perfil ICP: +400 avaliações com nome de rede, shoppings de marca nacional, "filial" de grande grupo
+
+Regime tributário: o Azulli é ideal para quem declara como MEI ou Simples Nacional (DAS, fluxo simples).
+Não temos CNPJ/regime na ficha — use campos porte/regime_provavel quando existirem.
 `.trim();
 
 const META_WHATSAPP_DIRETRIZES = `
@@ -261,7 +266,9 @@ function leadContexto(lead, searchContext = {}) {
     qualificacao: {
       segmento,
       icp_score: icpScore,
-      icp_nivel: icpNivel(icpScore)
+      icp_nivel: icpNivel(icpScore),
+      porte: lead.porte || null,
+      regime_provavel: lead.regime_provavel || null
     },
     personalizacao: {
       ganchos_obrigatorios: gerarGanchosPersonalizacao(enriched),

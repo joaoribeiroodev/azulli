@@ -149,7 +149,7 @@ function renderResultados(wrapper, leads) {
       <div class="p-5 border-b border-slate-200 flex items-center justify-between">
         <div>
           <h3 class="text-sm font-bold text-slate-900">${leads.length} potenciais assinantes encontrados</h3>
-          <p class="text-xs text-slate-500 mt-0.5">Já salvos na base. O enriquecimento por IA roda em segundo plano (ICP score e pitch).</p>
+          <p class="text-xs text-slate-500 mt-0.5">Já salvos na base. Segmento e ICP são calculados em segundo plano (usa o termo da busca).</p>
         </div>
         <div class="flex gap-2">
           <button id="btn-exportar" class="btn-secondary">

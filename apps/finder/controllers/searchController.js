@@ -46,7 +46,10 @@ async function buscar(req, res, next) {
 
     // dispara enriquecimento em background (não bloqueia resposta)
     if (persisted.length > 0) {
-      enrichment.enriquecerEmBackground(persisted, { userId });
+      enrichment.enriquecerEmBackground(persisted, {
+        userId,
+        searchContext: { termo: termo.trim(), localizacao: localizacao.trim() }
+      });
     }
 
     res.json({

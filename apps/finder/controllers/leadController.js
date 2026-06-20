@@ -1,6 +1,7 @@
 'use strict';
 
 const Lead = require('../models/Lead');
+const Search = require('../models/Search');
 const aiService = require('../services/aiService');
 const enrichment = require('../services/leadEnrichment');
 const azulliCore = require('../services/azulliCore');
@@ -91,7 +92,17 @@ async function reEnriquecer(req, res, next) {
   try {
     const lead = await Lead.findById(req.params.id);
     if (!lead) return res.status(404).json({ erro: 'Lead não encontrado' });
-    const atualizado = await enrichment.enriquecerLead(lead, { userId: req.auth.sub });
+    let searchContext = {};
+    if (lead.search_id) {
+      const search = await Search.findById(lead.search_id);
+      if (search) {
+        searchContext = { termo: search.termo, localizacao: search.localizacao };
+      }
+    }
+    const atualizado = await enrichment.enriquecerLead(lead, {
+      userId: req.auth.sub,
+      searchContext
+    });
     res.json({ lead: atualizado });
   } catch (err) {
     if (err.status === 503) return res.status(503).json({ erro: err.message });

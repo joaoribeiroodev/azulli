@@ -2,11 +2,11 @@
 
 const aiService = require('./aiService');
 const Lead = require('../models/Lead');
+const { scheduleAfter } = require('../lib/afterScope');
 const { parseEndereco, normalizarTelefone, whatsappLink } = require('../utils/endereco');
 
 /**
  * Enriquecimento básico que não depende de IA (sempre roda).
- * Extrai cidade/UF do endereço e normaliza telefone/whatsapp.
  */
 async function enriquecerBasico(lead) {
   const { cidade, uf, cep } = parseEndereco(lead.endereco);
@@ -26,19 +26,27 @@ async function enriquecerBasico(lead) {
   return lead;
 }
 
+function withSearchContext(lead, searchContext = {}) {
+  return {
+    ...lead,
+    search_termo: searchContext.termo || lead.search_termo || null,
+    search_localizacao: searchContext.localizacao || lead.search_localizacao || null
+  };
+}
+
 /**
- * Pipeline completo (básico + IA). Tolerante a falhas: se IA estiver desligada,
- * só faz o enriquecimento básico.
+ * Pipeline completo (básico + IA).
  */
-async function enriquecerLead(lead, { userId } = {}) {
+async function enriquecerLead(lead, { userId, gerarPitch = true, searchContext = {} } = {}) {
   let atual = await enriquecerBasico(lead);
+  const contextualizado = withSearchContext(atual, searchContext);
 
   if (!aiService.isEnabled()) {
     return atual;
   }
 
   try {
-    const ai = await aiService.enriquecerLead(atual, { userId });
+    const ai = await aiService.enriquecerLead(contextualizado, { userId, gerarPitch, searchContext });
     atual = await Lead.applyEnrichment(atual.id, {
       segmento: ai.segmento,
       icpScore: ai.icpScore,
@@ -54,19 +62,61 @@ async function enriquecerLead(lead, { userId } = {}) {
 }
 
 /**
- * Processa uma lista de leads em background (sequencial, sem travar a resposta HTTP).
+ * Enriquecimento otimizado pós-busca: segmento em lote + ICP por lead (sem pitches).
  */
-function enriquecerEmBackground(leads, { userId } = {}) {
-  // não esperar a Promise — o caller já respondeu ao HTTP
-  setImmediate(async () => {
-    for (const l of leads) {
-      try {
-        await enriquecerLead(l, { userId });
-      } catch (e) {
-        console.warn(`[enrichment] erro no lead ${l.id}:`, e.message);
-      }
+async function enriquecerLeadsPosBusca(leads, { userId, searchContext = {} } = {}) {
+  if (!leads?.length) return;
+
+  const contextualizados = [];
+  for (const lead of leads) {
+    try {
+      contextualizados.push(withSearchContext(await enriquecerBasico(lead), searchContext));
+    } catch (e) {
+      console.warn(`[enrichment] básico falhou lead ${lead.id}:`, e.message);
+      contextualizados.push(withSearchContext(lead, searchContext));
+    }
+  }
+
+  if (!aiService.isEnabled()) return;
+
+  let segmentos = {};
+  try {
+    segmentos = await aiService.classificarSegmentosLote(contextualizados, { userId, searchContext });
+  } catch (e) {
+    console.warn('[enrichment] lote segmento falhou:', e.message);
+  }
+
+  for (const lead of contextualizados) {
+    try {
+      const segmento = segmentos[lead.id] || lead.segmento || 'outros';
+      const enriched = { ...lead, segmento };
+      const icpScore = await aiService.calcularIcpScore(enriched, { userId, searchContext });
+
+      await Lead.applyEnrichment(lead.id, {
+        segmento,
+        icpScore,
+        validado: true
+      });
+    } catch (e) {
+      console.warn(`[enrichment] lead ${lead.id}:`, e.message);
+    }
+  }
+}
+
+function enriquecerEmBackground(leads, { userId, searchContext = {} } = {}) {
+  scheduleAfter(async () => {
+    try {
+      await enriquecerLeadsPosBusca(leads, { userId, searchContext });
+      console.log(`[enrichment] concluído para ${leads.length} leads`);
+    } catch (e) {
+      console.warn('[enrichment] batch falhou:', e.message);
     }
   });
 }
 
-module.exports = { enriquecerBasico, enriquecerLead, enriquecerEmBackground };
+module.exports = {
+  enriquecerBasico,
+  enriquecerLead,
+  enriquecerLeadsPosBusca,
+  enriquecerEmBackground
+};

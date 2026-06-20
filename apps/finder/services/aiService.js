@@ -3,6 +3,7 @@
 const openaiConfig = require('../config/openai');
 const db = require('../config/database');
 const prompts = require('./aiPrompts');
+const segmentHeuristics = require('./segmentHeuristics');
 
 const PITCH_VERSION = 3;
 
@@ -162,16 +163,32 @@ function normalizeEmailPitch(data) {
   };
 }
 
+function reconciliarSegmento(segmento, lead, searchContext) {
+  const sugerido = segmentHeuristics.segmentoSugeridoBusca(searchContext);
+  const heuristica = segmentHeuristics.classificarPorHeuristica(lead, searchContext);
+
+  if (heuristica?.confianca === 'alta') return heuristica.segmento;
+  if (sugerido && segmento === 'alimentacao' && sugerido === 'construcao') return 'construcao';
+  if (sugerido && segmento === 'outros' && heuristica?.segmento) return heuristica.segmento;
+  if (sugerido && heuristica?.segmento === sugerido) return sugerido;
+  return segmentHeuristics.isSegmentoValido(segmento) ? segmento : 'outros';
+}
+
 // ------------------------------------------------------------------
 // 1. Classificar segmento
 // ------------------------------------------------------------------
-async function classificarSegmento(lead, { userId } = {}) {
+async function classificarSegmento(lead, { userId, searchContext = {} } = {}) {
+  const heuristica = segmentHeuristics.classificarPorHeuristica(lead, searchContext);
+  if (heuristica?.confianca === 'alta') {
+    return heuristica.segmento;
+  }
+
   const completion = await chat(
     [
       { role: 'system', content: prompts.PROMPT_SEGMENTO },
-      { role: 'user', content: JSON.stringify(prompts.leadContexto(lead).negocio) }
+      { role: 'user', content: JSON.stringify(prompts.leadContexto(lead, searchContext)) }
     ],
-    { temperature: 0.2, max_tokens: 15 }
+    { temperature: 0.1, max_tokens: 15 }
   );
 
   const raw = (completion.choices?.[0]?.message?.content || '')
@@ -179,7 +196,12 @@ async function classificarSegmento(lead, { userId } = {}) {
     .toLowerCase()
     .replace(/[^a-z]/g, '');
 
-  const segmento = prompts.SEGMENTOS_VALIDOS.has(raw) ? raw : 'outros';
+  const segmento = reconciliarSegmento(
+    prompts.SEGMENTOS_VALIDOS.has(raw) ? raw : 'outros',
+    lead,
+    searchContext
+  );
+
   await registrarUso({
     leadId: lead.id,
     userId,
@@ -190,30 +212,117 @@ async function classificarSegmento(lead, { userId } = {}) {
   return segmento;
 }
 
+async function classificarSegmentosLote(leads, { userId, searchContext = {} } = {}) {
+  const map = {};
+  const pending = [];
+
+  for (const lead of leads) {
+    const heuristica = segmentHeuristics.classificarPorHeuristica(lead, searchContext);
+    if (heuristica?.confianca === 'alta') {
+      map[lead.id] = heuristica.segmento;
+    } else {
+      pending.push(lead);
+    }
+  }
+
+  if (pending.length === 0 || !openaiConfig.isEnabled()) {
+    for (const lead of pending) {
+      const h = segmentHeuristics.classificarPorHeuristica(lead, searchContext);
+      map[lead.id] = h?.segmento || segmentHeuristics.segmentoSugeridoBusca(searchContext) || 'outros';
+    }
+    return map;
+  }
+
+  try {
+    const completion = await chat(
+      [
+        { role: 'system', content: prompts.PROMPT_SEGMENTO_LOTE },
+        {
+          role: 'user',
+          content: JSON.stringify({
+            termo_busca: searchContext.termo || null,
+            localizacao_busca: searchContext.localizacao || null,
+            segmento_esperado: segmentHeuristics.segmentoSugeridoBusca(searchContext),
+            negocios: pending.map((l) => ({
+              id: l.id,
+              nome: l.nome,
+              endereco: l.endereco,
+              avaliacao: l.avaliacao,
+              total_avaliacoes: l.total_avaliacoes
+            }))
+          })
+        }
+      ],
+      { temperature: 0.1, max_tokens: 1200, json: true }
+    );
+
+    const data = extractJsonContent(completion);
+    for (const item of data.itens || []) {
+      if (!item?.id) continue;
+      const raw = String(item.segmento || '').trim().toLowerCase().replace(/[^a-z]/g, '');
+      if (prompts.SEGMENTOS_VALIDOS.has(raw)) {
+        const lead = pending.find((l) => l.id === item.id);
+        map[item.id] = lead
+          ? reconciliarSegmento(raw, lead, searchContext)
+          : raw;
+      }
+    }
+
+    await registrarUso({
+      leadId: null,
+      userId,
+      acao: 'segmento_lote',
+      modelo: openaiConfig.model,
+      usage: completion.usage
+    });
+  } catch (e) {
+    console.warn('[ai] classificarSegmentosLote falhou:', e.message);
+  }
+
+  for (const lead of pending) {
+    if (map[lead.id]) continue;
+    const h = segmentHeuristics.classificarPorHeuristica(lead, searchContext);
+    map[lead.id] = h?.segmento || segmentHeuristics.segmentoSugeridoBusca(searchContext) || 'outros';
+  }
+
+  return map;
+}
+
 // ------------------------------------------------------------------
 // 2. ICP score (0–100)
 // ------------------------------------------------------------------
-async function calcularIcpScore(lead, { userId } = {}) {
-  const completion = await chat(
-    [
-      { role: 'system', content: prompts.PROMPT_ICP },
-      { role: 'user', content: JSON.stringify(prompts.leadContexto(lead)) }
-    ],
-    { temperature: 0, max_tokens: 6 }
+async function calcularIcpScore(lead, { userId, searchContext = {} } = {}) {
+  try {
+    const completion = await chat(
+      [
+        { role: 'system', content: prompts.PROMPT_ICP },
+        { role: 'user', content: JSON.stringify(prompts.leadContexto(lead, searchContext)) }
+      ],
+      { temperature: 0, max_tokens: 8 }
+    );
+
+    const raw = completion.choices?.[0]?.message?.content || '';
+    const n = parseInt(raw.replace(/\D/g, ''), 10);
+    const score = Number.isNaN(n) ? null : Math.max(0, Math.min(100, n));
+
+    await registrarUso({
+      leadId: lead.id,
+      userId,
+      acao: 'icp_score',
+      modelo: openaiConfig.model,
+      usage: completion.usage
+    });
+
+    if (score != null) return score;
+  } catch (e) {
+    console.warn('[ai] calcularIcpScore falhou:', e.message);
+  }
+
+  return segmentHeuristics.calcularIcpHeuristic(
+    lead,
+    lead.segmento || 'outros',
+    searchContext
   );
-
-  const raw = completion.choices?.[0]?.message?.content || '';
-  const n = parseInt(raw.replace(/\D/g, ''), 10);
-  const score = Number.isNaN(n) ? 50 : Math.max(0, Math.min(100, n));
-
-  await registrarUso({
-    leadId: lead.id,
-    userId,
-    acao: 'icp_score',
-    modelo: openaiConfig.model,
-    usage: completion.usage
-  });
-  return score;
 }
 
 // ------------------------------------------------------------------
@@ -269,11 +378,11 @@ async function gerarPitchEmail(lead, { userId } = {}) {
 // ------------------------------------------------------------------
 // 5. Validação leve dos dados
 // ------------------------------------------------------------------
-async function validarDados(lead, { userId } = {}) {
+async function validarDados(lead, { userId, searchContext = {} } = {}) {
   const completion = await chat(
     [
       { role: 'system', content: prompts.PROMPT_VALIDACAO },
-      { role: 'user', content: JSON.stringify(prompts.leadContexto(lead).negocio) }
+      { role: 'user', content: JSON.stringify(prompts.leadContexto(lead, searchContext).negocio) }
     ],
     { temperature: 0, max_tokens: 6 }
   );
@@ -291,32 +400,33 @@ async function validarDados(lead, { userId } = {}) {
 // ------------------------------------------------------------------
 // Pipeline completo
 // ------------------------------------------------------------------
-async function enriquecerLead(lead, { userId, gerarPitch = true } = {}) {
+async function enriquecerLead(lead, { userId, gerarPitch = true, searchContext = {} } = {}) {
   ensureEnabled();
 
   const result = {};
   try {
-    result.validado = await validarDados(lead, { userId });
+    result.validado = await validarDados(lead, { userId, searchContext });
   } catch (e) {
     console.warn('[ai] validarDados falhou:', e.message);
     result.validado = false;
   }
 
   try {
-    result.segmento = await classificarSegmento(lead, { userId });
+    result.segmento = await classificarSegmento(lead, { userId, searchContext });
   } catch (e) {
     console.warn('[ai] classificarSegmento falhou:', e.message);
-    result.segmento = 'outros';
+    const h = segmentHeuristics.classificarPorHeuristica(lead, searchContext);
+    result.segmento = h?.segmento || segmentHeuristics.segmentoSugeridoBusca(searchContext) || 'outros';
   }
 
   const enriched = { ...lead, segmento: result.segmento, icp_score: lead.icp_score };
 
   try {
-    result.icpScore = await calcularIcpScore(enriched, { userId });
+    result.icpScore = await calcularIcpScore(enriched, { userId, searchContext });
     enriched.icp_score = result.icpScore;
   } catch (e) {
     console.warn('[ai] calcularIcpScore falhou:', e.message);
-    result.icpScore = null;
+    result.icpScore = segmentHeuristics.calcularIcpHeuristic(enriched, result.segmento, searchContext);
   }
 
   if (gerarPitch) {
@@ -341,6 +451,7 @@ async function enriquecerLead(lead, { userId, gerarPitch = true } = {}) {
 module.exports = {
   isEnabled: openaiConfig.isEnabled,
   classificarSegmento,
+  classificarSegmentosLote,
   calcularIcpScore,
   gerarPitchWhatsapp,
   gerarPitchEmail,

@@ -1,6 +1,7 @@
 'use strict';
 
 const { parseEndereco } = require('../utils/endereco');
+const segmentHeuristics = require('./segmentHeuristics');
 
 const AZULLI_PRODUTO = `
 O Azulli é um SaaS brasileiro de gestão financeira e operacional para MEIs e pequenas empresas.
@@ -225,16 +226,24 @@ function beneficiosSegmento(segmento) {
   return SEGMENTO_BENEFICIOS[key];
 }
 
-function leadContexto(lead) {
+function leadContexto(lead, searchContext = {}) {
   const parsed = parseEndereco(lead.endereco);
   const cidade = lead.cidade || parsed.cidade;
   const uf = lead.uf || parsed.uf;
   const cep = lead.cep || parsed.cep;
-  const segmento = lead.segmento || 'outros';
+  const termoBusca = searchContext.termo || lead.search_termo || null;
+  const localBusca = searchContext.localizacao || lead.search_localizacao || null;
+  const segmentoEsperado = segmentHeuristics.segmentoSugeridoBusca({ termo: termoBusca });
+  const segmento = lead.segmento || segmentoEsperado || 'outros';
   const icpScore = lead.icp_score ?? lead.icpScore ?? null;
-  const enriched = { ...lead, cidade, uf, segmento };
+  const enriched = { ...lead, cidade, uf, segmento, search_termo: termoBusca, search_localizacao: localBusca };
 
   return {
+    busca: {
+      termo: termoBusca,
+      localizacao: localBusca,
+      segmento_esperado: segmentoEsperado
+    },
     negocio: {
       nome: lead.nome || null,
       endereco: lead.endereco || null,
@@ -265,15 +274,57 @@ function leadContexto(lead) {
 }
 
 const PROMPT_SEGMENTO = `
-Você classifica negócios brasileiros em UMA categoria.
-Responda APENAS a categoria (sem pontuação, sem aspas).
-Possíveis: alimentacao, beleza, automotivo, saude, servicos, varejo, educacao, tech, construcao, outros.
+Você classifica negócios brasileiros (Google Maps) em UMA categoria para prospecção B2B.
+Responda APENAS a categoria (sem pontuação, sem aspas, sem explicação).
+
+Categorias e exemplos:
+- construcao: lojas de material de construção, ferragens, depósitos, cimento, tintas para obra, hidráulica/elétrica de construção, madeireiras
+- varejo: lojas genéricas, pet shop, moda, mercados (NÃO material de construção)
+- alimentacao: restaurantes, padarias, lanchonetes, bares, açaiterias
+- beleza: salões, barbearias, estética
+- automotivo: oficinas, autopeças, borracharias
+- saude: clínicas, consultórios, odontologia, farmácias locais
+- servicos: prestadores (advocacia, contabilidade, limpeza, consultoria)
+- educacao: escolas, cursos, creches
+- tech: software, informática corporativa
+- outros: quando não encaixar
+
+REGRAS CRÍTICAS:
+- Use "busca.termo" e "busca.segmento_esperado" como pista forte do segmento real
+- Loja de material de construção NUNCA é "alimentacao"
+- Se busca.termo mencionar construção/materiais/ferragem → preferir "construcao"
+- Nome genérico ("Center", "Plus") exige mais peso no termo da busca
+
+Possíveis respostas: alimentacao, beleza, automotivo, saude, servicos, varejo, educacao, tech, construcao, outros.
+`.trim();
+
+const PROMPT_SEGMENTO_LOTE = `
+Você classifica uma LISTA de negócios brasileiros encontrados numa mesma busca do Google Maps.
+Retorne APENAS JSON válido:
+{
+  "itens": [
+    { "id": "uuid-do-lead", "segmento": "construcao" }
+  ]
+}
+
+${PROMPT_SEGMENTO}
+
+O campo "segmento_esperado" no input reflete o termo que o SDR digitou — priorize esse segmento quando os nomes forem ambíguos.
 `.trim();
 
 const PROMPT_ICP = `
 Você é analista de aquisição B2B do Azulli.
-Dada a ficha de um negócio, retorne APENAS um inteiro entre 0 e 100 representando o fit com o ICP abaixo.
+Dada a ficha de um negócio (inclui busca.termo e segmento), retorne APENAS um inteiro entre 0 e 100 = fit com ICP.
 Sem texto, sem explicação.
+
+Critérios (some mentalmente):
+- MEI/pequena empresa local abordável: base 40–55
+- Telefone visível: +10
+- Avaliação Google ≥ 4.0: +8 a +15
+- Segmento alinhado ao termo da busca: +10
+- Presença local clara (endereço, avaliações): +5
+- Rede nacional/franquia óbvia: −30
+- Dados vazios/suspeitos: −20
 
 ${ICP_DESCRICAO}
 `.trim();
@@ -364,6 +415,7 @@ module.exports = {
   leadContexto,
   gerarGanchosPersonalizacao,
   PROMPT_SEGMENTO,
+  PROMPT_SEGMENTO_LOTE,
   PROMPT_ICP,
   PROMPT_VALIDACAO,
   PROMPT_WHATSAPP_JSON,

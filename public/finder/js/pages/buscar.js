@@ -1,4 +1,4 @@
-/* global window, document, API, UI, Router, XLSX */
+/* global window, document, API, UI, Router */
 'use strict';
 
 (() => {
@@ -72,7 +72,7 @@ Router.register('buscar', {
       wrapper.innerHTML = UI.loadingHTML('Coletando dados no Google Maps — pode levar 10–20 segundos.');
       try {
         const res = await API.searches.create(termo, localizacao);
-        renderResultados(wrapper, res.dados);
+        renderResultados(wrapper, res.dados, res.searchId);
         const msg = res.excluidos_icp
           ? `${res.total} leads salvos (${res.excluidos_icp} redes nacionais filtradas).`
           : `${res.total} potenciais assinantes encontrados.`;
@@ -110,7 +110,7 @@ function suggestion(termo, loc) {
   </button>`;
 }
 
-function renderResultados(wrapper, leads) {
+function renderResultados(wrapper, leads, searchId) {
   if (!leads || leads.length === 0) {
     wrapper.innerHTML = UI.emptyHTML({
       titulo: 'Nenhum resultado',
@@ -159,7 +159,7 @@ function renderResultados(wrapper, leads) {
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             Exportar Excel
           </button>
-          <a href="#/leads" class="btn-primary">Ver na lista completa</a>
+          <a href="#/leads${searchId ? `?searchId=${encodeURIComponent(searchId)}` : ''}" class="btn-primary">Ver na lista completa</a>
         </div>
       </div>
       <div class="overflow-x-auto">
@@ -180,33 +180,7 @@ function renderResultados(wrapper, leads) {
     </div>
   `;
 
-  document.getElementById('btn-exportar').addEventListener('click', () => exportarExcel(leads));
-}
-
-function exportarExcel(leads) {
-  const dados = leads.map((l, i) => ({
-    'ID': i + 1,
-    'Negócio': l.nome,
-    'Segmento': l.segmento || '',
-    'Telefone': l.telefone || '',
-    'Endereço': l.endereco || '',
-    'Cidade': l.cidade || '',
-    'UF': l.uf || '',
-    'Avaliação Google': l.avaliacao || '',
-    'ICP score': l.icp_score ?? '',
-    'Status': l.status,
-    'Data prospecção': UI.fmtDate(l.created_at)
-  }));
-  const ws = XLSX.utils.json_to_sheet(dados);
-  ws['!cols'] = [
-    { wch: 4 }, { wch: 30 }, { wch: 14 }, { wch: 16 }, { wch: 38 },
-    { wch: 18 }, { wch: 4 }, { wch: 12 }, { wch: 8 }, { wch: 14 }, { wch: 18 }
-  ];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Prospects');
-  const stamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-  XLSX.writeFile(wb, `Azulli_Prospects_${stamp}.xlsx`);
-  UI.toast('Excel exportado.', 'success');
+  document.getElementById('btn-exportar').addEventListener('click', () => UI.exportLeadsExcel(leads));
 }
 
 })();

@@ -10,9 +10,9 @@ const { isValidPlanId } = require('../config/plans');
 
 async function listar(req, res, next) {
   try {
-    const { status, segmento, uf, cidade, scoreMin, responsavel, q, sort, dir, skip, limit } = req.query;
+    const { status, segmento, uf, cidade, scoreMin, responsavel, q, searchId, sort, dir, skip, limit } = req.query;
     const result = await Lead.list({
-      status, segmento, uf, cidade, scoreMin, responsavel, q, sort, dir,
+      status, segmento, uf, cidade, scoreMin, responsavel, q, searchId, sort, dir,
       skip: skip ? +skip : 0,
       limit: limit ? +limit : 50
     });

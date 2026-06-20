@@ -75,13 +75,17 @@ async function findById(id) {
 }
 
 async function list({
-  status, segmento, uf, cidade, scoreMin, responsavel, q,
+  status, segmento, uf, cidade, scoreMin, responsavel, q, searchId,
   sort = 'icp_score', dir = 'desc',
   skip = 0, limit = 50
 } = {}) {
   const where = ['1=1'];
   const params = [];
 
+  if (searchId) {
+    params.push(searchId);
+    where.push(`l.search_id = $${params.length}`);
+  }
   if (status) {
     const arr = Array.isArray(status) ? status : String(status).split(',');
     params.push(arr);

@@ -16,9 +16,7 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-
-const TOKEN_KEY = "azulli_finder_token"
-const USER_KEY = "azulli_finder_user"
+import { finderClient } from "@/lib/finder/client"
 
 export function FinderLoginForm() {
   const router = useRouter()
@@ -33,24 +31,14 @@ export function FinderLoginForm() {
 
     startTransition(async () => {
       try {
-        const res = await fetch("/api/finder/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: email.trim(), password }),
-        })
-        const payload = await res.json().catch(() => ({}))
-        if (!res.ok) {
-          setError(payload.erro || "Falha no login")
-          return
-        }
-
-        localStorage.setItem(TOKEN_KEY, payload.token)
-        localStorage.setItem(USER_KEY, JSON.stringify(payload.user))
-        toast.success(`Bem-vindo, ${payload.user?.nome || payload.user?.email}!`)
+        const { token, user } = await finderClient.auth.login(email.trim(), password)
+        finderClient.token.set(token)
+        finderClient.user.set(user)
+        toast.success(`Bem-vindo, ${user.nome || user.email}!`)
         router.push("/finder/dashboard")
         router.refresh()
-      } catch {
-        setError("Não foi possível conectar ao servidor.")
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Falha no login")
       }
     })
   }

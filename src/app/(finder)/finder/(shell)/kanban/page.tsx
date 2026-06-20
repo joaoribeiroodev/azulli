@@ -1,11 +1,5 @@
-import { Suspense } from "react"
+import { FinderKanbanPage } from "@/components/finder/pages/finder-kanban-page"
 
-import { FinderPage } from "@/components/finder/finder-page"
-
-export default function FinderKanbanPage() {
-  return (
-    <Suspense fallback={null}>
-      <FinderPage route="kanban" />
-    </Suspense>
-  )
+export default function FinderKanbanRoute() {
+  return <FinderKanbanPage />
 }

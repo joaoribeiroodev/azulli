@@ -1,6 +1,5 @@
 'use strict';
 
-const path = require('path');
 const express = require('express');
 const cors = require('cors');
 
@@ -63,18 +62,6 @@ app.use('/api/leads', leadRoutes);
 app.post('/api/buscar', (req, res, next) => {
   req.url = '/';
   searchRoutes.handle(req, res, next);
-});
-
-// ---------- Frontend estático ----------
-app.use(express.static(path.join(__dirname, 'public')));
-
-app.get('/', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// rota app SPA (qualquer rota não-/api volta o index.html)
-app.get(/^\/(?!api).*/, (_req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // ---------- 404 + error handler ----------

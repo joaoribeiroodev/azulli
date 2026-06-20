@@ -1,11 +1,5 @@
-import { Suspense } from "react"
+import { FinderBuscarPage } from "@/components/finder/pages/finder-buscar-page"
 
-import { FinderPage } from "@/components/finder/finder-page"
-
-export default function FinderBuscarPage() {
-  return (
-    <Suspense fallback={null}>
-      <FinderPage route="buscar" />
-    </Suspense>
-  )
+export default function FinderBuscarRoute() {
+  return <FinderBuscarPage />
 }

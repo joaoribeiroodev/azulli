@@ -1,11 +1,5 @@
-import { Suspense } from "react"
+import { FinderLeadsPage } from "@/components/finder/pages/finder-leads-page"
 
-import { FinderPage } from "@/components/finder/finder-page"
-
-export default function FinderLeadsPage() {
-  return (
-    <Suspense fallback={null}>
-      <FinderPage route="leads" />
-    </Suspense>
-  )
+export default function FinderLeadsRoute() {
+  return <FinderLeadsPage />
 }

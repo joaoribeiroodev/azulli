@@ -1,21 +1,36 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import {
   Clock,
   Columns2,
+  ExternalLink,
   LayoutDashboard,
   LogOut,
   Menu,
   Search,
+  Settings,
   Users,
   UsersRound,
   X,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
+import { toast } from "sonner"
 
+import { useFinderContext } from "@/components/finder/finder-context"
 import { ThemeToggle } from "@/components/theme-toggle"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
 
 type NavItem = {
@@ -68,44 +83,54 @@ function NavLink({
   )
 }
 
-function LogoutButton({ className }: { className?: string }) {
-  const router = useRouter()
-
+function LogoutButton({ onLogout }: { onLogout: () => void }) {
   return (
-    <button
-      type="button"
-      onClick={() => {
-        localStorage.removeItem("azulli_finder_token")
-        localStorage.removeItem("azulli_finder_user")
-        router.push("/finder/login")
-      }}
-      className={cn(
-        "flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors touch-manipulation",
-        className
-      )}
-    >
-      <LogOut className="h-4 w-4" />
-      Sair
-    </button>
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <button
+          type="button"
+          className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors touch-manipulation"
+        >
+          <LogOut className="h-4 w-4" />
+          Sair
+        </button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Sair da conta?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Você precisará entrar novamente para acessar o Finder.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={() => {
+              onLogout()
+              toast.info("Sessão encerrada.")
+            }}
+          >
+            Sair
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
 
 function UserChip() {
+  const { user } = useFinderContext()
+  const initial = (user?.nome || user?.email || "?").trim().charAt(0).toUpperCase()
+
   return (
     <div className="px-1 py-2 flex items-center gap-2 min-w-0">
-      <div
-        id="user-avatar"
-        className="w-9 h-9 rounded-full bg-brand/10 text-brand font-semibold text-sm flex items-center justify-center shrink-0"
-      >
-        A
+      <div className="w-9 h-9 rounded-full bg-brand/10 text-brand font-semibold text-sm flex items-center justify-center shrink-0">
+        {initial}
       </div>
       <div className="min-w-0 flex-1">
-        <div id="user-nome" className="text-sm font-medium truncate">
-          —
-        </div>
-        <div id="user-role" className="text-xs text-muted-foreground truncate uppercase">
-          —
-        </div>
+        <div className="text-sm font-medium truncate">{user?.nome || user?.email || "—"}</div>
+        <div className="text-xs text-muted-foreground truncate uppercase">{user?.role || "—"}</div>
       </div>
     </div>
   )
@@ -118,6 +143,7 @@ type FinderSidebarProps = {
 
 export function FinderSidebar({ mobileOpen, onNavigate }: FinderSidebarProps) {
   const pathname = usePathname()
+  const { adminUrl, logout } = useFinderContext()
 
   return (
     <aside
@@ -153,13 +179,21 @@ export function FinderSidebar({ mobileOpen, onNavigate }: FinderSidebarProps) {
 
       <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
         {NAV_ITEMS.map((item) => (
-          <NavLink
-            key={item.href}
-            item={item}
-            pathname={pathname}
-            onNavigate={onNavigate}
-          />
+          <NavLink key={item.href} item={item} pathname={pathname} onNavigate={onNavigate} />
         ))}
+        {adminUrl ? (
+          <a
+            href={adminUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={navLinkClass(false)}
+            onClick={onNavigate}
+          >
+            <Settings className="h-4 w-4 shrink-0" />
+            Admin Azulli
+            <ExternalLink className="h-3 w-3 ml-auto opacity-60" />
+          </a>
+        ) : null}
       </nav>
 
       <div className="mt-auto border-t px-3 py-3 space-y-2 pb-safe">
@@ -168,17 +202,19 @@ export function FinderSidebar({ mobileOpen, onNavigate }: FinderSidebarProps) {
           <span className="text-xs text-muted-foreground">Tema</span>
           <ThemeToggle />
         </div>
-        <LogoutButton />
+        <LogoutButton onLogout={logout} />
       </div>
     </aside>
   )
 }
 
 type FinderMobileNavProps = {
+  title: string
+  aiEnabled: boolean
   onOpenMenu: () => void
 }
 
-export function FinderMobileNav({ onOpenMenu }: FinderMobileNavProps) {
+export function FinderMobileNav({ title, aiEnabled, onOpenMenu }: FinderMobileNavProps) {
   return (
     <header className="finder-mobile-header lg:hidden sticky top-0 z-30 border-b bg-background/95 backdrop-blur pt-safe">
       <div className="h-14 px-3 sm:px-4 flex items-center gap-2 min-w-0">
@@ -195,25 +231,23 @@ export function FinderMobileNav({ onOpenMenu }: FinderMobileNavProps) {
           <p className="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">
             Azulli Finder
           </p>
-          <h2
-            id="page-title-mobile"
-            className="text-sm font-display font-bold text-brand-ink truncate leading-tight"
-          >
-            Dashboard
+          <h2 className="text-sm font-display font-bold text-brand-ink truncate leading-tight">
+            {title}
           </h2>
         </div>
 
-        <div
-          id="ai-status-mobile"
-          className="hidden sm:inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] text-muted-foreground shrink-0"
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
-          IA
+        <div className="hidden sm:inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] text-muted-foreground shrink-0">
+          <span
+            className={cn(
+              "w-1.5 h-1.5 rounded-full",
+              aiEnabled ? "bg-brand" : "bg-muted-foreground"
+            )}
+          />
+          IA: {aiEnabled ? "ON" : "OFF"}
         </div>
 
         <ThemeToggle />
       </div>
-      <p id="page-subtitle-mobile" className="hidden" aria-hidden />
     </header>
   )
 }

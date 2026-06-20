@@ -1,11 +1,5 @@
-import { Suspense } from "react"
+import { FinderHistoricoPage } from "@/components/finder/pages/finder-historico-page"
 
-import { FinderPage } from "@/components/finder/finder-page"
-
-export default function FinderHistoricoPage() {
-  return (
-    <Suspense fallback={null}>
-      <FinderPage route="historico" />
-    </Suspense>
-  )
+export default function FinderHistoricoRoute() {
+  return <FinderHistoricoPage />
 }

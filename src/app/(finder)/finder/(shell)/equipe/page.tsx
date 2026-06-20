@@ -1,11 +1,5 @@
-import { Suspense } from "react"
+import { FinderEquipePage } from "@/components/finder/pages/finder-equipe-page"
 
-import { FinderPage } from "@/components/finder/finder-page"
-
-export default function FinderEquipePage() {
-  return (
-    <Suspense fallback={null}>
-      <FinderPage route="equipe" />
-    </Suspense>
-  )
+export default function FinderEquipeRoute() {
+  return <FinderEquipePage />
 }

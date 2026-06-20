@@ -1,11 +1,5 @@
-import { Suspense } from "react"
+import { FinderDashboardPage } from "@/components/finder/pages/finder-dashboard-page"
 
-import { FinderPage } from "@/components/finder/finder-page"
-
-export default function FinderDashboardPage() {
-  return (
-    <Suspense fallback={null}>
-      <FinderPage route="dashboard" />
-    </Suspense>
-  )
+export default function FinderDashboardRoute() {
+  return <FinderDashboardPage />
 }

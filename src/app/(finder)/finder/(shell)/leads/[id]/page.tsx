@@ -1,14 +1,8 @@
-import { Suspense } from "react"
-
-import { FinderPage } from "@/components/finder/finder-page"
+import { FinderLeadDetailPage } from "@/components/finder/pages/finder-lead-detail-page"
 
 type Props = { params: Promise<{ id: string }> }
 
-export default async function FinderLeadDetailPage({ params }: Props) {
+export default async function FinderLeadDetailRoute({ params }: Props) {
   const { id } = await params
-  return (
-    <Suspense fallback={null}>
-      <FinderPage route="leads" leadId={id} />
-    </Suspense>
-  )
+  return <FinderLeadDetailPage leadId={id} />
 }

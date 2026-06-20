@@ -5,10 +5,5 @@ export const metadata = {
 }
 
 export default function FinderLoginPage() {
-  return (
-    <>
-      <link rel="stylesheet" href="/finder/css/app.css" />
-      <FinderLoginForm />
-    </>
-  )
+  return <FinderLoginForm />
 }

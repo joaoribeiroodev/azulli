@@ -50,7 +50,16 @@ export async function proxy(request: NextRequest) {
   const isAdmin = isAdminHost(hostname)
   const isFinder = isFinderHost(hostname)
 
+  const isPublicApi = PUBLIC_API_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+  )
+
   const { response, user } = await updateSession(request)
+
+  // APIs com auth própria (Finder JWT, cron, webhooks) — nunca redirecionar ao /login Supabase
+  if (isPublicApi) {
+    return response
+  }
 
   // Subdomínio Finder: UI estática + API própria (JWT), sem gate Supabase
   if (isFinder) {
@@ -108,12 +117,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  const isPublicApi = PUBLIC_API_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
-  )
-
   const isPublic =
-    isPublicApi ||
     PUBLIC_ROUTES.some(
       (r) => pathname === r || pathname.startsWith(`${r}/`)
     )

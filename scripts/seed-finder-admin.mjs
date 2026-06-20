@@ -41,6 +41,9 @@ if (!password) {
 const pool = new Pool({
   connectionString: databaseUrl,
   options: "-c search_path=finder,public",
+  ssl: /supabase\.co/i.test(databaseUrl)
+    ? { rejectUnauthorized: false }
+    : undefined,
 })
 
 async function upsertAdmin(targetEmail, hash, displayName) {

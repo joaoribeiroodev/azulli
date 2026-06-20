@@ -236,13 +236,28 @@ export async function handleFinderApi(
 
   try {
     if (segment === "health" && request.method === "GET") {
-      const dbInfo = await health.healthcheck()
-      return NextResponse.json({
-        status: "ok",
-        time: dbInfo.now,
-        env: env.nodeEnv,
-        ai: aiService.isEnabled() ? "on" : "off",
-      })
+      try {
+        const dbInfo = await health.healthcheck()
+        return NextResponse.json({
+          status: "ok",
+          time: dbInfo.now,
+          env: env.nodeEnv,
+          ai: aiService.isEnabled() ? "on" : "off",
+        })
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Falha na conexão com o banco"
+        console.error("[finder/health]", err)
+        return NextResponse.json(
+          {
+            status: "degraded",
+            erro: message,
+            hint:
+              "Use a connection string do Supabase (Connect → URI). Em serverless, prefira o Session pooler (porta 5432).",
+          },
+          { status: 503 }
+        )
+      }
     }
 
     if (segment === "config" && request.method === "GET") {

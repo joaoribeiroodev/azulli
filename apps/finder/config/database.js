@@ -3,12 +3,19 @@
 const { Pool } = require('pg');
 const env = require('./env');
 
+const isProduction = env.nodeEnv === 'production';
+const needsSsl =
+  isProduction ||
+  /supabase\.co/i.test(env.databaseUrl) ||
+  /sslmode=require/i.test(env.databaseUrl);
+
 const pool = new Pool({
   connectionString: env.databaseUrl,
-  max: 10,
+  max: isProduction ? 3 : 10,
   idleTimeoutMillis: 30_000,
-  connectionTimeoutMillis: 5_000,
-  options: '-c search_path=finder,public'
+  connectionTimeoutMillis: 10_000,
+  options: '-c search_path=finder,public',
+  ssl: needsSsl ? { rejectUnauthorized: false } : undefined
 });
 
 pool.on('error', (err) => {

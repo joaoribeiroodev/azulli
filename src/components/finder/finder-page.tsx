@@ -103,9 +103,18 @@ async function loadAppConfig() {
     window.__FINDER_PLANS = cfg.plans || []
 
     const chip = document.getElementById("ai-status")
+    const chipMobile = document.getElementById("ai-status-mobile")
     if (chip) {
       chip.classList.remove("hidden")
+      chip.classList.add("lg:inline-flex")
       chip.innerHTML = cfg.ai
+        ? '<span class="w-1.5 h-1.5 rounded-full bg-brand"></span> IA: ON'
+        : '<span class="w-1.5 h-1.5 rounded-full bg-muted-foreground"></span> IA: OFF'
+    }
+    if (chipMobile) {
+      chipMobile.classList.remove("hidden")
+      chipMobile.classList.add("sm:inline-flex")
+      chipMobile.innerHTML = cfg.ai
         ? '<span class="w-1.5 h-1.5 rounded-full bg-brand"></span> IA: ON'
         : '<span class="w-1.5 h-1.5 rounded-full bg-muted-foreground"></span> IA: OFF'
     }

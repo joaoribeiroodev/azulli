@@ -120,8 +120,15 @@ const Router = (() => {
   function setPageTitle(title, subtitle) {
     const titleEl = document.getElementById('page-title');
     const subtitleEl = document.getElementById('page-subtitle');
+    const mobileTitleEl = document.getElementById('page-title-mobile');
+    const mobileSubtitleEl = document.getElementById('page-subtitle-mobile');
     if (titleEl) titleEl.textContent = title;
     if (subtitleEl) subtitleEl.textContent = subtitle || '';
+    if (mobileTitleEl) mobileTitleEl.textContent = title;
+    if (mobileSubtitleEl) {
+      mobileSubtitleEl.textContent = subtitle || '';
+      mobileSubtitleEl.classList.toggle('hidden', !subtitle);
+    }
   }
 
   async function renderInto({ route, id, params, container }) {

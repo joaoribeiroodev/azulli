@@ -1,22 +1,8 @@
+import path from "node:path"
 import { createRequire } from "node:module"
 import { NextResponse } from "next/server"
 
 import { convertFinderLead } from "@/lib/finder/convert-lead"
-
-const require = createRequire(import.meta.url)
-
-// Caminhos estáticos — Turbopack/Vercel não suportam require(path.join(...))
-const finderDb = require("../../../apps/finder/config/database.js")
-const finderEnv = require("../../../apps/finder/config/env.js")
-const { PLANS } = require("../../../apps/finder/config/plans.js")
-const aiService = require("../../../apps/finder/services/aiService.js")
-const azulliCore = require("../../../apps/finder/services/azulliCore.js")
-const authCtrl = require("../../../apps/finder/controllers/authController.js")
-const userCtrl = require("../../../apps/finder/controllers/userController.js")
-const searchCtrl = require("../../../apps/finder/controllers/searchController.js")
-const leadCtrl = require("../../../apps/finder/controllers/leadController.js")
-const finderAuth = require("../../../apps/finder/middleware/auth.js")
-const requireRoleFactory = require("../../../apps/finder/middleware/requireRole.js")
 
 type RouteHandler = (
   req: MockReq,
@@ -47,11 +33,67 @@ type MockRes = {
   json(data: unknown): void
 }
 
-let initialized = false
+type FinderModules = {
+  finderDb: { healthcheck: () => Promise<{ now: unknown }> }
+  finderEnv: {
+    nodeEnv: string
+    urls: { admin: string | null; app: string | null; finderPublic: string | null }
+  }
+  PLANS: Record<string, unknown>
+  aiService: { isEnabled: () => boolean }
+  azulliCore: { isConfigured: () => boolean }
+  authCtrl: {
+    login: RouteHandler
+    me: RouteHandler
+  }
+  userCtrl: {
+    list: RouteHandler
+    create: RouteHandler
+    update: RouteHandler
+  }
+  searchCtrl: {
+    buscar: RouteHandler
+    listar: RouteHandler
+  }
+  leadCtrl: Record<string, RouteHandler>
+  finderAuth: { requireAuth: RouteHandler }
+  requireRoleFactory: (...roles: string[]) => RouteHandler
+}
+
+let finderModules: FinderModules | null = null
+let runtimeInitialized = false
+
+/** Carrega apps/finder em runtime via process.cwd() — paths relativos quebram no bundle .next/. */
+function loadFinderModule<T = unknown>(relativePath: string): T {
+  const root = process.cwd()
+  const req = createRequire(path.join(root, "package.json"))
+  return req(path.join(root, "apps/finder", relativePath)) as T
+}
+
+function getFinderModules(): FinderModules {
+  if (finderModules) return finderModules
+
+  finderModules = {
+    finderDb: loadFinderModule("config/database.js"),
+    finderEnv: loadFinderModule("config/env.js"),
+    PLANS: loadFinderModule<{ PLANS: Record<string, unknown> }>("config/plans.js")
+      .PLANS,
+    aiService: loadFinderModule("services/aiService.js"),
+    azulliCore: loadFinderModule("services/azulliCore.js"),
+    authCtrl: loadFinderModule("controllers/authController.js"),
+    userCtrl: loadFinderModule("controllers/userController.js"),
+    searchCtrl: loadFinderModule("controllers/searchController.js"),
+    leadCtrl: loadFinderModule("controllers/leadController.js"),
+    finderAuth: loadFinderModule("middleware/auth.js"),
+    requireRoleFactory: loadFinderModule("middleware/requireRole.js"),
+  }
+
+  return finderModules
+}
 
 function ensureFinderRuntime() {
-  if (initialized) return
-  initialized = true
+  if (runtimeInitialized) return
+  runtimeInitialized = true
 
   ;(globalThis as typeof globalThis & {
     __AZULLI_FINDER_CONVERT__?: typeof convertFinderLead
@@ -146,11 +188,12 @@ function buildMockReq(
 }
 
 async function withAuth(
+  mods: FinderModules,
   req: MockReq,
   res: MockRes,
   handler: RouteHandler
 ): Promise<NextResponse> {
-  const authMw = finderAuth.requireAuth as RouteHandler
+  const authMw = mods.finderAuth.requireAuth
 
   await runHandler(authMw, req, res, { middleware: true })
   if (res.body !== null) {
@@ -163,13 +206,14 @@ async function withAuth(
 }
 
 async function withRole(
+  mods: FinderModules,
   req: MockReq,
   res: MockRes,
   roles: string[],
   handler: RouteHandler
 ): Promise<NextResponse> {
-  const authMw = finderAuth.requireAuth as RouteHandler
-  const roleMw = requireRoleFactory(...roles) as RouteHandler
+  const authMw = mods.finderAuth.requireAuth
+  const roleMw = mods.requireRoleFactory(...roles)
 
   await runHandler(authMw, req, res, { middleware: true })
   if (res.body !== null) {
@@ -192,6 +236,18 @@ export async function handleFinderApi(
   slug: string[] = []
 ): Promise<NextResponse> {
   ensureFinderRuntime()
+  const mods = getFinderModules()
+  const {
+    finderDb,
+    finderEnv,
+    PLANS,
+    aiService,
+    azulliCore,
+    authCtrl,
+    userCtrl,
+    searchCtrl,
+    leadCtrl,
+  } = mods
 
   const req = buildMockReq(request, {})
   req.body = await parseBody(request)
@@ -228,7 +284,7 @@ export async function handleFinderApi(
     }
 
     if (segment === "config" && request.method === "GET") {
-      return withAuth(req, res, (_req, innerRes) => {
+      return withAuth(mods, req, res, (_req, innerRes) => {
         innerRes.json({
           app: "Azulli Finder",
           plans: Object.values(PLANS),
@@ -249,74 +305,74 @@ export async function handleFinderApi(
         return NextResponse.json(res.body ?? {}, { status: res.statusCode })
       }
       if (slug[1] === "me" && request.method === "GET") {
-        return withAuth(req, res, authCtrl.me)
+        return withAuth(mods, req, res, authCtrl.me)
       }
     }
 
     if (segment === "users") {
       if (!id && request.method === "GET") {
-        return withAuth(req, res, userCtrl.list)
+        return withAuth(mods, req, res, userCtrl.list)
       }
       if (!id && request.method === "POST") {
-        return withRole(req, res, ["admin"], userCtrl.create)
+        return withRole(mods, req, res, ["admin"], userCtrl.create)
       }
       if (id && request.method === "PATCH") {
         req.params = { id }
-        return withRole(req, res, ["admin"], userCtrl.update)
+        return withRole(mods, req, res, ["admin"], userCtrl.update)
       }
     }
 
     if (segment === "searches") {
       if (request.method === "POST") {
-        return withAuth(req, res, searchCtrl.buscar)
+        return withAuth(mods, req, res, searchCtrl.buscar)
       }
       if (request.method === "GET") {
-        return withAuth(req, res, searchCtrl.listar)
+        return withAuth(mods, req, res, searchCtrl.listar)
       }
     }
 
     if (segment === "leads") {
       if (slug[1] === "stats" && request.method === "GET") {
-        return withAuth(req, res, leadCtrl.stats)
+        return withAuth(mods, req, res, leadCtrl.stats)
       }
       if (!id && request.method === "GET") {
-        return withAuth(req, res, leadCtrl.listar)
+        return withAuth(mods, req, res, leadCtrl.listar)
       }
       if (id && !action && request.method === "GET") {
         req.params = { id }
-        return withAuth(req, res, leadCtrl.obter)
+        return withAuth(mods, req, res, leadCtrl.obter)
       }
       if (id && !action && request.method === "PATCH") {
         req.params = { id }
-        return withAuth(req, res, leadCtrl.atualizar)
+        return withAuth(mods, req, res, leadCtrl.atualizar)
       }
       if (id && !action && request.method === "DELETE") {
         req.params = { id }
-        return withRole(req, res, ["admin"], leadCtrl.excluir)
+        return withRole(mods, req, res, ["admin"], leadCtrl.excluir)
       }
       if (id && action === "status" && request.method === "POST") {
         req.params = { id }
-        return withAuth(req, res, leadCtrl.trocarStatus)
+        return withAuth(mods, req, res, leadCtrl.trocarStatus)
       }
       if (id && action === "atribuir" && request.method === "POST") {
         req.params = { id }
-        return withAuth(req, res, leadCtrl.atribuir)
+        return withAuth(mods, req, res, leadCtrl.atribuir)
       }
       if (id && action === "pegar" && request.method === "POST") {
         req.params = { id }
-        return withAuth(req, res, leadCtrl.pegarParaMim)
+        return withAuth(mods, req, res, leadCtrl.pegarParaMim)
       }
       if (id && action === "enriquecer" && request.method === "POST") {
         req.params = { id }
-        return withAuth(req, res, leadCtrl.reEnriquecer)
+        return withAuth(mods, req, res, leadCtrl.reEnriquecer)
       }
       if (id && action === "pitch" && request.method === "POST") {
         req.params = { id }
-        return withAuth(req, res, leadCtrl.regerarPitch)
+        return withAuth(mods, req, res, leadCtrl.regerarPitch)
       }
       if (id && action === "converter" && request.method === "POST") {
         req.params = { id }
-        return withRole(req, res, ["admin", "closer"], leadCtrl.converter)
+        return withRole(mods, req, res, ["admin", "closer"], leadCtrl.converter)
       }
     }
 

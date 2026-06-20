@@ -48,7 +48,9 @@ const env = Object.freeze({
   databaseUrl: buildDatabaseUrl(),
 
   jwt: Object.freeze({
-    secret: required('FINDER_JWT_SECRET', ['JWT_SECRET']),
+    get secret() {
+      return required('FINDER_JWT_SECRET', ['JWT_SECRET']);
+    },
     expiresIn: optional('FINDER_JWT_EXPIRES_IN', optional('JWT_EXPIRES_IN', '7d'))
   }),
 

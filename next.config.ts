@@ -10,7 +10,8 @@ const nextConfig: NextConfig = {
     "openai",
   ],
   outputFileTracingIncludes: {
-    "/api/finder/**": ["./apps/finder/**/*"],
+    "/api/finder/[[...slug]]": ["./apps/finder/**/*"],
+    "/api/internal/finder/convert-lead": ["./apps/finder/**/*"],
   },
   images: {
     remotePatterns: [

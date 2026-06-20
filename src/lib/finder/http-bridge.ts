@@ -1,4 +1,3 @@
-import path from "node:path"
 import { createRequire } from "node:module"
 import { NextResponse } from "next/server"
 
@@ -63,12 +62,9 @@ type FinderModules = {
 let finderModules: FinderModules | null = null
 let runtimeInitialized = false
 
-/** Carrega apps/finder em runtime via process.cwd() — paths relativos quebram no bundle .next/. */
-function loadFinderModule<T = unknown>(relativePath: string): T {
-  const root = process.cwd()
-  const req = createRequire(path.join(root, "package.json"))
-  return req(path.join(root, "apps/finder", relativePath)) as T
-}
+const loadFinderModule = createRequire(import.meta.url)(
+  "../../../apps/finder/load-module.cjs"
+) as <T = unknown>(relativePath: string) => T
 
 function getFinderModules(): FinderModules {
   if (finderModules) return finderModules

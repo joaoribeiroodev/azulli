@@ -1,7 +1,11 @@
 'use strict';
 
-const puppeteer = require('puppeteer');
 const env = require('../config/env');
+
+function getPuppeteer() {
+  // Lazy load — evita falha no build/deploy quando Chromium não está disponível
+  return require('puppeteer');
+}
 
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
@@ -35,7 +39,7 @@ async function buscarLeadsGoogleMaps(termo, localizacao) {
 
   let browser = null;
   try {
-    browser = await puppeteer.launch({
+    browser = await getPuppeteer().launch({
       headless: env.scrape.headless ? 'new' : false,
       args: LAUNCH_ARGS
     });

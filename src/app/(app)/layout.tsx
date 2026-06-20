@@ -10,6 +10,9 @@ import { RegisterServiceWorker } from "@/components/pwa/register-sw"
 
 import { getCurrentMembership } from "@/lib/team/queries"
 
+/** Rotas autenticadas usam cookies — não pré-renderizar no build. */
+export const dynamic = "force-dynamic"
+
 export default async function AppLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {

@@ -3,6 +3,20 @@ import { NextResponse } from "next/server"
 
 import { convertFinderLead } from "@/lib/finder/convert-lead"
 
+const require = createRequire(import.meta.url)
+
+const finderDb = require("../../../apps/finder/config/database.js")
+const finderEnv = require("../../../apps/finder/config/env.js")
+const { PLANS } = require("../../../apps/finder/config/plans.js")
+const aiService = require("../../../apps/finder/services/aiService.js")
+const azulliCore = require("../../../apps/finder/services/azulliCore.js")
+const authCtrl = require("../../../apps/finder/controllers/authController.js")
+const userCtrl = require("../../../apps/finder/controllers/userController.js")
+const searchCtrl = require("../../../apps/finder/controllers/searchController.js")
+const leadCtrl = require("../../../apps/finder/controllers/leadController.js")
+const finderAuth = require("../../../apps/finder/middleware/auth.js")
+const requireRoleFactory = require("../../../apps/finder/middleware/requireRole.js")
+
 type RouteHandler = (
   req: MockReq,
   res: MockRes,
@@ -62,26 +76,21 @@ type FinderModules = {
 let finderModules: FinderModules | null = null
 let runtimeInitialized = false
 
-const loadFinderModule = createRequire(import.meta.url)(
-  "../../../apps/finder/load-module.cjs"
-) as <T = unknown>(relativePath: string) => T
-
 function getFinderModules(): FinderModules {
   if (finderModules) return finderModules
 
   finderModules = {
-    finderDb: loadFinderModule("config/database.js"),
-    finderEnv: loadFinderModule("config/env.js"),
-    PLANS: loadFinderModule<{ PLANS: Record<string, unknown> }>("config/plans.js")
-      .PLANS,
-    aiService: loadFinderModule("services/aiService.js"),
-    azulliCore: loadFinderModule("services/azulliCore.js"),
-    authCtrl: loadFinderModule("controllers/authController.js"),
-    userCtrl: loadFinderModule("controllers/userController.js"),
-    searchCtrl: loadFinderModule("controllers/searchController.js"),
-    leadCtrl: loadFinderModule("controllers/leadController.js"),
-    finderAuth: loadFinderModule("middleware/auth.js"),
-    requireRoleFactory: loadFinderModule("middleware/requireRole.js"),
+    finderDb,
+    finderEnv,
+    PLANS,
+    aiService,
+    azulliCore,
+    authCtrl,
+    userCtrl,
+    searchCtrl,
+    leadCtrl,
+    finderAuth,
+    requireRoleFactory,
   }
 
   return finderModules
@@ -231,8 +240,30 @@ export async function handleFinderApi(
   request: Request,
   slug: string[] = []
 ): Promise<NextResponse> {
-  ensureFinderRuntime()
-  const mods = getFinderModules()
+  try {
+    ensureFinderRuntime()
+    const mods = getFinderModules()
+    return await dispatchFinderApi(request, slug, mods)
+  } catch (err) {
+    console.error("[finder/api] bootstrap", err)
+    const message =
+      err instanceof Error ? err.message : "Falha ao iniciar o Finder"
+    return NextResponse.json(
+      {
+        erro: message,
+        hint:
+          "Confira DATABASE_URL e FINDER_JWT_SECRET na Vercel. O diretório apps/finder deve estar no deploy.",
+      },
+      { status: 500 }
+    )
+  }
+}
+
+async function dispatchFinderApi(
+  request: Request,
+  slug: string[],
+  mods: FinderModules
+): Promise<NextResponse> {
   const {
     finderDb,
     finderEnv,

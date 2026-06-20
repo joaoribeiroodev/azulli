@@ -14,8 +14,8 @@
 ```
 ┌─────────────────────────────────────────────────────────┐
 │              Next.js (Vercel) — projeto único            │
-│  /api/finder/*  ←→  apps/finder/ (lógica JS)          │
-│  /finder/*      ←→  App Router + módulos public/finder/js│
+│  /api/finder/*  ←→  src/lib/finder/server/ (backend JS) │
+│  /finder/*      ←→  App Router React + shadcn (src/components/finder/)│
 │  convert-lead   ←→  public.tenants (mesmo DB, in-process)│
 └──────────────────────────┬──────────────────────────────┘
                            │
@@ -26,11 +26,11 @@
 
 ## UI Finder
 
-- **Shell:** `src/app/(finder)/finder/(shell)/layout.tsx` + `finder-sidebar.tsx` (padrão Admin)
+- **Shell:** `src/app/(finder)/finder/(shell)/layout.tsx` + `FinderProvider` + sidebar (padrão Admin)
 - **Login:** `src/app/(finder)/finder/login/page.tsx` (shadcn + JWT)
-- **Páginas:** rotas App Router (`/finder/dashboard`, `/finder/leads`, …) carregam módulos JS existentes
-- **Estilos:** tokens globais (`globals.css`) + `public/finder/css/app.css` (componentes Finder)
-- **Legacy:** `public/finder/index.html` redireciona para `/finder/dashboard`
+- **Páginas:** React client components em `src/components/finder/pages/`
+- **Estilos:** tokens globais (`globals.css`) + Tailwind/shadcn
+- **API client:** `src/lib/finder/client.ts` → `/api/finder/*`
 
 ## Decisões
 

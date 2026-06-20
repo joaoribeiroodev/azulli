@@ -1,7 +1,9 @@
-/* global window, document, API, Auth, Router, UI */
+/* global window, document, API, Auth, Router, UI, Theme */
 'use strict';
 
 document.addEventListener('DOMContentLoaded', async () => {
+  Theme.init();
+  initMobileNav();
   Auth.bindLoginForm();
   Auth.bindLogout();
 
@@ -12,6 +14,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadAppConfig();
   }
 });
+
+function initMobileNav() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  const toggle = document.getElementById('sidebar-toggle');
+  const closeBtn = document.getElementById('sidebar-close');
+
+  function closeSidebar() {
+    sidebar?.classList.remove('open');
+    overlay?.classList.add('hidden');
+    document.body.classList.remove('overflow-hidden');
+  }
+
+  function openSidebar() {
+    sidebar?.classList.add('open');
+    overlay?.classList.remove('hidden');
+    document.body.classList.add('overflow-hidden');
+  }
+
+  toggle?.addEventListener('click', openSidebar);
+  closeBtn?.addEventListener('click', closeSidebar);
+  overlay?.addEventListener('click', closeSidebar);
+
+  window.FinderNav = { closeSidebar };
+}
 
 async function loadAppConfig() {
   try {

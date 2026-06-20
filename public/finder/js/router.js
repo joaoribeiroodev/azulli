@@ -44,6 +44,7 @@ const Router = (() => {
       return;
     }
     window.Auth.showApp();
+    window.FinderNav?.closeSidebar?.();
 
     const { route, id, params } = parseHash();
     const def = routes[route] || routes.dashboard;

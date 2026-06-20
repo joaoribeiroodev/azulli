@@ -10,9 +10,9 @@ const UI = (() => {
     el.className = `toast toast-${type}`;
     const icons = { success: '✓', error: '✕', warn: '!', info: 'i' };
     el.innerHTML = `
-      <div class="w-5 h-5 rounded-full bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center flex-shrink-0">${icons[type] || 'i'}</div>
-      <div class="text-sm text-slate-800 flex-1">${escapeHtml(msg)}</div>
-      <button class="text-slate-400 hover:text-slate-700" aria-label="Fechar">×</button>
+      <div class="w-5 h-5 rounded-full bg-[var(--muted-bg)] text-[var(--foreground)] text-xs font-bold flex items-center justify-center flex-shrink-0">${icons[type] || 'i'}</div>
+      <div class="text-sm text-[var(--foreground)] flex-1">${escapeHtml(msg)}</div>
+      <button class="text-[var(--muted)] hover:text-[var(--foreground)]" aria-label="Fechar">×</button>
     `;
     el.querySelector('button').addEventListener('click', () => el.remove());
     toastContainer().appendChild(el);
@@ -100,11 +100,11 @@ const UI = (() => {
   function confirm({ titulo, mensagem, confirmar = 'Confirmar', cancelar = 'Cancelar', perigo = false }) {
     return new Promise((resolve) => {
       const { root, close } = openModal(`
-        <div class="px-6 py-5 border-b border-slate-200">
-          <h3 class="text-lg font-bold text-slate-900">${escapeHtml(titulo)}</h3>
+        <div class="px-6 py-5 border-b border-[var(--border)]">
+          <h3 class="text-lg font-display font-bold text-[var(--foreground)]">${escapeHtml(titulo)}</h3>
         </div>
-        <div class="px-6 py-5 text-sm text-slate-700">${escapeHtml(mensagem)}</div>
-        <div class="px-6 py-4 bg-slate-50 flex justify-end gap-2 rounded-b-2xl">
+        <div class="px-6 py-5 text-sm text-[var(--muted)]">${escapeHtml(mensagem)}</div>
+        <div class="px-6 py-4 bg-[var(--muted-bg)] flex flex-col-reverse sm:flex-row sm:justify-end gap-2 rounded-b-2xl">
           <button class="btn-secondary" data-cancel>${escapeHtml(cancelar)}</button>
           <button class="${perigo ? 'btn-danger' : 'btn-primary'}" data-ok>${escapeHtml(confirmar)}</button>
         </div>
@@ -117,7 +117,7 @@ const UI = (() => {
   // ---- Loading helpers ----
   function loadingHTML(label = 'Carregando…') {
     return `
-      <div class="flex flex-col items-center justify-center py-16 text-slate-500 gap-3">
+      <div class="flex flex-col items-center justify-center py-16 text-[var(--muted)] gap-3">
         <div class="loader loader-lg"></div>
         <div class="text-sm">${escapeHtml(label)}</div>
       </div>`;
@@ -125,10 +125,10 @@ const UI = (() => {
 
   function emptyHTML({ titulo, descricao, icone = '🔍' }) {
     return `
-      <div class="flex flex-col items-center justify-center py-16 text-center">
+      <div class="flex flex-col items-center justify-center py-16 text-center px-4">
         <div class="text-4xl mb-3">${icone}</div>
-        <div class="text-base font-semibold text-slate-900 mb-1">${escapeHtml(titulo)}</div>
-        <div class="text-sm text-slate-500 max-w-md">${escapeHtml(descricao)}</div>
+        <div class="text-base font-semibold text-[var(--foreground)] mb-1">${escapeHtml(titulo)}</div>
+        <div class="text-sm text-[var(--muted)] max-w-md">${escapeHtml(descricao)}</div>
       </div>`;
   }
 

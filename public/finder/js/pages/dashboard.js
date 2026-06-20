@@ -12,7 +12,7 @@ Router.register('dashboard', {
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6" id="stat-cards"></div>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="bg-white border border-slate-200 rounded-2xl p-5 lg:col-span-2">
+        <div class="finder-card p-5 lg:col-span-2">
           <div class="flex items-center justify-between mb-4">
             <div>
               <h3 class="text-sm font-bold text-slate-900">Funil comercial</h3>
@@ -22,20 +22,20 @@ Router.register('dashboard', {
           <canvas id="chart-status" height="120"></canvas>
         </div>
 
-        <div class="bg-white border border-slate-200 rounded-2xl p-5">
+        <div class="finder-card p-5">
           <h3 class="text-sm font-bold text-slate-900 mb-1">Top segmentos</h3>
           <p class="text-xs text-slate-500 mb-3">Onde concentrar prospecção</p>
           <canvas id="chart-segmento" height="160"></canvas>
         </div>
 
-        <div class="bg-white border border-slate-200 rounded-2xl p-5 lg:col-span-3">
+        <div class="finder-card p-5 lg:col-span-3">
           <h3 class="text-sm font-bold text-slate-900 mb-1">Distribuição geográfica</h3>
           <p class="text-xs text-slate-500 mb-3">Leads por UF (top 15)</p>
           <canvas id="chart-uf" height="80"></canvas>
         </div>
       </div>
 
-      <div class="mt-6 bg-white border border-slate-200 rounded-2xl p-5">
+      <div class="mt-6 finder-card p-5">
         <div class="flex items-center justify-between mb-3">
           <h3 class="text-sm font-bold text-slate-900">Próximos passos</h3>
         </div>
@@ -87,6 +87,22 @@ function card(label, value, hint) {
     </div>`;
 }
 
+function chartTheme() {
+  const dark = document.documentElement.classList.contains('dark');
+  return {
+    tick: dark ? '#94a3b8' : '#64748b',
+    grid: dark ? 'rgba(148,163,184,0.12)' : 'rgba(148,163,184,0.25)',
+  };
+}
+
+function scaleOpts() {
+  const t = chartTheme();
+  return {
+    ticks: { color: t.tick },
+    grid: { color: t.grid }
+  };
+}
+
 function renderChartStatus(data) {
   const STATUS_ORDER = ['novo', 'qualificado', 'contatado', 'em_negociacao', 'assinante', 'descartado'];
   const COLORS = {
@@ -108,7 +124,10 @@ function renderChartStatus(data) {
     options: {
       responsive: true,
       plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+      scales: {
+        x: scaleOpts(),
+        y: { beginAtZero: true, ticks: { precision: 0, color: chartTheme().tick }, grid: { color: chartTheme().grid } }
+      }
     }
   });
 }
@@ -124,7 +143,14 @@ function renderChartSegmento(data) {
         backgroundColor: ['#1f57e6', '#3273ff', '#5891ff', '#8ab6ff', '#bcd6ff', '#deebff']
       }]
     },
-    options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } }
+    options: {
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { boxWidth: 12, font: { size: 11 }, color: chartTheme().tick }
+        }
+      }
+    }
   });
 }
 
@@ -143,7 +169,10 @@ function renderChartUf(data) {
     options: {
       indexAxis: 'y',
       plugins: { legend: { display: false } },
-      scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
+      scales: {
+        x: { beginAtZero: true, ticks: { precision: 0, color: chartTheme().tick }, grid: { color: chartTheme().grid } },
+        y: scaleOpts()
+      }
     }
   });
 }

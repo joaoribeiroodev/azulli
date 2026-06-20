@@ -59,6 +59,8 @@ Router.register('dashboard', {
       </div>
     `;
 
+    await UI.loadExternalScript('https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js');
+
     const stats = await API.leads.stats();
     renderStatCards(stats.resumo);
     renderChartStatus(stats.byStatus);

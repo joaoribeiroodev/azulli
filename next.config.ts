@@ -1,5 +1,8 @@
 import type { NextConfig } from "next";
 
+const FINDER_CACHE = "public, max-age=31536000, immutable";
+const FINDER_HTML_CACHE = "public, max-age=0, must-revalidate";
+
 const nextConfig: NextConfig = {
   serverExternalPackages: [
     "pdf-lib",
@@ -12,11 +15,28 @@ const nextConfig: NextConfig = {
     "openai",
   ],
   outputFileTracingIncludes: {
-    "/api/finder/[[...slug]]": [
-      "./apps/finder/**/*",
-      "./node_modules/@sparticuz/chromium-min/**",
-    ],
+    "/api/finder/[[...slug]]": ["./apps/finder/**/*"],
     "/api/internal/finder/convert-lead": ["./apps/finder/**/*"],
+  },
+  async headers() {
+    return [
+      {
+        source: "/finder/js/:path*",
+        headers: [{ key: "Cache-Control", value: FINDER_CACHE }],
+      },
+      {
+        source: "/finder/css/:path*",
+        headers: [{ key: "Cache-Control", value: FINDER_CACHE }],
+      },
+      {
+        source: "/finder/index.html",
+        headers: [{ key: "Cache-Control", value: FINDER_HTML_CACHE }],
+      },
+      {
+        source: "/finder",
+        headers: [{ key: "Cache-Control", value: FINDER_HTML_CACHE }],
+      },
+    ];
   },
   images: {
     remotePatterns: [

@@ -180,7 +180,7 @@ function renderResultados(wrapper, leads, searchId) {
     </div>
   `;
 
-  document.getElementById('btn-exportar').addEventListener('click', () => UI.exportLeadsExcel(leads));
+  document.getElementById('btn-exportar').addEventListener('click', () => { UI.exportLeadsExcel(leads); });
 }
 
 })();

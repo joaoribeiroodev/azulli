@@ -8,6 +8,13 @@ const azulliCore = require('../services/azulliCore');
 const convertService = require('../services/conversion');
 const { isValidPlanId } = require('../config/plans');
 
+const STATS_CACHE_TTL_MS = 30_000;
+let statsCache = { data: null, at: 0 };
+
+function invalidateStatsCache() {
+  statsCache = { data: null, at: 0 };
+}
+
 async function listar(req, res, next) {
   try {
     const { status, segmento, uf, cidade, scoreMin, responsavel, q, searchId, sort, dir, skip, limit } = req.query;
@@ -37,6 +44,7 @@ async function atualizar(req, res, next) {
   try {
     const lead = await Lead.update(req.params.id, req.body || {});
     if (!lead) return res.status(404).json({ erro: 'Lead não encontrado' });
+    invalidateStatsCache();
     res.json({ lead });
   } catch (err) {
     next(err);
@@ -51,6 +59,7 @@ async function trocarStatus(req, res, next) {
       userId: req.auth.sub,
       motivo
     });
+    invalidateStatsCache();
     res.json({ lead });
   } catch (err) {
     if (/inválido|não encontrado/.test(err.message)) {
@@ -82,6 +91,7 @@ async function pegarParaMim(req, res, next) {
 async function excluir(req, res, next) {
   try {
     await Lead.destroy(req.params.id);
+    invalidateStatsCache();
     res.json({ sucesso: true });
   } catch (err) {
     next(err);
@@ -137,13 +147,19 @@ async function regerarPitch(req, res, next) {
 
 async function stats(_req, res, next) {
   try {
+    if (statsCache.data && Date.now() - statsCache.at < STATS_CACHE_TTL_MS) {
+      return res.json(statsCache.data);
+    }
+
     const [resumo, byStatus, bySegmento, byUf] = await Promise.all([
       Lead.statsResumo(),
       Lead.statsByStatus(),
       Lead.statsBySegmento(),
       Lead.statsByUf()
     ]);
-    res.json({ resumo, byStatus, bySegmento, byUf });
+    const payload = { resumo, byStatus, bySegmento, byUf };
+    statsCache = { data: payload, at: Date.now() };
+    res.json(payload);
   } catch (err) {
     next(err);
   }
@@ -216,6 +232,7 @@ async function converter(req, res, next) {
       payloadResponse: coreResponse
     });
 
+    invalidateStatsCache();
     res.json({ lead: atualizado, conversao: coreResponse });
   } catch (err) {
     next(err);

@@ -23,21 +23,27 @@ async function buscar(req, res, next) {
     const { aceitos, excluidos } = icpQualification.filtrarLeadsParaIcp(scraped);
 
     const persisted = [];
-    for (const l of aceitos) {
-      try {
-        const lead = await Lead.upsertFromScrape({
-          searchId: search.id,
-          nome: l.nome,
-          telefone: l.telefone,
-          endereco: l.endereco,
-          avaliacao: l.avaliacao,
-          totalAvaliacoes: l.totalAvaliacoes,
-          mapsUrl: l.mapsUrl,
-          website: l.website
-        });
-        persisted.push(lead);
-      } catch (e) {
-        console.warn('[search] falha ao persistir lead:', e.message);
+    try {
+      const rows = await Lead.upsertManyFromScrape(search.id, aceitos);
+      persisted.push(...rows);
+    } catch (e) {
+      console.warn('[search] batch upsert falhou, tentando um a um:', e.message);
+      for (const l of aceitos) {
+        try {
+          const lead = await Lead.upsertFromScrape({
+            searchId: search.id,
+            nome: l.nome,
+            telefone: l.telefone,
+            endereco: l.endereco,
+            avaliacao: l.avaliacao,
+            totalAvaliacoes: l.totalAvaliacoes,
+            mapsUrl: l.mapsUrl,
+            website: l.website
+          });
+          persisted.push(lead);
+        } catch (err) {
+          console.warn('[search] falha ao persistir lead:', err.message);
+        }
       }
     }
 

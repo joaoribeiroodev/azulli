@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@source "../../public/finder/**/*.js";
+@source "../../public/finder/**/*.html";
+
 @custom-variant dark (&:is(.dark *));
 
 /* =========================================================================

@@ -53,19 +53,23 @@ export async function proxy(request: NextRequest) {
   const isPublicApi = PUBLIC_API_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   )
+  const isFinderStatic = pathname.startsWith(FINDER_STATIC_PREFIX)
 
-  const { response, user } = await updateSession(request)
-
-  // APIs com auth própria (Finder JWT, cron, webhooks) — nunca redirecionar ao /login Supabase
-  if (isPublicApi) {
-    return response
+  // Finder UI/API — JWT próprio; não refrescar sessão Supabase (economiza ~100–200ms/request)
+  if (isPublicApi || isFinderStatic) {
+    return NextResponse.next()
   }
 
-  // Subdomínio Finder: UI estática + API própria (JWT), sem gate Supabase
   if (isFinder) {
     if (pathname === "/") {
       const url = request.nextUrl.clone()
-      url.pathname = `${FINDER_STATIC_PREFIX}/`
+      url.pathname = `${FINDER_STATIC_PREFIX}/dashboard`
+      return NextResponse.redirect(url)
+    }
+
+    if (pathname === FINDER_STATIC_PREFIX || pathname === `${FINDER_STATIC_PREFIX}/`) {
+      const url = request.nextUrl.clone()
+      url.pathname = `${FINDER_STATIC_PREFIX}/dashboard`
       return NextResponse.redirect(url)
     }
 
@@ -77,12 +81,14 @@ export async function proxy(request: NextRequest) {
 
     if (!allowed) {
       const url = request.nextUrl.clone()
-      url.pathname = `${FINDER_STATIC_PREFIX}/`
+      url.pathname = `${FINDER_STATIC_PREFIX}/dashboard`
       return NextResponse.redirect(url)
     }
 
-    return response
+    return NextResponse.next()
   }
+
+  const { response, user } = await updateSession(request)
 
   // Subdomínio admin: raiz → painel admin
   if (isAdmin && pathname === "/") {

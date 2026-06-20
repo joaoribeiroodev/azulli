@@ -1,13 +1,13 @@
 # Plano de integração — Azulli Finder (unificado)
 
-## Arquitetura atual (pós-refatoração)
+## Arquitetura atual (pós-unificação App Router)
 
 | Superfície | Host | Runtime |
 |---|---|---|
 | Landing | `azulli.app.br` | Next.js / Vercel |
 | App | `use.azulli.app.br` | Next.js / Vercel |
-| Admin | `admin.azulli.app.br` | Next.js / Vercel |
-| **Finder** | `finder.azulli.app.br` | **Next.js / Vercel** (mesmo projeto) |
+| Admin | `admin.azulli.app.br` | Next.js / Vercel (`src/app/(admin)/`) |
+| **Finder** | `finder.azulli.app.br` | Next.js / Vercel (`src/app/(finder)/finder/`) |
 
 **Um deploy. Um Postgres (Supabase).** Schema `finder.*` isolado do multi-tenant `public.*`.
 
@@ -15,7 +15,7 @@
 ┌─────────────────────────────────────────────────────────┐
 │              Next.js (Vercel) — projeto único            │
 │  /api/finder/*  ←→  apps/finder/ (lógica JS)          │
-│  /finder/       ←→  public/finder/ (SPA)                │
+│  /finder/*      ←→  App Router + módulos public/finder/js│
 │  convert-lead   ←→  public.tenants (mesmo DB, in-process)│
 └──────────────────────────┬──────────────────────────────┘
                            │
@@ -23,6 +23,14 @@
                     ├── public.*  (SaaS multi-tenant)
                     └── finder.*  (time comercial)
 ```
+
+## UI Finder
+
+- **Shell:** `src/app/(finder)/finder/(shell)/layout.tsx` + `finder-sidebar.tsx` (padrão Admin)
+- **Login:** `src/app/(finder)/finder/login/page.tsx` (shadcn + JWT)
+- **Páginas:** rotas App Router (`/finder/dashboard`, `/finder/leads`, …) carregam módulos JS existentes
+- **Estilos:** tokens globais (`globals.css`) + `public/finder/css/app.css` (componentes Finder)
+- **Legacy:** `public/finder/index.html` redireciona para `/finder/dashboard`
 
 ## Decisões
 

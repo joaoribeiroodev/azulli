@@ -5,10 +5,18 @@ const Auth = (() => {
   function isLogged() { return Boolean(API.token.get()); }
 
   function showLogin() {
+    if (window.__FINDER_NEXT_ROUTES__) {
+      window.location.href = '/finder/login';
+      return;
+    }
     document.getElementById('app-view').classList.add('hidden');
     document.getElementById('login-view').classList.remove('hidden');
   }
   function showApp() {
+    if (window.__FINDER_NEXT_ROUTES__) {
+      renderUserChip();
+      return;
+    }
     document.getElementById('login-view').classList.add('hidden');
     document.getElementById('app-view').classList.remove('hidden');
     renderUserChip();
@@ -42,6 +50,7 @@ const Auth = (() => {
 
   function bindLoginForm() {
     const form = document.getElementById('login-form');
+    if (!form) return;
     const btn  = document.getElementById('login-btn');
     const btnTxt = document.getElementById('login-btn-text');
     const errBox = document.getElementById('login-error');
@@ -60,7 +69,7 @@ const Auth = (() => {
         API.token.set(token);
         API.user.set(user);
         showApp();
-        Router.go('#/dashboard');
+        Router.go('dashboard');
         UI.toast(`Bem-vindo, ${user.nome || user.email}!`, 'success');
       } catch (err) {
         errBox.textContent = err.message || 'Falha no login';
@@ -73,7 +82,9 @@ const Auth = (() => {
   }
 
   function bindLogout() {
-    document.getElementById('logout-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('logout-btn');
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
       const ok = await UI.confirm({
         titulo: 'Sair da conta?',
         mensagem: 'Você precisará entrar novamente para acessar o Finder.',
@@ -82,6 +93,11 @@ const Auth = (() => {
       });
       if (!ok) return;
       API.token.clear();
+      if (window.__FINDER_NEXT_ROUTES__) {
+        window.location.href = '/finder/login';
+        UI.toast('Sessão encerrada.', 'info');
+        return;
+      }
       showLogin();
       window.location.hash = '#/login';
       UI.toast('Sessão encerrada.', 'info');

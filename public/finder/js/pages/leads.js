@@ -96,7 +96,7 @@ async function renderLista({ container, params }) {
     document.getElementById('f-q').addEventListener('keydown', (e) => { if (e.key === 'Enter') apply(); });
     document.getElementById('btn-exportar').addEventListener('click', exportarFiltrados);
     document.getElementById('btn-clear-search').addEventListener('click', () => {
-      Router.go('#/leads');
+      Router.go('leads');
     });
     document.getElementById('btn-limpar').addEventListener('click', () => {
       ['f-q', 'f-uf', 'f-score'].forEach((id) => (document.getElementById(id).value = ''));
@@ -157,7 +157,7 @@ async function exportarFiltrados() {
   try {
     const { limit, ...rest } = currentQueryParams;
     const leads = await fetchAllLeads(rest);
-    UI.exportLeadsExcel(leads);
+    await UI.exportLeadsExcel(leads);
   } catch (err) {
     UI.toast(err.message, 'error');
   } finally {

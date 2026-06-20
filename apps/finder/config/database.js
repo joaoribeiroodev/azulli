@@ -56,7 +56,7 @@ function createPool() {
   return new Pool({
     connectionString,
     max: maxConnections,
-    idleTimeoutMillis: serverless ? 5_000 : 30_000,
+    idleTimeoutMillis: serverless ? 20_000 : 30_000,
     connectionTimeoutMillis: 10_000,
     allowExitOnIdle: serverless,
     options: '-c search_path=finder,public',

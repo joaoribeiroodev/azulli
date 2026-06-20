@@ -48,9 +48,12 @@ const API = (() => {
     }
 
     if (res.status === 401) {
-      // sessão expirada
       clearToken();
-      if (window.Router) window.Router.go('#/login');
+      if (window.__FINDER_NEXT_ROUTES__) {
+        window.location.href = '/finder/login';
+      } else if (window.Router) {
+        window.Router.go('login');
+      }
       throw new ApiError(payload?.erro || 'Sessão expirada', 401, payload);
     }
 

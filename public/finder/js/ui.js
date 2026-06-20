@@ -81,11 +81,37 @@ const UI = (() => {
     return `https://www.google.com/maps/search/${q}`;
   }
 
-  function exportLeadsExcel(leads, { filenamePrefix = 'Azulli_Prospects' } = {}) {
+  const externalScripts = new Map();
+
+  function loadExternalScript(src) {
+    if (externalScripts.has(src)) return externalScripts.get(src);
+    const pending = new Promise((resolve, reject) => {
+      const existing = document.querySelector(`script[data-ext-src="${src}"]`);
+      if (existing) {
+        if (existing.dataset.loaded) return resolve();
+        existing.addEventListener('load', () => resolve());
+        existing.addEventListener('error', reject);
+        return;
+      }
+      const el = document.createElement('script');
+      el.src = src;
+      el.defer = true;
+      el.dataset.extSrc = src;
+      el.onload = () => { el.dataset.loaded = '1'; resolve(); };
+      el.onerror = reject;
+      document.head.appendChild(el);
+    });
+    externalScripts.set(src, pending);
+    return pending;
+  }
+
+  async function exportLeadsExcel(leads, { filenamePrefix = 'Azulli_Prospects' } = {}) {
     if (!leads || leads.length === 0) {
       toast('Nenhum lead para exportar.', 'warn');
       return;
     }
+
+    await loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
     if (typeof XLSX === 'undefined') {
       toast('Biblioteca Excel não carregada.', 'error');
       return;
@@ -320,6 +346,7 @@ const UI = (() => {
     fmtPhone,
     whatsappLink,
     mapsSearchLink,
+    loadExternalScript,
     exportLeadsExcel,
     openModal,
     confirm,

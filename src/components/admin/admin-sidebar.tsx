@@ -15,22 +15,20 @@ type NavItem = {
   external?: boolean
 }
 
-const FINDER_URL = process.env.NEXT_PUBLIC_FINDER_URL
+const FINDER_HREF = process.env.NEXT_PUBLIC_FINDER_URL
+  ? `${process.env.NEXT_PUBLIC_FINDER_URL.replace(/\/$/, "")}/dashboard`
+  : "/finder/dashboard"
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/admin", label: "Painel", icon: BarChart3, exact: true },
   { href: "/admin/announcements", label: "Avisos", icon: Megaphone, exact: false },
-  ...(FINDER_URL
-    ? [
-        {
-          href: FINDER_URL,
-          label: "Finder",
-          icon: Search,
-          exact: false,
-          external: true,
-        },
-      ]
-    : []),
+  {
+    href: FINDER_HREF,
+    label: "Finder",
+    icon: Search,
+    exact: false,
+    external: FINDER_HREF.startsWith("http"),
+  },
 ]
 
 function isActive(pathname: string, href: string, exact: boolean) {

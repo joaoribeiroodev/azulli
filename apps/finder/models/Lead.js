@@ -23,6 +23,18 @@ const LEAD_COLUMNS = `
   u.email AS responsavel_email
 `;
 
+/** Colunas enxutas para listagem/kanban (sem pitches TEXT pesados). */
+const LIST_COLUMNS = `
+  l.id, l.search_id, l.nome, l.telefone, l.whatsapp, l.email,
+  l.endereco, l.cidade, l.uf, l.cep, l.cnpj,
+  l.avaliacao, l.total_avaliacoes, l.maps_url, l.website,
+  l.segmento, l.porte, l.icp_score,
+  l.validado, l.enriquecido_em,
+  l.status, l.responsavel_id, l.notas,
+  l.created_at, l.updated_at,
+  u.nome AS responsavel_nome
+`;
+
 function isValidStatus(s) { return STATUS.includes(s); }
 
 function normalizeEndereco(endereco) {
@@ -61,6 +73,47 @@ async function upsertFromScrape({
     ]
   );
   return rows[0];
+}
+
+/**
+ * Persiste vários leads de uma busca em uma única round-trip ao Postgres.
+ */
+async function upsertManyFromScrape(searchId, items) {
+  if (!items.length) return [];
+
+  const searchIds = items.map(() => searchId);
+  const nomes = items.map((l) => l.nome);
+  const telefones = items.map((l) => l.telefone || null);
+  const enderecos = items.map((l) => normalizeEndereco(l.endereco) || null);
+  const avaliacoes = items.map((l) => l.avaliacao || null);
+  const totalAvaliacoes = items.map((l) => l.totalAvaliacoes ?? null);
+  const mapsUrls = items.map((l) => l.mapsUrl || null);
+  const websites = items.map((l) => l.website || null);
+
+  const { rows } = await db.query(
+    `INSERT INTO leads (search_id, nome, telefone, endereco, avaliacao, total_avaliacoes, maps_url, website)
+     SELECT * FROM UNNEST(
+       $1::uuid[],
+       $2::text[],
+       $3::text[],
+       $4::text[],
+       $5::numeric[],
+       $6::int[],
+       $7::text[],
+       $8::text[]
+     )
+     ON CONFLICT (lower(nome), lower(coalesce(endereco, '')))
+     DO UPDATE SET
+       telefone          = COALESCE(EXCLUDED.telefone,          leads.telefone),
+       avaliacao         = COALESCE(EXCLUDED.avaliacao,         leads.avaliacao),
+       total_avaliacoes  = COALESCE(EXCLUDED.total_avaliacoes,  leads.total_avaliacoes),
+       maps_url          = COALESCE(EXCLUDED.maps_url,          leads.maps_url),
+       website           = COALESCE(EXCLUDED.website,           leads.website),
+       updated_at        = NOW()
+     RETURNING *`,
+    [searchIds, nomes, telefones, enderecos, avaliacoes, totalAvaliacoes, mapsUrls, websites]
+  );
+  return rows;
 }
 
 async function findById(id) {
@@ -119,7 +172,7 @@ async function list({
   params.push(Number(limit), Number(skip));
 
   const sql = `
-    SELECT ${LEAD_COLUMNS}
+    SELECT ${LIST_COLUMNS}, COUNT(*) OVER()::int AS _total
       FROM leads l
       LEFT JOIN users u ON u.id = l.responsavel_id
      WHERE ${where.join(' AND ')}
@@ -127,17 +180,13 @@ async function list({
      LIMIT $${params.length - 1} OFFSET $${params.length}
   `;
 
-  const countSql = `SELECT COUNT(*)::int AS total FROM leads l WHERE ${where.join(' AND ')}`;
-  const countParams = params.slice(0, params.length - 2);
-
-  const [leadsRes, countRes] = await Promise.all([
-    db.query(sql, params),
-    db.query(countSql, countParams)
-  ]);
+  const { rows } = await db.query(sql, params);
+  const total = rows[0]?._total ?? 0;
+  const leads = rows.map(({ _total, ...lead }) => lead);
 
   return {
-    leads: leadsRes.rows,
-    total: countRes.rows[0].total,
+    leads,
+    total,
     limit: Number(limit),
     skip: Number(skip)
   };
@@ -256,11 +305,12 @@ async function statsByUf() {
 async function statsResumo() {
   const { rows } = await db.query(`
     SELECT
-      (SELECT COUNT(*)::int FROM leads)                                        AS total,
-      (SELECT COUNT(*)::int FROM leads WHERE status = 'assinante')            AS assinantes,
-      (SELECT COUNT(*)::int FROM leads WHERE status NOT IN ('assinante','descartado')) AS ativos,
-      (SELECT COALESCE(AVG(icp_score), 0)::int FROM leads WHERE icp_score IS NOT NULL) AS icp_medio,
+      COUNT(*)::int AS total,
+      COUNT(*) FILTER (WHERE status = 'assinante')::int AS assinantes,
+      COUNT(*) FILTER (WHERE status NOT IN ('assinante', 'descartado'))::int AS ativos,
+      COALESCE(AVG(icp_score) FILTER (WHERE icp_score IS NOT NULL), 0)::int AS icp_medio,
       (SELECT COUNT(*)::int FROM searches WHERE created_at > NOW() - INTERVAL '7 days') AS buscas_7d
+      FROM leads
   `);
   return rows[0];
 }
@@ -336,6 +386,7 @@ module.exports = {
   STATUS,
   SEGMENTOS,
   upsertFromScrape,
+  upsertManyFromScrape,
   findById,
   list,
   update,

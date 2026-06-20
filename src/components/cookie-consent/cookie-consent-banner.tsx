@@ -38,7 +38,7 @@ export function CookieConsentBanner() {
     if (!hasConsent()) setVisible(true)
   }, [])
 
-  if (pathname.startsWith("/admin")) return null
+  if (pathname.startsWith("/admin") || pathname.startsWith("/finder")) return null
 
   if (!visible) return null
 

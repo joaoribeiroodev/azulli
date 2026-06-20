@@ -10,7 +10,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const ok = await Auth.ensureSession();
   if (ok) {
     Router.start();
-    pollHealth();
     loadAppConfig();
   }
 });
@@ -58,20 +57,14 @@ async function loadAppConfig() {
       nav.appendChild(a);
     }
     window.__FINDER_PLANS = cfg.plans || [];
-  } catch (_e) {
-    /* ignore */
-  }
-}
 
-async function pollHealth() {
-  try {
-    const h = await API.health();
     const chip = document.getElementById('ai-status');
-    if (!chip) return;
-    chip.classList.remove('hidden');
-    chip.innerHTML = h.ai === 'on'
-      ? '<span class="w-1.5 h-1.5 rounded-full bg-azulli-500"></span> IA: ON'
-      : '<span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> IA: OFF';
+    if (chip) {
+      chip.classList.remove('hidden');
+      chip.innerHTML = cfg.ai
+        ? '<span class="w-1.5 h-1.5 rounded-full bg-azulli-500"></span> IA: ON'
+        : '<span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> IA: OFF';
+    }
   } catch (_e) {
     /* ignore */
   }

@@ -2,18 +2,76 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { BarChart3, LogOut, Megaphone } from "lucide-react"
+import { BarChart3, LogOut, Megaphone, Search } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
-const NAV_ITEMS = [
+type NavItem = {
+  href: string
+  label: string
+  icon: LucideIcon
+  exact: boolean
+  external?: boolean
+}
+
+const FINDER_URL = process.env.NEXT_PUBLIC_FINDER_URL
+
+const NAV_ITEMS: NavItem[] = [
   { href: "/admin", label: "Painel", icon: BarChart3, exact: true },
   { href: "/admin/announcements", label: "Avisos", icon: Megaphone, exact: false },
-] as const
+  ...(FINDER_URL
+    ? [
+        {
+          href: FINDER_URL,
+          label: "Finder",
+          icon: Search,
+          exact: false,
+          external: true,
+        },
+      ]
+    : []),
+]
 
 function isActive(pathname: string, href: string, exact: boolean) {
   if (exact) return pathname === href
   return pathname === href || pathname.startsWith(`${href}/`)
+}
+
+function navLinkClass(active: boolean) {
+  return cn(
+    "flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+    active
+      ? "bg-brand/10 text-brand"
+      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+  )
+}
+
+function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
+  const active = !item.external && isActive(pathname, item.href, item.exact)
+  const Icon = item.icon
+  const className = navLinkClass(active)
+
+  if (item.external) {
+    return (
+      <a
+        href={item.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className}
+      >
+        <Icon className="h-4 w-4 shrink-0" />
+        {item.label}
+      </a>
+    )
+  }
+
+  return (
+    <Link href={item.href} className={className}>
+      <Icon className="h-4 w-4 shrink-0" />
+      {item.label}
+    </Link>
+  )
 }
 
 export function AdminSidebar() {
@@ -29,25 +87,9 @@ export function AdminSidebar() {
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {NAV_ITEMS.map((item) => {
-          const active = isActive(pathname, item.href, item.exact)
-          const Icon = item.icon
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                active
-                  ? "bg-brand/10 text-brand"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <Icon className="h-4 w-4 shrink-0" />
-              {item.label}
-            </Link>
-          )
-        })}
+        {NAV_ITEMS.map((item) => (
+          <NavLink key={item.href} item={item} pathname={pathname} />
+        ))}
       </nav>
 
       <div className="px-3 py-4 border-t">
@@ -84,18 +126,35 @@ export function AdminMobileNav() {
           </Link>
           <nav className="flex items-center gap-0.5 shrink-0">
             {NAV_ITEMS.map((item) => {
-              const active = isActive(pathname, item.href, item.exact)
+              const active = !item.external && isActive(pathname, item.href, item.exact)
               const Icon = item.icon
+              const className = cn(
+                "inline-flex items-center justify-center rounded-lg min-h-11 min-w-11 touch-manipulation transition-colors",
+                active
+                  ? "bg-brand/10 text-brand"
+                  : "text-muted-foreground hover:bg-muted active:bg-muted"
+              )
+
+              if (item.external) {
+                return (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={className}
+                    aria-label={item.label}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </a>
+                )
+              }
+
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={cn(
-                    "inline-flex items-center justify-center rounded-lg min-h-11 min-w-11 touch-manipulation transition-colors",
-                    active
-                      ? "bg-brand/10 text-brand"
-                      : "text-muted-foreground hover:bg-muted active:bg-muted"
-                  )}
+                  className={className}
                   aria-label={item.label}
                   aria-current={active ? "page" : undefined}
                 >
@@ -113,7 +172,6 @@ export function AdminMobileNav() {
           </nav>
         </div>
       </header>
-      {/* Reserva espaço do header fixo — evita sobreposição e cliques bloqueados */}
       <div
         className="lg:hidden shrink-0"
         style={{ height: MOBILE_HEADER_HEIGHT }}

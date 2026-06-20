@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { isAppProductHost, isAdminHost } from "@/lib/app/domain-hosts"
+import { isAppProductHost, isAdminHost, isFinderHost } from "@/lib/app/domain-hosts"
 import { updateSession } from "@/lib/supabase/middleware"
 import { isMissingDbColumn } from "@/lib/onboarding/db"
 
@@ -23,6 +23,8 @@ const PUBLIC_API_PREFIXES = [
   "/api/cron",
   "/api/webhooks",
   "/api/email/unsubscribe",
+  "/api/internal",
+  "/api/finder",
 ]
 
 const ADMIN_ROUTE_PREFIX = "/admin"
@@ -40,12 +42,38 @@ const ALWAYS_ALLOWED_FOR_AUTHED = [
   "/api/export",
 ]
 
+const FINDER_STATIC_PREFIX = "/finder"
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const hostname = request.nextUrl.hostname
   const isAdmin = isAdminHost(hostname)
+  const isFinder = isFinderHost(hostname)
 
   const { response, user } = await updateSession(request)
+
+  // Subdomínio Finder: UI estática + API própria (JWT), sem gate Supabase
+  if (isFinder) {
+    if (pathname === "/") {
+      const url = request.nextUrl.clone()
+      url.pathname = `${FINDER_STATIC_PREFIX}/`
+      return NextResponse.redirect(url)
+    }
+
+    const allowed =
+      pathname.startsWith(FINDER_STATIC_PREFIX) ||
+      pathname.startsWith("/api/finder") ||
+      pathname.startsWith("/_next") ||
+      pathname === "/favicon.ico"
+
+    if (!allowed) {
+      const url = request.nextUrl.clone()
+      url.pathname = `${FINDER_STATIC_PREFIX}/`
+      return NextResponse.redirect(url)
+    }
+
+    return response
+  }
 
   // Subdomínio admin: raiz → painel admin
   if (isAdmin && pathname === "/") {

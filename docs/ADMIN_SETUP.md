@@ -15,6 +15,9 @@ Vercel → mesmo projeto → Domains → `admin.azulli.app.br`
 ```
 NEXT_PUBLIC_ADMIN_URL=https://admin.azulli.app.br
 PLATFORM_ADMIN_EMAILS=seu@email.com
+NEXT_PUBLIC_FINDER_URL=https://finder.azulli.app.br
+DATABASE_URL=...                 # mesmo Postgres — schema finder
+FINDER_JWT_SECRET=...            # JWT do time comercial
 SUPABASE_SERVICE_ROLE_KEY=...   # métricas admin
 ```
 

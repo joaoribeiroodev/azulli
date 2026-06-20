@@ -1,0 +1,43 @@
+# Arquivos que NÃO devem entrar na imagem Docker
+# (mantém o build rápido e a imagem menor)
+
+# Dependências (serão reinstaladas dentro do container)
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ambiente e segredos (passados por -e/docker-compose)
+.env
+.env.local
+.env.*.local
+
+# Git
+.git
+.gitignore
+
+# IDE / Editores
+.vscode
+.vscode/settings.json
+.idea
+*.swp
+*.swo
+
+# SO
+.DS_Store
+Thumbs.db
+*~
+
+# Caches e builds locais
+.cache
+.history
+dist
+build
+temp
+.tmp
+*.log
+
+# Docker
+Dockerfile.dev
+docker-compose.override.yml
+.docker

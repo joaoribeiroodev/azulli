@@ -2,37 +2,9 @@
 
 const openaiConfig = require('../config/openai');
 const db = require('../config/database');
+const prompts = require('./aiPrompts');
 
-const ICP_DESCRICAO = `
-Perfil ideal de assinante do Azulli (SaaS de gestão financeira e operacional):
-- MEI, ME ou pequena empresa brasileira (até ~30 funcionários)
-- Operação simples mas com fluxo recorrente de cobrança/notas/recibos
-- Geralmente faz controle no papel, planilha ou WhatsApp (muito a ganhar com automação)
-- Segmentos prioritários: serviços, beleza, automotivo, alimentação local,
-  saúde de bairro, varejo de bairro, pet, cowork, oficinas
-- Sinais positivos: avaliações Google ≥ 3.8, telefone visível,
-  presença local consistente, atende público local
-- Anti-perfil: grandes redes, franquias nacionais, multinacionais,
-  empresas sem operação local
-`;
-
-const SEGMENTOS_VALIDOS = new Set([
-  'alimentacao', 'beleza', 'automotivo', 'saude', 'servicos',
-  'varejo', 'educacao', 'tech', 'construcao', 'outros'
-]);
-
-function leadFicha(lead) {
-  return {
-    nome: lead.nome,
-    endereco: lead.endereco,
-    cidade: lead.cidade,
-    uf: lead.uf,
-    telefone: lead.telefone,
-    avaliacao: lead.avaliacao,
-    total_avaliacoes: lead.total_avaliacoes,
-    website: lead.website
-  };
-}
+const PITCH_VERSION = 3;
 
 async function registrarUso({ leadId, userId, acao, modelo, usage, erro = null }) {
   try {
@@ -64,15 +36,130 @@ function ensureEnabled() {
   }
 }
 
-async function chat(messages, { temperature = 0.3, max_tokens = 200 } = {}) {
+async function chat(messages, { temperature = 0.3, max_tokens = 200, json = false } = {}) {
   ensureEnabled();
   const client = openaiConfig.getClient();
-  return client.chat.completions.create({
+  const body = {
     model: openaiConfig.model,
     temperature,
     max_tokens,
     messages
-  });
+  };
+  if (json) body.response_format = { type: 'json_object' };
+  return client.chat.completions.create(body);
+}
+
+function extractJsonContent(completion) {
+  const raw = (completion.choices?.[0]?.message?.content || '').trim();
+  if (!raw) throw new Error('Resposta vazia da OpenAI');
+  try {
+    return JSON.parse(raw);
+  } catch {
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (match) return JSON.parse(match[0]);
+    throw new Error('JSON inválido na resposta da OpenAI');
+  }
+}
+
+function wrapPitch(canal, data) {
+  return JSON.stringify({ v: PITCH_VERSION, canal, ...data });
+}
+
+function parsePitchStored(stored) {
+  if (!stored || typeof stored !== 'string') return null;
+  const trimmed = stored.trim();
+  if (!trimmed.startsWith('{')) {
+    return {
+      v: 1,
+      legacy: true,
+      canal: 'whatsapp',
+      mensagem: trimmed,
+      corpo: trimmed
+    };
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return { v: 1, legacy: true, canal: 'whatsapp', mensagem: trimmed, corpo: trimmed };
+  }
+}
+
+function getPitchCopyText(stored, canal = 'whatsapp') {
+  const parsed = parsePitchStored(stored);
+  if (!parsed) return '';
+  if (canal === 'email') {
+    if (parsed.assunto && parsed.corpo) {
+      return `Assunto: ${parsed.assunto}\n\n${parsed.corpo}`;
+    }
+    return parsed.corpo || parsed.mensagem || stored;
+  }
+  return parsed.mensagem || parsed.corpo || stored;
+}
+
+function normalizeWhatsappPitch(data) {
+  const estrutura = data.estrutura || {};
+  const mensagem = String(data.mensagem || '').trim();
+  const mensagemPosOptin = String(data.mensagem_pos_optin || '').trim();
+  const fallback = [estrutura.gancho, estrutura.contexto, estrutura.permissao, estrutura.opt_out]
+    .filter(Boolean)
+    .join('\n\n');
+
+  return {
+    mensagem: mensagem || fallback,
+    mensagem_pos_optin: mensagemPosOptin,
+    estrutura: {
+      gancho: estrutura.gancho || '',
+      contexto: estrutura.contexto || estrutura.dor || '',
+      permissao: estrutura.permissao || estrutura.beneficio || '',
+      opt_out: estrutura.opt_out || estrutura.cta || '',
+      prova: estrutura.prova || ''
+    },
+    follow_up: data.follow_up || '',
+    objecoes: Array.isArray(data.objecoes) ? data.objecoes.slice(0, 3) : [],
+    personalizacao_usada: Array.isArray(data.personalizacao_usada) ? data.personalizacao_usada : [],
+    dicas_vendedor: Array.isArray(data.dicas_vendedor) ? data.dicas_vendedor.slice(0, 5) : [],
+    conformidade_meta: data.conformidade_meta || null
+  };
+}
+
+function normalizeEmailPitch(data) {
+  const estrutura = data.estrutura || {};
+  const assunto = String(data.assunto || '').trim();
+  let corpo = String(data.corpo || '').trim();
+
+  if (!corpo && estrutura.abertura) {
+    const partes = [
+      estrutura.abertura,
+      estrutura.contexto,
+      estrutura.problema,
+      estrutura.solucao,
+      Array.isArray(estrutura.beneficios) ? estrutura.beneficios.map((b) => `• ${b}`).join('\n') : null,
+      estrutura.cta,
+      estrutura.fechamento || 'Abraços,\nTime Azulli'
+    ].filter(Boolean);
+    corpo = partes.join('\n\n');
+  }
+
+  if (data.ps && !corpo.includes('P.S.')) {
+    corpo += `\n\nP.S. ${data.ps}`;
+  }
+
+  return {
+    assunto,
+    assunto_alternativo: data.assunto_alternativo || '',
+    corpo,
+    estrutura: {
+      abertura: estrutura.abertura || '',
+      contexto: estrutura.contexto || '',
+      problema: estrutura.problema || '',
+      solucao: estrutura.solucao || '',
+      beneficios: Array.isArray(estrutura.beneficios) ? estrutura.beneficios : [],
+      cta: estrutura.cta || '',
+      fechamento: estrutura.fechamento || 'Abraços,\nTime Azulli'
+    },
+    personalizacao_usada: Array.isArray(data.personalizacao_usada) ? data.personalizacao_usada : [],
+    ps: data.ps || null
+  };
 }
 
 // ------------------------------------------------------------------
@@ -81,15 +168,8 @@ async function chat(messages, { temperature = 0.3, max_tokens = 200 } = {}) {
 async function classificarSegmento(lead, { userId } = {}) {
   const completion = await chat(
     [
-      {
-        role: 'system',
-        content:
-          'Você classifica negócios brasileiros em UMA categoria. ' +
-          'Responda APENAS a categoria (sem pontuação, sem aspas). ' +
-          'Possíveis: alimentacao, beleza, automotivo, saude, servicos, ' +
-          'varejo, educacao, tech, construcao, outros.'
-      },
-      { role: 'user', content: JSON.stringify(leadFicha(lead)) }
+      { role: 'system', content: prompts.PROMPT_SEGMENTO },
+      { role: 'user', content: JSON.stringify(prompts.leadContexto(lead).negocio) }
     ],
     { temperature: 0.2, max_tokens: 15 }
   );
@@ -99,7 +179,7 @@ async function classificarSegmento(lead, { userId } = {}) {
     .toLowerCase()
     .replace(/[^a-z]/g, '');
 
-  const segmento = SEGMENTOS_VALIDOS.has(raw) ? raw : 'outros';
+  const segmento = prompts.SEGMENTOS_VALIDOS.has(raw) ? raw : 'outros';
   await registrarUso({
     leadId: lead.id,
     userId,
@@ -116,15 +196,8 @@ async function classificarSegmento(lead, { userId } = {}) {
 async function calcularIcpScore(lead, { userId } = {}) {
   const completion = await chat(
     [
-      {
-        role: 'system',
-        content:
-          'Você é analista de aquisição B2B do Azulli. Dada a ficha de um negócio, retorne ' +
-          'APENAS um inteiro entre 0 e 100 representando o fit do negócio com o ICP abaixo. ' +
-          'Sem texto, sem explicação.\n\n' +
-          ICP_DESCRICAO
-      },
-      { role: 'user', content: JSON.stringify(leadFicha(lead)) }
+      { role: 'system', content: prompts.PROMPT_ICP },
+      { role: 'user', content: JSON.stringify(prompts.leadContexto(lead)) }
     ],
     { temperature: 0, max_tokens: 6 }
   );
@@ -144,27 +217,20 @@ async function calcularIcpScore(lead, { userId } = {}) {
 }
 
 // ------------------------------------------------------------------
-// 3. Pitch de venda do Azulli — WhatsApp
+// 3. Pitch WhatsApp estruturado
 // ------------------------------------------------------------------
 async function gerarPitchWhatsapp(lead, { userId } = {}) {
   const completion = await chat(
     [
-      {
-        role: 'system',
-        content:
-          'Você é SDR do Azulli (SaaS de gestão financeira e operacional para MEIs e pequenas empresas). ' +
-          'Escreva uma abordagem CURTA por WhatsApp (3 a 4 linhas) em português brasileiro, ' +
-          'natural e personalizada, oferecendo o Azulli para este negócio. ' +
-          'Cite UM benefício concreto relevante ao segmento (ex.: cobrança recorrente, controle de fluxo de caixa, ' +
-          'emissão de nota, agendamento, comissionamento). ' +
-          'Termine com convite gentil para conversar. Nada de CTA agressivo, sem emojis em excesso.'
-      },
-      { role: 'user', content: JSON.stringify(leadFicha(lead)) }
+      { role: 'system', content: prompts.PROMPT_WHATSAPP_JSON },
+      { role: 'user', content: JSON.stringify(prompts.leadContexto(lead)) }
     ],
-    { temperature: 0.7, max_tokens: 220 }
+    { temperature: 0.65, max_tokens: 900, json: true }
   );
 
-  const pitch = (completion.choices?.[0]?.message?.content || '').trim();
+  const normalized = normalizeWhatsappPitch(extractJsonContent(completion));
+  const pitch = wrapPitch('whatsapp', normalized);
+
   await registrarUso({
     leadId: lead.id,
     userId,
@@ -176,24 +242,20 @@ async function gerarPitchWhatsapp(lead, { userId } = {}) {
 }
 
 // ------------------------------------------------------------------
-// 4. Pitch de venda do Azulli — Email
+// 4. Pitch e-mail estruturado
 // ------------------------------------------------------------------
 async function gerarPitchEmail(lead, { userId } = {}) {
   const completion = await chat(
     [
-      {
-        role: 'system',
-        content:
-          'Você é SDR do Azulli. Escreva um email curto em pt-BR oferecendo o Azulli para este negócio. ' +
-          'Formato exato:\n' +
-          'Assunto: <linha curta>\n\nOlá <nome do negócio>,\n<corpo de 4 a 6 linhas>\n\nAbraços, Time Azulli.'
-      },
-      { role: 'user', content: JSON.stringify(leadFicha(lead)) }
+      { role: 'system', content: prompts.PROMPT_EMAIL_JSON },
+      { role: 'user', content: JSON.stringify(prompts.leadContexto(lead)) }
     ],
-    { temperature: 0.6, max_tokens: 350 }
+    { temperature: 0.55, max_tokens: 1100, json: true }
   );
 
-  const pitch = (completion.choices?.[0]?.message?.content || '').trim();
+  const normalized = normalizeEmailPitch(extractJsonContent(completion));
+  const pitch = wrapPitch('email', normalized);
+
   await registrarUso({
     leadId: lead.id,
     userId,
@@ -210,12 +272,8 @@ async function gerarPitchEmail(lead, { userId } = {}) {
 async function validarDados(lead, { userId } = {}) {
   const completion = await chat(
     [
-      {
-        role: 'system',
-        content:
-          'Responda apenas "valido" ou "invalido" se a ficha parece de um negócio real e abordável comercialmente.'
-      },
-      { role: 'user', content: JSON.stringify(leadFicha(lead)) }
+      { role: 'system', content: prompts.PROMPT_VALIDACAO },
+      { role: 'user', content: JSON.stringify(prompts.leadContexto(lead).negocio) }
     ],
     { temperature: 0, max_tokens: 6 }
   );
@@ -231,7 +289,7 @@ async function validarDados(lead, { userId } = {}) {
 }
 
 // ------------------------------------------------------------------
-// Pipeline completo (chama as 4 etapas em sequência tolerante a falhas)
+// Pipeline completo
 // ------------------------------------------------------------------
 async function enriquecerLead(lead, { userId, gerarPitch = true } = {}) {
   ensureEnabled();
@@ -251,8 +309,11 @@ async function enriquecerLead(lead, { userId, gerarPitch = true } = {}) {
     result.segmento = 'outros';
   }
 
+  const enriched = { ...lead, segmento: result.segmento, icp_score: lead.icp_score };
+
   try {
-    result.icpScore = await calcularIcpScore({ ...lead, segmento: result.segmento }, { userId });
+    result.icpScore = await calcularIcpScore(enriched, { userId });
+    enriched.icp_score = result.icpScore;
   } catch (e) {
     console.warn('[ai] calcularIcpScore falhou:', e.message);
     result.icpScore = null;
@@ -260,13 +321,17 @@ async function enriquecerLead(lead, { userId, gerarPitch = true } = {}) {
 
   if (gerarPitch) {
     try {
-      result.pitchWhatsapp = await gerarPitchWhatsapp(
-        { ...lead, segmento: result.segmento },
-        { userId }
-      );
+      result.pitchWhatsapp = await gerarPitchWhatsapp(enriched, { userId });
     } catch (e) {
       console.warn('[ai] gerarPitchWhatsapp falhou:', e.message);
       result.pitchWhatsapp = null;
+    }
+
+    try {
+      result.pitchEmail = await gerarPitchEmail(enriched, { userId });
+    } catch (e) {
+      console.warn('[ai] gerarPitchEmail falhou:', e.message);
+      result.pitchEmail = null;
     }
   }
 
@@ -280,5 +345,7 @@ module.exports = {
   gerarPitchWhatsapp,
   gerarPitchEmail,
   validarDados,
-  enriquecerLead
+  enriquecerLead,
+  parsePitchStored,
+  getPitchCopyText
 };

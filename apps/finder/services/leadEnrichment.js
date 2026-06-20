@@ -43,6 +43,7 @@ async function enriquecerLead(lead, { userId } = {}) {
       segmento: ai.segmento,
       icpScore: ai.icpScore,
       pitchWhatsapp: ai.pitchWhatsapp,
+      pitchEmail: ai.pitchEmail,
       validado: ai.validado
     });
   } catch (e) {

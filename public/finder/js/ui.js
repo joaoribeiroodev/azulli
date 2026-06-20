@@ -132,6 +132,141 @@ const UI = (() => {
       </div>`;
   }
 
+  function parsePitchStored(stored) {
+    if (!stored || typeof stored !== 'string') return null;
+    const trimmed = stored.trim();
+    if (!trimmed) return null;
+    if (!trimmed.startsWith('{')) {
+      return { v: 1, legacy: true, canal: 'whatsapp', mensagem: trimmed, corpo: trimmed };
+    }
+    try { return JSON.parse(trimmed); }
+    catch { return { v: 1, legacy: true, canal: 'whatsapp', mensagem: trimmed, corpo: trimmed }; }
+  }
+
+  function getPitchCopyText(stored, canal = 'whatsapp', variant = 'default') {
+    const parsed = parsePitchStored(stored);
+    if (!parsed) return '';
+    if (canal === 'email') {
+      if (parsed.assunto && parsed.corpo) return `Assunto: ${parsed.assunto}\n\n${parsed.corpo}`;
+      return parsed.corpo || parsed.mensagem || stored;
+    }
+    if (variant === 'pos_optin' && parsed.mensagem_pos_optin) return parsed.mensagem_pos_optin;
+    if (variant === 'follow_up' && parsed.follow_up) return parsed.follow_up;
+    return parsed.mensagem || parsed.corpo || stored;
+  }
+
+  function pitchSection(label, value) {
+    if (!value) return '';
+    return `
+      <div class="pitch-section">
+        <div class="pitch-section-label">${escapeHtml(label)}</div>
+        <div class="pitch-section-body">${escapeHtml(value)}</div>
+      </div>`;
+  }
+
+  function pitchList(label, items) {
+    if (!items || !items.length) return '';
+    const lis = items.map((item) => {
+      if (typeof item === 'string') return `<li>${escapeHtml(item)}</li>`;
+      if (item && item.objecao) {
+        return `<li><strong>${escapeHtml(item.objecao)}</strong><br><span class="text-[var(--muted)]">${escapeHtml(item.resposta || '')}</span></li>`;
+      }
+      return '';
+    }).filter(Boolean).join('');
+    if (!lis) return '';
+    return `
+      <div class="pitch-section">
+        <div class="pitch-section-label">${escapeHtml(label)}</div>
+        <ul class="pitch-list">${lis}</ul>
+      </div>`;
+  }
+
+  function renderPitchContent(canal, stored) {
+    const parsed = parsePitchStored(stored);
+    if (!parsed) {
+      return `<div class="pitch-empty">Ainda não gerado. Clique em "Regerar" para criar materiais personalizados.</div>`;
+    }
+
+    if (parsed.legacy) {
+      return `<div class="pitch-message">${escapeHtml(parsed.mensagem || parsed.corpo || '')}</div>`;
+    }
+
+    if (canal === 'email') {
+      const assuntoAlt = parsed.assunto_alternativo
+        ? `<div class="text-xs text-[var(--muted)] mt-1">Alternativo: ${escapeHtml(parsed.assunto_alternativo)}</div>`
+        : '';
+      return `
+        <div class="pitch-block">
+          <div class="pitch-block-label">Assunto</div>
+          <div class="pitch-message pitch-message-compact">${escapeHtml(parsed.assunto || '—')}</div>
+          ${assuntoAlt}
+        </div>
+        <div class="pitch-block mt-4">
+          <div class="pitch-block-label">E-mail pronto para enviar</div>
+          <div class="pitch-message">${escapeHtml(parsed.corpo || '')}</div>
+        </div>
+        ${parsed.estrutura ? `
+          <details class="pitch-details mt-4">
+            <summary>Estrutura da mensagem</summary>
+            <div class="pitch-details-body">
+              ${pitchSection('Abertura', parsed.estrutura.abertura)}
+              ${pitchSection('Contexto', parsed.estrutura.contexto)}
+              ${pitchSection('Problema', parsed.estrutura.problema)}
+              ${pitchSection('Solução', parsed.estrutura.solucao)}
+              ${pitchList('Benefícios', parsed.estrutura.beneficios)}
+              ${pitchSection('CTA', parsed.estrutura.cta)}
+            </div>
+          </details>` : ''}
+        ${parsed.personalizacao_usada && parsed.personalizacao_usada.length ? `
+          <div class="pitch-block mt-4">
+            <div class="pitch-block-label">Personalização usada</div>
+            <ul class="pitch-list">${parsed.personalizacao_usada.map((g) => `<li>${escapeHtml(g)}</li>`).join('')}</ul>
+          </div>` : ''}`;
+    }
+
+    return `
+      <div class="pitch-compliance mb-4">
+        <div class="pitch-compliance-title">Conformidade Meta / WhatsApp Business</div>
+        <p class="pitch-compliance-text">1º contato sem pitch comercial. Envie a proposta completa só após resposta positiva do lead.</p>
+      </div>
+      <div class="pitch-block">
+        <div class="pitch-block-label">1º contato (antes do opt-in)</div>
+        <div class="pitch-message">${escapeHtml(parsed.mensagem || '')}</div>
+      </div>
+      ${parsed.mensagem_pos_optin ? `
+        <div class="pitch-block mt-4">
+          <div class="pitch-block-label">Após resposta positiva (opt-in)</div>
+          <div class="pitch-message">${escapeHtml(parsed.mensagem_pos_optin)}</div>
+        </div>` : ''}
+      ${parsed.estrutura ? `
+        <details class="pitch-details mt-4" open>
+          <summary>Estrutura da abordagem</summary>
+          <div class="pitch-details-body">
+            ${pitchSection('Gancho personalizado', parsed.estrutura.gancho)}
+            ${pitchSection('Contexto do contato', parsed.estrutura.contexto || parsed.estrutura.dor)}
+            ${pitchSection('Pedido de permissão', parsed.estrutura.permissao || parsed.estrutura.beneficio)}
+            ${pitchSection('Opt-out', parsed.estrutura.opt_out || parsed.estrutura.cta)}
+          </div>
+        </details>` : ''}
+      ${parsed.personalizacao_usada && parsed.personalizacao_usada.length ? `
+        <div class="pitch-block mt-4">
+          <div class="pitch-block-label">Personalização usada (dados captados)</div>
+          <ul class="pitch-list">${parsed.personalizacao_usada.map((g) => `<li>${escapeHtml(g)}</li>`).join('')}</ul>
+        </div>` : ''}
+      ${parsed.follow_up ? `
+        <div class="pitch-block mt-4">
+          <div class="pitch-block-label">Follow-up leve (máx. 1x, sem pitch repetido)</div>
+          <div class="pitch-message pitch-message-compact">${escapeHtml(parsed.follow_up)}</div>
+        </div>` : ''}
+      ${parsed.conformidade_meta && parsed.conformidade_meta.observacao ? `
+        <div class="pitch-block mt-4">
+          <div class="pitch-block-label">Observação Meta</div>
+          <div class="pitch-section-body">${escapeHtml(parsed.conformidade_meta.observacao)}</div>
+        </div>` : ''}
+      ${pitchList('Objeções e respostas', parsed.objecoes)}
+      ${pitchList('Dicas para o vendedor', parsed.dicas_vendedor)}`;
+  }
+
   return {
     toast,
     escapeHtml,
@@ -145,7 +280,10 @@ const UI = (() => {
     openModal,
     confirm,
     loadingHTML,
-    emptyHTML
+    emptyHTML,
+    parsePitchStored,
+    getPitchCopyText,
+    renderPitchContent
   };
 })();
 

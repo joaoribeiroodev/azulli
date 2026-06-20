@@ -112,7 +112,12 @@ async function regerarPitch(req, res, next) {
 
     const patch = canal === 'email' ? { pitchEmail: pitch } : { pitchWhatsapp: pitch };
     const atualizado = await Lead.applyEnrichment(lead.id, patch);
-    res.json({ lead: atualizado, pitch });
+    res.json({
+      lead: atualizado,
+      pitch,
+      pitchData: aiService.parsePitchStored(pitch),
+      copyText: aiService.getPitchCopyText(pitch, canal)
+    });
   } catch (err) {
     if (err.status === 503) return res.status(503).json({ erro: err.message });
     next(err);

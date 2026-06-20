@@ -64,21 +64,28 @@ async function renderDetalhe({ container, id }) {
           </div>
         </div>
 
-        <!-- Pitch -->
-        <div class="bg-white border border-slate-200 rounded-2xl p-6">
-          <div class="flex items-center justify-between mb-3">
+        <!-- Materiais comerciais (IA) -->
+        <div class="finder-card p-6">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
             <div>
-              <h3 class="text-sm font-bold text-slate-900">Pitch sugerido (WhatsApp)</h3>
-              <p class="text-xs text-slate-500">Gerado por IA usando o perfil do negócio e o ICP do Azulli.</p>
+              <h3 class="text-sm font-bold text-slate-900">Materiais comerciais (IA)</h3>
+              <p class="text-xs text-slate-500">Personalizados com dados captados (Maps). WhatsApp em conformidade com Meta: 1º contato pede permissão, pitch só após opt-in.</p>
             </div>
-            <div class="flex gap-2">
-              <button id="btn-copiar-pitch" class="btn-secondary text-xs">Copiar</button>
+            <div class="flex flex-wrap gap-2">
+              <button id="btn-copiar-pitch" class="btn-secondary text-xs">Copiar 1º contato</button>
+              <button id="btn-copiar-pos-optin" class="btn-secondary text-xs hidden">Copiar pós opt-in</button>
               <button id="btn-regerar-pitch" class="btn-primary text-xs">Regerar</button>
             </div>
           </div>
-          <div id="pitch-box" class="text-sm text-slate-800 whitespace-pre-wrap bg-slate-50 border border-slate-200 rounded-lg p-4">${
-            UI.escapeHtml(lead.pitch_whatsapp || 'Ainda não gerado. Clique em "Regerar" para criar um pitch personalizado.')
-          }</div>
+
+          <div class="pitch-tabs mb-4" role="tablist">
+            <button type="button" class="pitch-tab pitch-tab-active" data-pitch-tab="whatsapp">WhatsApp</button>
+            <button type="button" class="pitch-tab" data-pitch-tab="email">E-mail</button>
+          </div>
+
+          <div id="pitch-box" class="pitch-panel">
+            ${UI.renderPitchContent('whatsapp', lead.pitch_whatsapp)}
+          </div>
         </div>
 
         <!-- Notas + edição -->
@@ -141,13 +148,43 @@ async function renderDetalhe({ container, id }) {
   document.getElementById('btn-atribuir').addEventListener('click', () => modalAtribuir(lead, users));
   document.getElementById('btn-converter').addEventListener('click', () => modalConverter(lead));
 
+  let pitchCanal = 'whatsapp';
+  const pitchData = {
+    whatsapp: lead.pitch_whatsapp || '',
+    email: lead.pitch_email || ''
+  };
+
+  function renderPitchBox() {
+    document.getElementById('pitch-box').innerHTML = UI.renderPitchContent(
+      pitchCanal,
+      pitchData[pitchCanal]
+    );
+    const btnPos = document.getElementById('btn-copiar-pos-optin');
+    if (btnPos) {
+      const parsed = UI.parsePitchStored(pitchData.whatsapp);
+      const show = pitchCanal === 'whatsapp' && parsed && parsed.mensagem_pos_optin;
+      btnPos.classList.toggle('hidden', !show);
+    }
+  }
+
+  document.querySelectorAll('[data-pitch-tab]').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      pitchCanal = tab.dataset.pitchTab;
+      document.querySelectorAll('[data-pitch-tab]').forEach((t) => {
+        t.classList.toggle('pitch-tab-active', t.dataset.pitchTab === pitchCanal);
+      });
+      renderPitchBox();
+    });
+  });
+
   document.getElementById('btn-regerar-pitch').addEventListener('click', async () => {
     const btn = document.getElementById('btn-regerar-pitch');
     btn.disabled = true; btn.textContent = 'Gerando…';
     try {
-      const { pitch } = await API.leads.regerarPitch(lead.id, 'whatsapp');
-      document.getElementById('pitch-box').textContent = pitch;
-      UI.toast('Pitch atualizado.', 'success');
+      const { pitch } = await API.leads.regerarPitch(lead.id, pitchCanal);
+      pitchData[pitchCanal] = pitch;
+      renderPitchBox();
+      UI.toast('Material atualizado.', 'success');
     } catch (err) {
       UI.toast(err.message, 'error');
     } finally {
@@ -156,9 +193,15 @@ async function renderDetalhe({ container, id }) {
   });
 
   document.getElementById('btn-copiar-pitch').addEventListener('click', () => {
-    const txt = document.getElementById('pitch-box').textContent;
+    const txt = UI.getPitchCopyText(pitchData[pitchCanal], pitchCanal, 'default');
     if (!txt) return;
-    navigator.clipboard.writeText(txt).then(() => UI.toast('Pitch copiado.', 'success'));
+    navigator.clipboard.writeText(txt).then(() => UI.toast('Copiado para a área de transferência.', 'success'));
+  });
+
+  document.getElementById('btn-copiar-pos-optin').addEventListener('click', () => {
+    const txt = UI.getPitchCopyText(pitchData.whatsapp, 'whatsapp', 'pos_optin');
+    if (!txt) return;
+    navigator.clipboard.writeText(txt).then(() => UI.toast('Mensagem pós opt-in copiada.', 'success'));
   });
 
   document.getElementById('btn-enriquecer').addEventListener('click', async () => {

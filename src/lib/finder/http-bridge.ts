@@ -1,11 +1,22 @@
-import path from "node:path"
 import { createRequire } from "node:module"
 import { NextResponse } from "next/server"
 
 import { convertFinderLead } from "@/lib/finder/convert-lead"
 
 const require = createRequire(import.meta.url)
-const APPS_FINDER = path.join(process.cwd(), "apps", "finder")
+
+// Caminhos estáticos — Turbopack/Vercel não suportam require(path.join(...))
+const finderDb = require("../../../apps/finder/config/database.js")
+const finderEnv = require("../../../apps/finder/config/env.js")
+const { PLANS } = require("../../../apps/finder/config/plans.js")
+const aiService = require("../../../apps/finder/services/aiService.js")
+const azulliCore = require("../../../apps/finder/services/azulliCore.js")
+const authCtrl = require("../../../apps/finder/controllers/authController.js")
+const userCtrl = require("../../../apps/finder/controllers/userController.js")
+const searchCtrl = require("../../../apps/finder/controllers/searchController.js")
+const leadCtrl = require("../../../apps/finder/controllers/leadController.js")
+const finderAuth = require("../../../apps/finder/middleware/auth.js")
+const requireRoleFactory = require("../../../apps/finder/middleware/requireRole.js")
 
 type RouteHandler = (
   req: MockReq,
@@ -42,16 +53,9 @@ function ensureFinderRuntime() {
   if (initialized) return
   initialized = true
 
-  globalThis.__AZULLI_FINDER_CONVERT__ = async (payload: {
-    finderLeadId: string
-    email?: string | null
-    nome: string
-    telefone?: string | null
-    cnpj?: string | null
-    plano: "pro" | "enterprise"
-  }) => convertFinderLead(payload)
-
-  require(path.join(APPS_FINDER, "config", "env.js"))
+  ;(globalThis as typeof globalThis & {
+    __AZULLI_FINDER_CONVERT__?: typeof convertFinderLead
+  }).__AZULLI_FINDER_CONVERT__ = convertFinderLead
 }
 
 function createMockRes(): MockRes {
@@ -122,8 +126,7 @@ async function parseBody(request: Request): Promise<unknown> {
 
 function buildMockReq(
   request: Request,
-  params: Record<string, string>,
-  slug: string[]
+  params: Record<string, string>
 ): MockReq {
   const url = new URL(request.url)
   const query: Record<string, string> = {}
@@ -147,8 +150,7 @@ async function withAuth(
   res: MockRes,
   handler: RouteHandler
 ): Promise<NextResponse> {
-  const authMw = require(path.join(APPS_FINDER, "middleware", "auth.js"))
-    .requireAuth as RouteHandler
+  const authMw = finderAuth.requireAuth as RouteHandler
 
   await runHandler(authMw, req, res, { middleware: true })
   if (res.body !== null) {
@@ -166,13 +168,8 @@ async function withRole(
   roles: string[],
   handler: RouteHandler
 ): Promise<NextResponse> {
-  const authMw = require(path.join(APPS_FINDER, "middleware", "auth.js"))
-    .requireAuth as RouteHandler
-  const roleMw = require(path.join(
-    APPS_FINDER,
-    "middleware",
-    "requireRole.js"
-  ))(...roles) as RouteHandler
+  const authMw = finderAuth.requireAuth as RouteHandler
+  const roleMw = requireRoleFactory(...roles) as RouteHandler
 
   await runHandler(authMw, req, res, { middleware: true })
   if (res.body !== null) {
@@ -196,7 +193,7 @@ export async function handleFinderApi(
 ): Promise<NextResponse> {
   ensureFinderRuntime()
 
-  const req = buildMockReq(request, {}, slug)
+  const req = buildMockReq(request, {})
   req.body = await parseBody(request)
   const res = createMockRes()
 
@@ -204,44 +201,14 @@ export async function handleFinderApi(
   const id = slug[1]
   const action = slug[2]
 
-  const health = require(path.join(APPS_FINDER, "config", "database.js"))
-  const aiService = require(path.join(APPS_FINDER, "services", "aiService.js"))
-  const authCtrl = require(path.join(
-    APPS_FINDER,
-    "controllers",
-    "authController.js"
-  ))
-  const userCtrl = require(path.join(
-    APPS_FINDER,
-    "controllers",
-    "userController.js"
-  ))
-  const searchCtrl = require(path.join(
-    APPS_FINDER,
-    "controllers",
-    "searchController.js"
-  ))
-  const leadCtrl = require(path.join(
-    APPS_FINDER,
-    "controllers",
-    "leadController.js"
-  ))
-  const env = require(path.join(APPS_FINDER, "config", "env.js"))
-  const { PLANS } = require(path.join(APPS_FINDER, "config", "plans.js"))
-  const azulliCore = require(path.join(
-    APPS_FINDER,
-    "services",
-    "azulliCore.js"
-  ))
-
   try {
     if (segment === "health" && request.method === "GET") {
       try {
-        const dbInfo = await health.healthcheck()
+        const dbInfo = await finderDb.healthcheck()
         return NextResponse.json({
           status: "ok",
           time: dbInfo.now,
-          env: env.nodeEnv,
+          env: finderEnv.nodeEnv,
           ai: aiService.isEnabled() ? "on" : "off",
         })
       } catch (err) {
@@ -268,9 +235,9 @@ export async function handleFinderApi(
           ai: aiService.isEnabled(),
           integration: { azulliCore: azulliCore.isConfigured() },
           urls: {
-            admin: env.urls.admin,
-            app: env.urls.app,
-            finder: env.urls.finderPublic,
+            admin: finderEnv.urls.admin,
+            app: finderEnv.urls.app,
+            finder: finderEnv.urls.finderPublic,
           },
         })
       })

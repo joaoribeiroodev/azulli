@@ -1,7 +1,17 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["pdf-lib", "puppeteer", "pg"],
+  serverExternalPackages: [
+    "pdf-lib",
+    "puppeteer",
+    "pg",
+    "bcryptjs",
+    "jsonwebtoken",
+    "openai",
+  ],
+  outputFileTracingIncludes: {
+    "/api/finder/**": ["./apps/finder/**/*"],
+  },
   images: {
     remotePatterns: [
       {

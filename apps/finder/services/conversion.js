@@ -1,6 +1,5 @@
 'use strict';
 
-const env = require('./env');
 const azulliCore = require('./azulliCore');
 
 /**

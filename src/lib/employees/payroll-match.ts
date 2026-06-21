@@ -5,6 +5,7 @@
 
 const PAYROLL_CATEGORY_HINTS = [
   "folha",
+  "folha mensal",
   "salario",
   "salário",
   "salarios",
@@ -70,4 +71,4 @@ export function buildSalaryDescription(employeeName: string): string {
   return `Salário — ${employeeName}`
 }
 
-export const DEFAULT_PAYROLL_CATEGORY = "Folha de pagamento"
+export const DEFAULT_PAYROLL_CATEGORY = "Folha mensal"

@@ -62,6 +62,8 @@ type Props = {
   defaultDescription?: string
   defaultCategory?: string | null
   defaultAmount?: number | null
+  defaultDueDate?: string
+  defaultEmployeeId?: string | null
   recentCategories?: string[]
 }
 
@@ -85,6 +87,8 @@ export function TransactionDialog({
   defaultDescription = "",
   defaultCategory = null,
   defaultAmount = null,
+  defaultDueDate,
+  defaultEmployeeId = null,
   recentCategories = [],
 }: Props) {
   const [isPending, startTransition] = useTransition()
@@ -100,6 +104,7 @@ export function TransactionDialog({
       description: "",
       customer_id: null,
       supplier_id: null,
+      employee_id: null,
       product_id: null,
       items: undefined,
       category: null,
@@ -151,10 +156,11 @@ export function TransactionDialog({
       form.reset({
         type,
         amount,
-        due_date: todayLocalBR(),
+        due_date: defaultDueDate ?? todayLocalBR(),
         description: defaultDescription,
         customer_id: type === "income" ? defaultCustomerId : null,
         supplier_id: type === "expense" ? defaultSupplierId : null,
+        employee_id: type === "expense" ? defaultEmployeeId : null,
         product_id: defaultProductId,
         items: undefined,
         category: defaultCategory,
@@ -172,6 +178,8 @@ export function TransactionDialog({
     defaultDescription,
     defaultCategory,
     defaultAmount,
+    defaultDueDate,
+    defaultEmployeeId,
     form,
   ])
 

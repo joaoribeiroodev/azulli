@@ -18,6 +18,7 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { formatDateBR } from "@/lib/utils/date"
 import { formatWhatsAppBR } from "@/lib/utils/format"
+import { DEFAULT_PAYROLL_CATEGORY } from "@/lib/employees/payroll-match"
 import type { EmployeeDetail } from "@/lib/employees/payroll-queries"
 
 export function EmployeeContactCard({ employee }: { employee: EmployeeDetail }) {
@@ -102,6 +103,25 @@ export function EmployeeTenureCard({ employee }: { employee: EmployeeDetail }) {
             <p className="text-xs text-muted-foreground">Cargo</p>
           </div>
         </div>
+
+        {employee.salary != null && employee.salary > 0 && (
+          <>
+            <Separator />
+            <div className="flex items-center gap-3">
+              <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+              <div>
+                <p className="font-medium">
+                  {employee.salary_day
+                    ? `Todo dia ${employee.salary_day}`
+                    : "Dia de pagamento não definido"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Categoria automática: {DEFAULT_PAYROLL_CATEGORY}
+                </p>
+              </div>
+            </div>
+          </>
+        )}
 
         {employee.hire_date && (
           <>

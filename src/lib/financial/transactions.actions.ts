@@ -69,6 +69,7 @@ export async function createTransactionAction(
       description: d.description || null,
       customer_id: d.type === "income" ? d.customer_id || null : null,
       supplier_id: d.type === "expense" ? d.supplier_id || null : null,
+      employee_id: d.type === "expense" ? d.employee_id || null : null,
       product_id: hasItems ? null : d.product_id || null,
       category: normalizeCategory(d.category),
       status: d.status,

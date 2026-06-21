@@ -53,7 +53,7 @@ export default async function FuncionarioDetailPage({
   if (!employee) notFound()
 
   const [payrollSeries, suppliers, expenseCategories] = await Promise.all([
-    getEmployeePayrollSeries(employee.name, 6),
+    getEmployeePayrollSeries({ id: employee.id, name: employee.name }, 6),
     getSuppliersLite(),
     getCategoriesUsed("expense"),
   ])
@@ -85,7 +85,7 @@ export default async function FuncionarioDetailPage({
             fallback={<Skeleton className="h-96" />}
           >
             <PayrollTransactionsSection
-              employeeName={employee.name}
+              employee={employee}
               page={sp.page ? parseInt(sp.page, 10) : 1}
             />
           </Suspense>
@@ -101,14 +101,14 @@ export default async function FuncionarioDetailPage({
 }
 
 async function PayrollTransactionsSection({
-  employeeName,
+  employee,
   page,
 }: {
-  employeeName: string
+  employee: { id: string; name: string }
   page: number
 }) {
-  const result = await listPayrollTransactionsByEmployee(employeeName, page)
+  const result = await listPayrollTransactionsByEmployee(employee, page)
   return (
-    <EmployeePayrollTransactions employeeName={employeeName} result={result} />
+    <EmployeePayrollTransactions employeeName={employee.name} result={result} />
   )
 }

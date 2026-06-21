@@ -81,7 +81,11 @@ export function EmployeesTable({ rows }: { rows: EmployeeRow[] }) {
         toast.error(result.error)
         return
       }
-      toast.success("Funcionário excluído.")
+      toast.success(
+        result.data?.removedPendingCount
+          ? `Funcionário excluído. ${result.data.removedPendingCount} despesa(s) pendente(s) removida(s).`
+          : "Funcionário excluído."
+      )
     })
   }
 
@@ -258,8 +262,10 @@ export function EmployeesTable({ rows }: { rows: EmployeeRow[] }) {
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir {confirmDelete?.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Essa ação não pode ser desfeita. Para preservar histórico,
-              considere inativar o funcionário em vez de excluir.
+              Despesas de salário <strong>já pagas</strong> permanecem no
+              histórico. Despesas <strong>pendentes ou vencidas</strong>{" "}
+              vinculadas a este funcionário serão removidas. Para manter o
+              cadastro sem apagar histórico, prefira inativar.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

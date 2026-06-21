@@ -120,8 +120,10 @@ export const USER_MANUAL_SECTIONS: ManualSection[] = [
     id: "funcionarios",
     title: "Funcionários",
     bullets: [
-      "Cadastre colaboradores com salário e data de admissão.",
-      "«Registrar salário» cria despesa de folha vinculada ao funcionário.",
+      "Cadastre colaboradores com salário, dia de pagamento (1–31) e data de admissão.",
+      "Ao cadastrar com salário e dia definidos, o Azulli cria automaticamente uma despesa pendente («Folha mensal») na próxima data de pagamento.",
+      "«Registrar salário» cria despesa manual vinculada ao funcionário (útil para meses extras ou ajustes).",
+      "Inativar preserva histórico; excluir remove despesas pendentes vinculadas e mantém salários já pagos.",
       "Plano Pro: até 5 funcionários. Empresarial: ilimitado.",
     ],
   },

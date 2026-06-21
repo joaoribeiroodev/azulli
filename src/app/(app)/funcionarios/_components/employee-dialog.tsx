@@ -25,6 +25,13 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 
@@ -37,10 +44,13 @@ import {
   updateEmployeeAction,
 } from "@/lib/employees/actions"
 import { maskBRL, parseBRL } from "@/lib/utils/currency"
+import { formatDateBR } from "@/lib/utils/date"
 import { formatWhatsAppBR } from "@/lib/utils/format"
 import { cn } from "@/lib/utils"
 
 import type { EmployeeRow } from "@/lib/employees/queries"
+
+const SALARY_DAY_OPTIONS = Array.from({ length: 31 }, (_, i) => i + 1)
 
 type Props =
   | {
@@ -72,12 +82,15 @@ export function EmployeeDialog(props: Props) {
       document: "",
       hire_date: "",
       salary: null,
+      salary_day: null,
       notes: "",
       is_active: true,
     },
   })
 
   const watchedIsActive = form.watch("is_active")
+  const watchedSalary = form.watch("salary")
+  const showSalaryDay = watchedSalary != null && watchedSalary > 0
 
   useEffect(() => {
     if (open) {
@@ -89,6 +102,7 @@ export function EmployeeDialog(props: Props) {
         document: employee?.document ?? "",
         hire_date: employee?.hire_date ?? "",
         salary: employee?.salary ?? null,
+        salary_day: employee?.salary_day ?? null,
         notes: employee?.notes ?? "",
         is_active: employee?.is_active ?? true,
       }
@@ -121,8 +135,14 @@ export function EmployeeDialog(props: Props) {
         } else {
           toast.success("Atualizado com sucesso ✅")
         }
-      } else {
-        toast.success("Funcionário cadastrado! 👤")
+      } else if (result.success) {
+        if (result.data?.salaryExpenseCreated && result.data.salaryDueDate) {
+          toast.success("Funcionário cadastrado! 👤", {
+            description: `Despesa de salário criada para ${formatDateBR(result.data.salaryDueDate)}.`,
+          })
+        } else {
+          toast.success("Funcionário cadastrado! 👤")
+        }
       }
       onOpenChange(false)
     })
@@ -275,6 +295,11 @@ export function EmployeeDialog(props: Props) {
                           form.setValue("salary", v > 0 ? v : null, {
                             shouldValidate: true,
                           })
+                          if (v <= 0) {
+                            form.setValue("salary_day", null, {
+                              shouldValidate: true,
+                            })
+                          }
                         }}
                       />
                     </div>
@@ -286,6 +311,42 @@ export function EmployeeDialog(props: Props) {
                 </FormItem>
               )}
             />
+
+            {showSalaryDay && (
+              <FormField
+                control={form.control}
+                name="salary_day"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Dia de pagamento do salário</FormLabel>
+                    <Select
+                      value={field.value ? String(field.value) : ""}
+                      onValueChange={(v) =>
+                        field.onChange(v ? Number(v) : null)
+                      }
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o dia do mês" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {SALARY_DAY_OPTIONS.map((day) => (
+                          <SelectItem key={day} value={String(day)}>
+                            Dia {day}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription className="text-xs">
+                      Ao cadastrar, geramos uma despesa pendente nessa data com
+                      categoria «Folha mensal».
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}

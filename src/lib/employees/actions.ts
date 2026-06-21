@@ -10,6 +10,7 @@ import {
   type UpdateEmployeeInput,
 } from "@/lib/employees/schemas"
 import { checkPlanLimit } from "@/lib/billing/plan-limits"
+import { createScheduledSalaryExpense } from "@/lib/employees/payroll-expense"
 
 type ActionResult<T = undefined> =
   | { success: true; data?: T }
@@ -27,12 +28,17 @@ async function getCurrentTenantId(): Promise<string | null> {
 
 function revalidateEmployeeRoutes(id?: string) {
   revalidatePath("/funcionarios")
+  revalidatePath("/lancamentos")
+  revalidatePath("/dashboard")
+  revalidatePath("/agenda")
   if (id) revalidatePath(`/funcionarios/${id}`)
 }
 
 export async function createEmployeeAction(
   input: CreateEmployeeInput
-): Promise<ActionResult<{ id: string }>> {
+): Promise<
+  ActionResult<{ id: string; salaryDueDate?: string; salaryExpenseCreated?: boolean }>
+> {
   const parsed = createEmployeeSchema.safeParse(input)
   if (!parsed.success) {
     return {
@@ -61,6 +67,7 @@ export async function createEmployeeAction(
       document: d.document || null,
       hire_date: d.hire_date || null,
       salary: d.salary ?? null,
+      salary_day: d.salary_day ?? null,
       notes: d.notes || null,
       is_active: d.is_active,
     })
@@ -78,8 +85,45 @@ export async function createEmployeeAction(
     }
   }
 
+  let salaryDueDate: string | undefined
+  let salaryExpenseCreated = false
+
+  if (
+    d.is_active &&
+    d.salary != null &&
+    d.salary > 0 &&
+    d.salary_day != null
+  ) {
+    try {
+      const expense = await createScheduledSalaryExpense(supabase, {
+        tenantId,
+        employeeId: data.id,
+        employeeName: d.name,
+        salary: d.salary,
+        salaryDay: d.salary_day,
+      })
+      salaryDueDate = expense.dueDate
+      salaryExpenseCreated = expense.created
+    } catch (err) {
+      console.error("[employees] salary expense on create failed:", err)
+      await supabase.from("employees").delete().eq("id", data.id)
+      return {
+        success: false,
+        error:
+          "Não foi possível cadastrar o funcionário e gerar a despesa de salário. Tente novamente.",
+      }
+    }
+  }
+
   revalidateEmployeeRoutes(data.id)
-  return { success: true, data: { id: data.id } }
+  return {
+    success: true,
+    data: {
+      id: data.id,
+      salaryDueDate,
+      salaryExpenseCreated,
+    },
+  }
 }
 
 export async function updateEmployeeAction(
@@ -106,6 +150,7 @@ export async function updateEmployeeAction(
       document: rest.document || null,
       hire_date: rest.hire_date || null,
       salary: rest.salary ?? null,
+      salary_day: rest.salary_day ?? null,
       notes: rest.notes || null,
       is_active: rest.is_active,
     })
@@ -128,8 +173,25 @@ export async function updateEmployeeAction(
 
 export async function deleteEmployeeAction(
   id: string
-): Promise<ActionResult> {
+): Promise<ActionResult<{ removedPendingCount: number }>> {
   const supabase = await createClient()
+
+  const { count, error: txErr } = await supabase
+    .from("transactions")
+    .delete({ count: "exact" })
+    .eq("employee_id", id)
+    .eq("type", "expense")
+    .eq("status", "pending")
+
+  if (txErr) {
+    console.error("[employees] delete pending payroll failed:", txErr)
+    return {
+      success: false,
+      error:
+        "Não foi possível remover despesas pendentes do funcionário. Tente novamente.",
+    }
+  }
+
   const { error } = await supabase.from("employees").delete().eq("id", id)
 
   if (error) {
@@ -138,5 +200,8 @@ export async function deleteEmployeeAction(
   }
 
   revalidateEmployeeRoutes()
-  return { success: true }
+  return {
+    success: true,
+    data: { removedPendingCount: count ?? 0 },
+  }
 }

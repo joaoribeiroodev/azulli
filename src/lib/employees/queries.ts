@@ -10,6 +10,7 @@ export type EmployeeRow = {
   document: string | null
   hire_date: string | null
   salary: number | null
+  salary_day: number | null
   notes: string | null
   is_active: boolean
   created_at: string
@@ -26,7 +27,7 @@ export async function listEmployees(): Promise<EmployeeRow[]> {
   const { data, error } = await supabase
     .from("employees")
     .select(
-      "id, name, role, email, phone, document, hire_date, salary, notes, is_active, created_at"
+      "id, name, role, email, phone, document, hire_date, salary, salary_day, notes, is_active, created_at"
     )
     .order("is_active", { ascending: false })
     .order("name", { ascending: true })
@@ -35,6 +36,7 @@ export async function listEmployees(): Promise<EmployeeRow[]> {
   return data.map((e) => ({
     ...e,
     salary: e.salary !== null ? Number(e.salary) : null,
+    salary_day: e.salary_day !== null ? Number(e.salary_day) : null,
   }))
 }
 
@@ -65,7 +67,7 @@ export async function getEmployeeDetails(
   const { data, error } = await supabase
     .from("employees")
     .select(
-      "id, name, role, email, phone, document, hire_date, salary, notes, is_active, created_at"
+      "id, name, role, email, phone, document, hire_date, salary, salary_day, notes, is_active, created_at"
     )
     .eq("id", id)
     .maybeSingle()
@@ -74,5 +76,6 @@ export async function getEmployeeDetails(
   return {
     ...data,
     salary: data.salary !== null ? Number(data.salary) : null,
+    salary_day: data.salary_day !== null ? Number(data.salary_day) : null,
   }
 }

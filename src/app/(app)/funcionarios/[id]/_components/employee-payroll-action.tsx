@@ -9,6 +9,7 @@ import {
   buildSalaryDescription,
   DEFAULT_PAYROLL_CATEGORY,
 } from "@/lib/employees/payroll-match"
+import { nextSalaryDueDateBR } from "@/lib/employees/salary-due-date"
 import type { EmployeeDetail } from "@/lib/employees/payroll-queries"
 
 type Props = {
@@ -49,6 +50,12 @@ export function EmployeePayrollAction({
         defaultDescription={buildSalaryDescription(employee.name)}
         defaultCategory={DEFAULT_PAYROLL_CATEGORY}
         defaultAmount={employee.salary ?? null}
+        defaultDueDate={
+          employee.salary_day
+            ? nextSalaryDueDateBR(employee.salary_day)
+            : undefined
+        }
+        defaultEmployeeId={employee.id}
         recentCategories={categories}
       />
     </>

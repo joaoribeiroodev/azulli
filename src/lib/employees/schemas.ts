@@ -23,15 +23,48 @@ const employeeBaseSchema = z.object({
     .max(99_999_999.99)
     .optional()
     .nullable(),
+  salary_day: z
+    .number()
+    .int("Use um dia inteiro")
+    .min(1, "Dia mínimo: 1")
+    .max(31, "Dia máximo: 31")
+    .optional()
+    .nullable(),
   notes: z.string().trim().max(500).optional().or(z.literal("")),
   is_active: z.boolean(),
 })
 
-export const createEmployeeSchema = employeeBaseSchema
+const salaryDayRefinement = (
+  data: {
+    salary?: number | null
+    salary_day?: number | null
+  },
+  ctx: z.RefinementCtx
+) => {
+  const hasSalary = data.salary != null && data.salary > 0
+  if (hasSalary && !data.salary_day) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["salary_day"],
+      message: "Informe o dia de pagamento do salário",
+    })
+  }
+  if (!hasSalary && data.salary_day) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["salary_day"],
+      message: "Defina um salário base para informar o dia de pagamento",
+    })
+  }
+}
+
+export const createEmployeeSchema = employeeBaseSchema.superRefine(salaryDayRefinement)
 export type CreateEmployeeInput = z.infer<typeof createEmployeeSchema>
 
-export const updateEmployeeSchema = z.object({
-  id: z.string().uuid(),
-  ...employeeBaseSchema.shape,
-})
+export const updateEmployeeSchema = z
+  .object({
+    id: z.string().uuid(),
+    ...employeeBaseSchema.shape,
+  })
+  .superRefine(salaryDayRefinement)
 export type UpdateEmployeeInput = z.infer<typeof updateEmployeeSchema>

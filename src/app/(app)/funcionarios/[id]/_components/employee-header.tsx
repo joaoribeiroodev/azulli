@@ -45,7 +45,11 @@ export function EmployeeHeader({
       toast.error(result.error)
       return
     }
-    toast.success("Funcionário excluído.")
+    toast.success(
+      result.data?.removedPendingCount
+        ? `Funcionário excluído. ${result.data.removedPendingCount} despesa(s) pendente(s) removida(s).`
+        : "Funcionário excluído."
+    )
     router.push("/funcionarios")
   }
 
@@ -127,8 +131,10 @@ export function EmployeeHeader({
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir {employee.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Essa ação não pode ser desfeita. Pra preservar histórico,
-              considere inativar em vez de excluir.
+              Despesas de salário <strong>já pagas</strong> permanecem no
+              histórico. Despesas <strong>pendentes ou vencidas</strong>{" "}
+              vinculadas a este funcionário serão removidas. Para manter o
+              cadastro sem apagar histórico, prefira inativar.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

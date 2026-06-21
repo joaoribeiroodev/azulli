@@ -22,54 +22,89 @@ type PayrollTxRow = {
   category: string | null
 }
 
-async function fetchPayrollCandidates(
-  employeeName: string
-): Promise<PayrollTxRow[]> {
+async function fetchPayrollCandidates(employee: {
+  id: string
+  name: string
+}): Promise<PayrollTxRow[]> {
   const supabase = await createClient()
-  const tokens = employeeName
-    .split(/\s+/)
-    .map((t) => t.trim())
-    .filter((t) => t.length >= 3)
-  const searchToken = tokens[0] ?? employeeName.slice(0, 20)
-
-  const { data, error } = await supabase
+  const byIdPromise = supabase
     .from("transactions_with_status")
     .select(
       "id, type, amount, status, raw_status, due_date, paid_at, description, category"
     )
     .eq("type", "expense")
+    .eq("employee_id", employee.id)
+    .order("due_date", { ascending: false })
+    .limit(500)
+
+  const tokens = employee.name
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 3)
+  const searchToken = tokens[0] ?? employee.name.slice(0, 20)
+
+  const heuristicPromise = supabase
+    .from("transactions_with_status")
+    .select(
+      "id, type, amount, status, raw_status, due_date, paid_at, description, category"
+    )
+    .eq("type", "expense")
+    .is("employee_id", null)
     .or(
       `description.ilike.%${searchToken}%,category.ilike.%folha%,category.ilike.%salario%,category.ilike.%salário%`
     )
     .order("due_date", { ascending: false })
     .limit(500)
 
-  if (error || !data) {
-    console.error("[employees] fetchPayrollCandidates failed:", error)
-    return []
+  const [byId, heuristic] = await Promise.all([byIdPromise, heuristicPromise])
+
+  if (byId.error) {
+    console.error("[employees] fetchPayrollCandidates by id failed:", byId.error)
+  }
+  if (heuristic.error) {
+    console.error(
+      "[employees] fetchPayrollCandidates heuristic failed:",
+      heuristic.error
+    )
   }
 
-  return data
-    .filter((row) =>
+  const merged = new Map<string, PayrollTxRow>()
+
+  for (const row of byId.data ?? []) {
+    merged.set(row.id as string, mapPayrollRow(row))
+  }
+
+  for (const row of heuristic.data ?? []) {
+    if (
       matchesEmployeePayroll(
         {
           description: row.description as string | null,
           category: row.category as string | null,
         },
-        employeeName
+        employee.name
       )
-    )
-    .map((r) => ({
-      id: r.id as string,
-      type: r.type as string,
-      amount: Number(r.amount),
-      status: r.status as string,
-      raw_status: r.raw_status as string,
-      due_date: r.due_date as string,
-      paid_at: r.paid_at as string | null,
-      description: r.description as string | null,
-      category: r.category as string | null,
-    }))
+    ) {
+      merged.set(row.id as string, mapPayrollRow(row))
+    }
+  }
+
+  return Array.from(merged.values()).sort((a, b) =>
+    b.due_date.localeCompare(a.due_date)
+  )
+}
+
+function mapPayrollRow(r: Record<string, unknown>): PayrollTxRow {
+  return {
+    id: r.id as string,
+    type: r.type as string,
+    amount: Number(r.amount),
+    status: r.status as string,
+    raw_status: r.raw_status as string,
+    due_date: r.due_date as string,
+    paid_at: r.paid_at as string | null,
+    description: r.description as string | null,
+    category: r.category as string | null,
+  }
 }
 
 function toPaginatedRow(r: PayrollTxRow): PaginatedTransactionRow {
@@ -187,7 +222,7 @@ export async function getEmployeeDetail(
   const { data, error } = await supabase
     .from("employees")
     .select(
-      "id, name, role, email, phone, document, hire_date, salary, notes, is_active, created_at"
+      "id, name, role, email, phone, document, hire_date, salary, salary_day, notes, is_active, created_at"
     )
     .eq("id", id)
     .maybeSingle()
@@ -197,9 +232,13 @@ export async function getEmployeeDetail(
   const employee: EmployeeRow = {
     ...data,
     salary: data.salary !== null ? Number(data.salary) : null,
+    salary_day: data.salary_day !== null ? Number(data.salary_day) : null,
   }
 
-  const payrollRows = await fetchPayrollCandidates(employee.name)
+  const payrollRows = await fetchPayrollCandidates({
+    id: employee.id,
+    name: employee.name,
+  })
   const { tenureDays, tenureLabel } = computeTenure(employee.hire_date)
 
   return {
@@ -211,11 +250,11 @@ export async function getEmployeeDetail(
 }
 
 export async function listPayrollTransactionsByEmployee(
-  employeeName: string,
+  employee: { id: string; name: string },
   page = 1,
   pageSize = 15
 ): Promise<PaginatedTransactions> {
-  const all = await fetchPayrollCandidates(employeeName)
+  const all = await fetchPayrollCandidates(employee)
   const total = all.length
   const fromIdx = (page - 1) * pageSize
   const slice = all.slice(fromIdx, fromIdx + pageSize)
@@ -230,11 +269,11 @@ export async function listPayrollTransactionsByEmployee(
 }
 
 export async function getEmployeePayrollSeries(
-  employeeName: string,
+  employee: { id: string; name: string },
   months = 6
 ): Promise<MonthlyPayrollBucket[]> {
   const buckets = buildMonthBuckets(months)
-  const rows = await fetchPayrollCandidates(employeeName)
+  const rows = await fetchPayrollCandidates(employee)
 
   const map = new Map(buckets.map((b) => [b.yearMonth, b]))
   for (const row of rows) {

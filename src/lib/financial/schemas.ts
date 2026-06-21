@@ -68,6 +68,7 @@ export const createTransactionSchema = z
       .or(z.literal("")),
     customer_id: z.string().uuid().optional().nullable(),
     supplier_id: z.string().uuid().optional().nullable(),
+    employee_id: z.string().uuid().optional().nullable(),
     product_id: z.string().uuid().optional().nullable(),
     items: z.array(transactionItemInputSchema).optional(),
     category: categoryField,
@@ -77,10 +78,11 @@ export const createTransactionSchema = z
     (data) => {
       if (data.type === "income" && data.supplier_id) return false
       if (data.type === "expense" && data.customer_id) return false
+      if (data.type === "income" && data.employee_id) return false
       return true
     },
     {
-      message: "Receita só vincula cliente; despesa só vincula fornecedor.",
+      message: "Receita só vincula cliente; despesa só vincula fornecedor ou funcionário.",
       path: ["type"],
     }
   )

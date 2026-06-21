@@ -59,7 +59,9 @@ export async function buildAccountantExport(
         : t.status === "overdue"
           ? "Vencido"
           : "Pendente",
-    "Data pagamento": (t.paid_at as string | null)?.slice(0, 10) ?? "",
+    "Data pagamento": t.paid_at
+      ? utcToLocalDateBR(t.paid_at as string)
+      : "",
   }))
 
   const monthTx = (transactions ?? []).filter((t) => {

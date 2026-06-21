@@ -2,6 +2,11 @@ import "server-only"
 
 import { createClient } from "@/lib/supabase/server"
 import type { PaginatedTransactions, PaginatedTransactionRow } from "@/lib/financial/queries"
+import {
+  buildMonthBucketsBR,
+  getCurrentMonthRange,
+  utcToLocalDateBR,
+} from "@/lib/utils/date"
 import { matchesEmployeePayroll } from "./payroll-match"
 import type { EmployeeRow } from "./queries"
 
@@ -107,14 +112,9 @@ export type MonthlyPayrollBucket = {
   total: number
 }
 
-function getCurrentMonthRange(): { from: string; to: string } {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = now.getMonth()
-  const from = `${y}-${String(m + 1).padStart(2, "0")}-01`
-  const lastDay = new Date(y, m + 1, 0).getDate()
-  const to = `${y}-${String(m + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`
-  return { from, to }
+function getCurrentMonthRangeLocal(): { from: string; to: string } {
+  const { from, to } = getCurrentMonthRange()
+  return { from: from.slice(0, 10), to: to.slice(0, 10) }
 }
 
 function computeTenure(hireDate: string | null): {
@@ -144,7 +144,7 @@ function computePayrollKpis(
   rows: PayrollTxRow[],
   salary: number | null
 ): EmployeePayrollKpis {
-  const { from, to } = getCurrentMonthRange()
+  const { from, to } = getCurrentMonthRangeLocal()
   let totalPaid = 0
   let paidThisMonth = 0
   let pendingAmount = 0
@@ -155,7 +155,7 @@ function computePayrollKpis(
     const amount = t.amount
     if (t.status === "paid") {
       totalPaid += amount
-      const ref = t.paid_at?.slice(0, 10) ?? t.due_date
+      const ref = t.paid_at ? utcToLocalDateBR(t.paid_at) : t.due_date
       if (ref >= from && ref <= to) paidThisMonth += amount
       if (!lastPaymentDate || ref > lastPaymentDate) lastPaymentDate = ref
     } else if (t.status === "pending") {
@@ -239,7 +239,7 @@ export async function getEmployeePayrollSeries(
   const map = new Map(buckets.map((b) => [b.yearMonth, b]))
   for (const row of rows) {
     if (row.status !== "paid" || !row.paid_at) continue
-    const key = row.paid_at.slice(0, 7)
+    const key = utcToLocalDateBR(row.paid_at).slice(0, 7)
     const bucket = map.get(key)
     if (bucket) bucket.total += row.amount
   }
@@ -248,18 +248,5 @@ export async function getEmployeePayrollSeries(
 }
 
 function buildMonthBuckets(months: number): MonthlyPayrollBucket[] {
-  const fmt = new Intl.DateTimeFormat("pt-BR", {
-    month: "short",
-    year: "2-digit",
-    timeZone: "America/Sao_Paulo",
-  })
-  const buckets: MonthlyPayrollBucket[] = []
-  const now = new Date()
-  for (let i = months - 1; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    const yearMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
-    const label = fmt.format(d).replace(".", "").replace(" de ", "/")
-    buckets.push({ yearMonth, label, total: 0 })
-  }
-  return buckets
+  return buildMonthBucketsBR(months).map((b) => ({ ...b, total: 0 }))
 }

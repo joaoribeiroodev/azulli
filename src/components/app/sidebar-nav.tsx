@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import {
   LayoutDashboard,
   ArrowLeftRight,
+  Calendar,
   Users,
   Truck,
   Package,
@@ -46,6 +47,7 @@ const items: Item[] = [
   { href: "/produtos", label: "Produtos", icon: Package },
   { href: "/funcionarios", label: "Funcionários", icon: UserCog },
   { href: "/metas-e-lembretes", label: "Metas e lembretes", icon: Target },
+  { href: "/agenda", label: "Agenda", icon: Calendar },
   {
     href: "/contador",
     label: "Contador",

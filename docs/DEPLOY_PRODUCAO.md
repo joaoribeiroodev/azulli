@@ -70,9 +70,9 @@ supabase link --project-ref <seu-project-ref>
 supabase db push
 ```
 
-Ou aplique manualmente no SQL Editor, em ordem (`00001` … `00024`).
+Ou aplique manualmente no SQL Editor, em ordem (`00001` … `00028`).
 
-**Críticas para go-live:** `00014_subscriptions`, `00021_onboarding`, `00022_account_deletion`, `00023_accountant_role`, `00024_fix_ofx_paid_at`.
+**Críticas para go-live:** `00014_subscriptions`, `00021_onboarding`, `00022_account_deletion`, `00023_accountant_role`, `00024_fix_ofx_paid_at`, `00025_admin_announcements`, `00028_brazil_timezone` (fuso BR e status vencido).
 
 ### 2.2 Conferência rápida
 

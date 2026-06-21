@@ -57,6 +57,8 @@ Todas em `supabase/migrations/` aplicadas em ordem. **Críticas para go-live rec
 | `00022_account_deletion` | LGPD / exclusão de conta |
 | `00023_accountant_role` | Perfil contador |
 | `00024_fix_ofx_paid_at` | Correção OFX `paid_at` |
+| `00025_admin_announcements` | Avisos globais (sino) |
+| `00028_brazil_timezone` | Fuso BR (`today_brazil()`, vencidos na view) |
 
 Via CLI:
 

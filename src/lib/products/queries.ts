@@ -1,7 +1,7 @@
 import "server-only"
 import { cache } from "react"
 import { createClient } from "@/lib/supabase/server"
-import { getCurrentMonthRange } from "@/lib/utils/date"
+import { getCurrentMonthRange, getLast30DaysRangeBR } from "@/lib/utils/date"
 import type { MonthlyBucket } from "@/lib/financial/queries"
 
 // ===========================================================================
@@ -303,15 +303,7 @@ export async function getTopProducts(
   const { from, to } =
     range === "month"
       ? getCurrentMonthRange()
-      : (() => {
-          const now = new Date()
-          const last30 = new Date(now)
-          last30.setDate(last30.getDate() - 30)
-          return {
-            from: last30.toISOString().slice(0, 10) + "T00:00:00Z",
-            to: now.toISOString().slice(0, 10) + "T23:59:59Z",
-          }
-        })()
+      : getLast30DaysRangeBR()
 
   // Busca items vendidos no período
   const [{ data: itemsAgg }, { data: txAgg }] = await Promise.all([

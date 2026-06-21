@@ -28,6 +28,7 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 
 import { updateUserProfileAction } from "@/lib/settings/actions"
+import { SUPPORT_EMAIL } from "@/lib/company/support-contact"
 import { formatWhatsAppBR } from "@/lib/utils/format"
 import { AvatarUpload } from "@/components/app/avatar-upload"
 import { PrivacyDataCard } from "./privacy-data-card"
@@ -152,7 +153,14 @@ export function AccountTab({ user, hasActiveSubscription }: Props) {
                   {user.email}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Para alterar seu e-mail, entre em contato com o suporte.
+                  Para alterar seu e-mail, entre em contato com o suporte em{" "}
+                  <a
+                    href={`mailto:${SUPPORT_EMAIL}`}
+                    className="text-brand hover:underline underline-offset-4"
+                  >
+                    {SUPPORT_EMAIL}
+                  </a>
+                  .
                 </p>
               </div>
 

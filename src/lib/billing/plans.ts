@@ -28,7 +28,7 @@ export function canUseAutomatedEmails(tier: PlanId): boolean {
 
 /** O que o trial de 7 dias inclui (espelha Empresarial para degustação). */
 export const TRIAL_FEATURE_HIGHLIGHTS = [
-  "Lançamentos, OFX e exportação Excel",
+  "Lançamentos, OFX, agenda e exportação Excel",
   "Assistente IA e previsão de caixa",
   "E-mails de insights e cobrança",
   "Sem cartão de crédito no cadastro",
@@ -65,6 +65,7 @@ export const PLANS: Record<"pro" | "enterprise", Plan> = {
       "Importação OFX com categorização IA",
       "Detector de despesas recorrentes",
       "Metas e lembretes",
+      "Agenda financeira unificada",
       "Exportação Excel formatada",
       "Área do contador (convite + exportação)",
       "Dashboard com gráficos e relatórios",

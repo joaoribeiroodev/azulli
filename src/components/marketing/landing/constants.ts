@@ -3,6 +3,7 @@ import {
   BarChart3,
   Bot,
   Calculator,
+  Calendar,
   LineChart,
   Mail,
   Upload,
@@ -85,7 +86,14 @@ export const LANDING_FEATURES: LandingFeature[] = [
     tier: "pro",
     title: "Recorrentes, metas e estoque",
     description:
-      "Detecta assinaturas, metas mensais, lembretes na app e controle de estoque de produtos.",
+      "Detecta assinaturas, metas mensais, lembretes e controle de estoque de produtos.",
+  },
+  {
+    icon: Calendar,
+    tier: "pro",
+    title: "Agenda financeira",
+    description:
+      "Calendário unificado: vencimentos, lembretes e prazos de metas com legenda de cores e alertas no sino.",
   },
   {
     icon: LineChart,
@@ -124,6 +132,6 @@ export const LANDING_TRUST_SIGNALS = [
   {
     title: "Feito para o Brasil",
     description:
-      "Interface em português, foco em MEI e Simples Nacional — sem termos em inglês.",
+      "Interface em português, calendário e vencimentos em horário de Brasília — sem surpresas de fuso.",
   },
 ] as const

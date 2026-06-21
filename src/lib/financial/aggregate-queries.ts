@@ -1,5 +1,10 @@
 import "server-only"
 import { createClient } from "@/lib/supabase/server"
+import {
+  buildMonthBucketsBR,
+  startOfDayBRTIso,
+  utcToLocalDateBR,
+} from "@/lib/utils/date"
 import type { MonthlyBucket } from "@/lib/financial/queries"
 
 /**
@@ -16,7 +21,7 @@ export async function getAggregateMonthlySeries(
   const supabase = await createClient()
 
   const buckets = buildMonthBuckets(months)
-  const earliest = buckets[0].yearMonth + "-01T00:00:00Z"
+  const earliest = startOfDayBRTIso(buckets[0].yearMonth + "-01")
 
   if (scope === "customers") {
     const { data } = await supabase
@@ -40,7 +45,6 @@ export async function getAggregateMonthlySeries(
     return fillBuckets(buckets, data ?? [], "amount", "paid_at")
   }
 
-  // products: soma vendas via product_id direto + via items
   const [txRes, itemsRes] = await Promise.all([
     supabase
       .from("transactions")
@@ -61,7 +65,7 @@ export async function getAggregateMonthlySeries(
 
   for (const row of txRes.data ?? []) {
     if (!row.paid_at) continue
-    const key = row.paid_at.slice(0, 7)
+    const key = utcToLocalDateBR(row.paid_at).slice(0, 7)
     const bucket = map.get(key)
     if (bucket) bucket.total += Number(row.amount)
   }
@@ -70,7 +74,7 @@ export async function getAggregateMonthlySeries(
     const paidAt = (row as unknown as { transactions: { paid_at: string } })
       .transactions?.paid_at
     if (!paidAt) continue
-    const key = paidAt.slice(0, 7)
+    const key = utcToLocalDateBR(paidAt).slice(0, 7)
     const bucket = map.get(key)
     if (bucket) bucket.total += Number(row.total)
   }
@@ -88,7 +92,7 @@ function fillBuckets(
   for (const row of data) {
     const paidAt = row[dateField] as string | null
     if (!paidAt) continue
-    const key = paidAt.slice(0, 7)
+    const key = utcToLocalDateBR(paidAt).slice(0, 7)
     const bucket = map.get(key)
     if (bucket) bucket.total += Number(row[amountField])
   }
@@ -96,17 +100,8 @@ function fillBuckets(
 }
 
 function buildMonthBuckets(months: number): MonthlyBucket[] {
-  const fmt = new Intl.DateTimeFormat("pt-BR", {
-    month: "short",
-    year: "2-digit",
-  })
-  const buckets: MonthlyBucket[] = []
-  const now = new Date()
-  for (let i = months - 1; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    const yearMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
-    const label = fmt.format(d).replace(".", "").replace(" de ", "/")
-    buckets.push({ yearMonth, label, total: 0 })
-  }
-  return buckets
+  return buildMonthBucketsBR(months).map((b) => ({
+    ...b,
+    total: 0,
+  }))
 }

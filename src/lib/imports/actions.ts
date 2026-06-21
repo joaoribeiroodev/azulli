@@ -292,8 +292,77 @@ export async function confirmImportAction(
 
   revalidatePath("/lancamentos")
   revalidatePath("/dashboard")
+  revalidatePath("/agenda")
 
   return { success: true, data: { imported } }
+}
+
+/**
+ * Desfaz uma importação já confirmada: remove todos os lançamentos do batch
+ * e marca o batch como descartado.
+ */
+export async function cancelImportAction(
+  batchId: string
+): Promise<ActionResult<{ removed: number }>> {
+  const idParsed = z.string().uuid().safeParse(batchId)
+  if (!idParsed.success) {
+    return { success: false, error: "Importação inválida." }
+  }
+
+  const supabase = await createClient()
+
+  const { data: batch, error: batchErr } = await supabase
+    .from("import_batches")
+    .select("id, status")
+    .eq("id", batchId)
+    .maybeSingle()
+
+  if (batchErr || !batch) {
+    return { success: false, error: "Importação não encontrada." }
+  }
+  if (batch.status !== "confirmed") {
+    return {
+      success: false,
+      error: "Esta importação não pode ser cancelada.",
+    }
+  }
+
+  const { error: deleteErr, count } = await supabase
+    .from("transactions")
+    .delete({ count: "exact" })
+    .eq("import_batch_id", batchId)
+    .eq("source", "ofx_import")
+
+  if (deleteErr) {
+    console.error("[imports] cancel delete failed:", deleteErr)
+    return {
+      success: false,
+      error: "Não foi possível cancelar a importação.",
+    }
+  }
+
+  const { error: updateErr } = await supabase
+    .from("import_batches")
+    .update({
+      status: "discarded",
+      total_imported: 0,
+    })
+    .eq("id", batchId)
+    .eq("status", "confirmed")
+
+  if (updateErr) {
+    console.error("[imports] cancel batch update failed:", updateErr)
+    return {
+      success: false,
+      error: "Lançamentos removidos, mas não foi possível atualizar o registro da importação.",
+    }
+  }
+
+  revalidatePath("/lancamentos")
+  revalidatePath("/dashboard")
+  revalidatePath("/agenda")
+
+  return { success: true, data: { removed: count ?? 0 } }
 }
 
 /**

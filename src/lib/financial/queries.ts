@@ -3,6 +3,8 @@ import { cache } from "react"
 import { createClient } from "@/lib/supabase/server"
 import {
   getCurrentMonthRange,
+  getLast30DaysRangeBR,
+  buildMonthBucketsBR,
   getLastNDays,
   getWeekdayLabel,
   utcToLocalDateBR,
@@ -372,13 +374,7 @@ function computeRange(range: TopPartyRange): { from: string; to: string } {
   if (range === "month") {
     return getCurrentMonthRange()
   }
-  const today = new Date()
-  const last30 = new Date(today)
-  last30.setDate(last30.getDate() - 30)
-  return {
-    from: last30.toISOString().slice(0, 10) + "T00:00:00-03:00",
-    to: today.toISOString().slice(0, 10) + "T23:59:59-03:00",
-  }
+  return getLast30DaysRangeBR()
 }
 
 // ===========================================================================
@@ -426,20 +422,7 @@ export async function getMonthlySeriesByParty(
 }
 
 function buildMonthBuckets(months: number): MonthlyBucket[] {
-  const fmt = new Intl.DateTimeFormat("pt-BR", {
-    month: "short",
-    year: "2-digit",
-    timeZone: "America/Sao_Paulo",
-  })
-  const buckets: MonthlyBucket[] = []
-  const now = new Date()
-  for (let i = months - 1; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    const yearMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
-    const label = fmt.format(d).replace(".", "").replace(" de ", "/")
-    buckets.push({ yearMonth, label, total: 0 })
-  }
-  return buckets
+  return buildMonthBucketsBR(months).map((b) => ({ ...b, total: 0 }))
 }
 
 // ===========================================================================

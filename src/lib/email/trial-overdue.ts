@@ -42,14 +42,12 @@ export async function buildOverdueAlertPayload(params: {
   tenantName: string
 }): Promise<OverdueAlertEmailPayload | null> {
   const supabase = createServiceRoleClient()
-  const today = new Date().toISOString().slice(0, 10)
   const baseUrl = env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "")
 
   const { data: rows } = await supabase
     .from("transactions_with_status")
     .select("id, type, amount, description, due_date, status")
     .eq("status", "overdue")
-    .lt("due_date", today)
     .order("due_date", { ascending: true })
     .limit(20)
 

@@ -149,6 +149,7 @@ export async function createTransactionAction(
 
   revalidatePath("/dashboard")
   revalidatePath("/lancamentos")
+  revalidatePath("/agenda")
   revalidatePath("/clientes")
   revalidatePath("/fornecedores")
   revalidatePath("/funcionarios")
@@ -216,6 +217,7 @@ export async function updateTransactionAction(
 
   revalidatePath("/dashboard")
   revalidatePath("/lancamentos")
+  revalidatePath("/agenda")
   revalidatePath("/clientes")
   revalidatePath("/fornecedores")
   if (existing?.customer_id) {
@@ -290,6 +292,7 @@ export async function markAsPaidAction(id: string): Promise<ActionResult> {
 
   revalidatePath("/dashboard")
   revalidatePath("/lancamentos")
+  revalidatePath("/agenda")
   revalidatePath("/produtos")
   return { success: true }
 }
@@ -311,5 +314,6 @@ export async function deleteTransactionAction(
 
   revalidatePath("/dashboard")
   revalidatePath("/lancamentos")
+  revalidatePath("/agenda")
   return { success: true }
 }

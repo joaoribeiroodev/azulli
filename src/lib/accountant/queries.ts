@@ -5,6 +5,7 @@ import {
   getCurrentMonthRange,
   todayLocalBR,
   utcToLocalDateBR,
+  addDaysYMD,
 } from "@/lib/utils/date"
 
 export type AccountantPeriodSummary = {
@@ -327,7 +328,7 @@ export async function getAccountantPendingItems(): Promise<{
 }> {
   const supabase = await createClient()
   const today = todayLocalBR()
-  const in7 = addDaysIso(today, 7)
+  const in7 = addDaysYMD(today, 7)
 
   const { data } = await supabase
     .from("transactions_with_status")
@@ -414,11 +415,4 @@ export async function getAccountantMonthlyTrend(
   }
 
   return buckets
-}
-
-function addDaysIso(isoDate: string, days: number): string {
-  const [y, m, d] = isoDate.split("-").map(Number)
-  const date = new Date(y, m - 1, d)
-  date.setDate(date.getDate() + days)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
 }

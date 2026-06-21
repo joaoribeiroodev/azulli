@@ -43,15 +43,18 @@ Em **localhost**, todas as superfícies ficam em `http://localhost:3000` (sem se
 
 ### App do assinante (`use.azulli.app.br`)
 
-- **Dashboard** — fluxo de caixa, runway, alertas de forecast, gráficos mensais
+- **Dashboard** — fluxo de caixa, runway, alertas de forecast, card «Esta semana», gráficos mensais
 - **Lançamentos** — receitas/despesas, categorias, importação OFX com categorização por IA
+- **Agenda financeira** — calendário unificado (vencimentos, lembretes, metas) com legenda de cores
+- **Notificações** — sino no app (lembretes/metas urgentes + avisos da plataforma)
 - **Clientes, fornecedores, produtos, funcionários** — cadastros e KPIs por entidade
 - **Contador** — visão consolidada para contabilidade
-- **Metas e lembretes** — objetivos financeiros e cobranças
-- **Assistente** — chat com Gemini (modo auto / rules / llm)
-- **Billing** — assinaturas via Asaas (Pro / Enterprise)
-- **Configurações** — empresa, equipe, notificações, export LGPD
+- **Metas e lembretes** — objetivos financeiros e tarefas com prazo
+- **Assistente** — chat com Gemini (plano Empresarial / trial)
+- **Billing** — assinaturas via Asaas (Pro / Empresarial)
+- **Configurações** — empresa, equipe, notificações por e-mail, export LGPD, manual PDF
 - **PWA** — instalável no mobile (`public/sw.js`, ícones em `public/pwa/`)
+- **Fuso horário** — datas e «hoje» em America/Sao_Paulo (Brasil)
 
 ### Admin (`admin.azulli.app.br`)
 
@@ -142,7 +145,7 @@ azulli/
 │   ├── components/             # UI compartilhada (shadcn, app, finder, admin)
 │   ├── lib/                    # Domínio: billing, financial, email, finder, …
 │   └── proxy.ts                # Middleware de hosts / sessão Supabase
-├── supabase/migrations/        # SQL versionado (00001 … 00027)
+├── supabase/migrations/        # SQL versionado (00001 … 00028)
 ├── scripts/                    # Seeds, testes, PWA, utilitários
 ├── docs/                       # Guias de deploy e integração
 ├── public/                     # PWA, service worker, assets estáticos
@@ -188,6 +191,7 @@ Para o Finder, aplique também:
 
 - `00026_finder_schema.sql`
 - `00027_finder_perf_indexes.sql`
+- `00028_brazil_timezone.sql` — função `today_brazil()` e view `transactions_with_status` com fuso BR
 
 ### 4. Seed do admin Finder (opcional)
 
@@ -273,6 +277,7 @@ Migrations versionadas em `supabase/migrations/`:
 | `00019`–`00024` | E-mail, onboarding, LGPD, contador |
 | `00025` | Admin + avisos globais |
 | `00026`–`00027` | Schema Finder + índices de performance |
+| `00028` | Fuso horário Brasil (`today_brazil()`, status vencido na view) |
 
 Políticas **RLS** isolam dados por tenant no schema `public`. O schema `finder` usa autenticação JWT própria.
 

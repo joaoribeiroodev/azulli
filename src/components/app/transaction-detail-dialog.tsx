@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { formatBRL } from "@/lib/utils/currency"
-import { formatDateBR } from "@/lib/utils/date"
+import { formatDateBR, utcToLocalDateBR } from "@/lib/utils/date"
 
 export type TransactionDetailData = {
   type: "income" | "expense"
@@ -45,7 +45,7 @@ export function TransactionDetailDialog({
   const isIncome = transaction.type === "income"
   const displayDate =
     transaction.status === "paid" && transaction.paid_at
-      ? formatDateBR(transaction.paid_at.slice(0, 10))
+      ? formatDateBR(utcToLocalDateBR(transaction.paid_at))
       : formatDateBR(transaction.due_date)
 
   return (

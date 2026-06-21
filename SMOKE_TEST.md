@@ -40,16 +40,29 @@ Checklist rápido antes e depois do deploy. Execute em **sandbox Asaas** até o 
 
 - [ ] Banner trial (últimos 3 dias do trial)
 - [ ] Card runway (“Aguento X dias”)
+- [ ] Card «Esta semana» com próximos eventos da agenda
 - [ ] Insight em linguagem humana (se há dados)
 - [ ] Previsão de caixa sem erro Recharts no console
 - [ ] Recorrentes com badge “Possível corte” (se aplicável)
 
-## 6. Cliente + WhatsApp
+## 6. Agenda e notificações
+
+- [ ] Menu lateral → **Agenda** (após Metas e lembretes)
+- [ ] Lançamento pendente/vencido aparece no calendário do mês
+- [ ] Lembrete e meta com prazo aparecem na agenda (cores da legenda)
+- [ ] Filtros: todos / lançamentos / lembretes / metas
+- [ ] Clique no dia → lista detalhada; clique em lançamento abre detalhes
+- [ ] Sino no menu: alertas de lembretes/metas urgentes (máx. 5)
+- [ ] Seção «Avisos do Azulli» no sino (se houver aviso global no admin)
+- [ ] Link «Ver agenda completa» no sino abre `/agenda`
+- [ ] Vencimento «hoje» e «vencido» batem com calendário BR (não UTC)
+
+## 7. Cliente + WhatsApp
 
 - [ ] Cliente com telefone e receita vencida → botão “Cobrar no WhatsApp”
 - [ ] Link abre `wa.me` com mensagem pré-preenchida
 
-## 7. Crons (dev/prod)
+## 8. Crons (dev/prod)
 
 ```bash
 # Dry run (não envia e-mail)
@@ -62,16 +75,17 @@ curl -H "Authorization: Bearer $CRON_SECRET" \
 
 - [ ] Resposta JSON `ok: true` sem 401/500
 
-## 8. Landing e share
+## 9. Landing e share
 
 - [ ] Landing: menu mobile (ícone ☰) navega às seções
 - [ ] Scroll suave entre seções
 - [ ] OG image: `/opengraph-image` retorna PNG 1200×630
 
-## 9. Rotas críticas (sem 500)
+## 10. Rotas críticas (sem 500)
 
-- [ ] `/` `/login` `/dashboard` `/configuracoes` `/assistente`
+- [ ] `/` `/login` `/dashboard` `/agenda` `/configuracoes` `/assistente` `/manual`
+- [ ] `/termos-de-uso` `/politica-de-privacidade`
 
 ---
 
-*Última atualização: junho 2026*
+*Última atualização: 19 de junho de 2026*

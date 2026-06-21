@@ -52,8 +52,9 @@ export function CookieConsentBanner() {
         className="mx-auto max-w-3xl rounded-xl border border-border bg-card/95 backdrop-blur-md shadow-lg px-4 py-4 sm:px-5 sm:py-5 flex flex-col sm:flex-row sm:items-center gap-4"
       >
         <p className="text-sm text-muted-foreground leading-relaxed flex-1">
-          Usamos cookies essenciais para manter sua sessão e preferências (ex.:
-          tema). Saiba mais na nossa{" "}
+          Usamos cookies essenciais para manter sua sessão (incluindo entre
+          subdomínios use e trial), preferências (ex.: tema) e, se instalado,
+          cache do PWA. Saiba mais na nossa{" "}
           <Link
             href={LEGAL_PATHS.privacy}
             className="text-brand font-medium hover:underline underline-offset-4"

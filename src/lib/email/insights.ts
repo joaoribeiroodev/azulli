@@ -4,6 +4,16 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 
 import { createServiceRoleClient } from "@/lib/supabase/service-role"
 import { env } from "@/lib/env"
+import {
+  addDaysYMD,
+  endOfDayBRTIso,
+  formatDateInBR,
+  lastClosedWeekBR,
+  previousWeekBR,
+  startOfDayBRTIso,
+  todayLocalBR,
+  utcToLocalDateBR,
+} from "@/lib/utils/date"
 
 import { buildUnsubscribeUrl } from "./unsubscribe-token"
 import type {
@@ -38,9 +48,10 @@ export async function buildWeeklyInsightPayload(
   const supabase = createServiceRoleClient()
   const baseUrl = input.appBaseUrl ?? env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "")
   const now = input.now ?? new Date()
+  const today = input.now ? formatDateInBR(now) : todayLocalBR()
 
-  const thisWeek = lastClosedWeek(now)
-  const prevWeek = previousWeek(thisWeek)
+  const thisWeek = lastClosedWeekBR(now)
+  const prevWeek = previousWeekBR(thisWeek)
 
   // --- Carrega transações pagas das 2 últimas semanas + pendentes/overdue ---
   const [paidLast2Weeks, pending, recurring] = await Promise.all([
@@ -50,8 +61,8 @@ export async function buildWeeklyInsightPayload(
       prevWeek.startIso,
       thisWeek.endIso
     ),
-    loadPending(supabase, input.tenantId, todayIso(now)),
-    loadRecurringSummary(supabase, input.tenantId, todayIso(now)),
+    loadPending(supabase, input.tenantId, today),
+    loadRecurringSummary(supabase, input.tenantId, today),
   ])
 
   // --- Sumariza receita/despesa por semana ---
@@ -71,7 +82,7 @@ export async function buildWeeklyInsightPayload(
     pending,
     thisStats,
     prevStats,
-    todayIsoDate: todayIso(now),
+    todayIsoDate: today,
     baseUrl,
   })
 
@@ -130,8 +141,8 @@ async function loadPaidInRange(
     .eq("tenant_id", tenantId)
     .eq("status", "paid")
     .not("paid_at", "is", null)
-    .gte("paid_at", `${startIso}T00:00:00.000Z`)
-    .lt("paid_at", `${endIso}T23:59:59.999Z`)
+    .gte("paid_at", startOfDayBRTIso(startIso))
+    .lte("paid_at", endOfDayBRTIso(endIso))
 
   if (error || !data) {
     if (error) console.error("[insights] loadPaidInRange failed:", error)
@@ -150,7 +161,7 @@ async function loadPending(
   tenantId: string,
   todayIsoDate: string
 ): Promise<PendingTx[]> {
-  const horizon = addDaysIso(todayIsoDate, 30)
+  const horizon = addDaysYMD(todayIsoDate, 30)
   const { data, error } = await supabase
     .from("transactions")
     .select("id, type, amount, due_date, description")
@@ -186,7 +197,7 @@ async function loadRecurringSummary(
 ): Promise<RecurringSummary> {
   // Versão simplificada: só conta despesas com recurring_group preenchido
   // nos últimos 60 dias (já marcadas pelo OFX import / detector).
-  const cutoff = addDaysIso(todayIsoDate, -60)
+  const cutoff = addDaysYMD(todayIsoDate, -60)
   const { data, error } = await supabase
     .from("transactions")
     .select("amount, description, recurring_group")
@@ -252,7 +263,7 @@ function summarizeWeek(
   let expense = 0
   let count = 0
   for (const tx of txs) {
-    const day = tx.paid_at.slice(0, 10)
+    const day = utcToLocalDateBR(tx.paid_at)
     if (day < week.startIso || day > week.endIso) continue
     count++
     if (tx.type === "income") income += tx.amount
@@ -435,7 +446,7 @@ function pickPrimaryAlert(args: {
 
   // 3) Próxima despesa grande nos próximos 7 dias → info
   const upcoming = pending
-    .filter((p) => p.type === "expense" && p.due_date <= addDaysIso(todayIsoDate, 7))
+    .filter((p) => p.type === "expense" && p.due_date <= addDaysYMD(todayIsoDate, 7))
     .sort((a, b) => b.amount - a.amount)
   if (upcoming.length > 0 && upcoming[0].amount >= 500) {
     const top = upcoming[0]
@@ -453,42 +464,6 @@ function pickPrimaryAlert(args: {
   }
 
   return null
-}
-
-// ---------------------------------------------------------------------------
-// Helpers — semanas
-// ---------------------------------------------------------------------------
-
-type Week = { startIso: string; endIso: string }
-
-/**
- * Última semana fechada (segunda → domingo).
- * Se hoje for segunda, retorna a semana que terminou ontem (domingo).
- */
-function lastClosedWeek(today: Date): Week {
-  const utcDay = today.getUTCDay() // 0=dom, 1=seg, ..., 6=sab
-  const daysSinceLastSunday = utcDay === 0 ? 7 : utcDay
-  const end = new Date(
-    Date.UTC(
-      today.getUTCFullYear(),
-      today.getUTCMonth(),
-      today.getUTCDate()
-    )
-  )
-  end.setUTCDate(end.getUTCDate() - daysSinceLastSunday)
-  const start = new Date(end)
-  start.setUTCDate(end.getUTCDate() - 6)
-  return {
-    startIso: start.toISOString().slice(0, 10),
-    endIso: end.toISOString().slice(0, 10),
-  }
-}
-
-function previousWeek(week: Week): Week {
-  return {
-    startIso: addDaysIso(week.startIso, -7),
-    endIso: addDaysIso(week.endIso, -7),
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -545,19 +520,4 @@ function median(values: number[]): number {
   return sorted.length % 2 === 0
     ? (sorted[mid - 1] + sorted[mid]) / 2
     : sorted[mid]
-}
-
-function todayIso(now: Date): string {
-  return new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
-  )
-    .toISOString()
-    .slice(0, 10)
-}
-
-function addDaysIso(iso: string, days: number): string {
-  const [y, m, d] = iso.split("-").map(Number)
-  const date = new Date(Date.UTC(y, m - 1, d))
-  date.setUTCDate(date.getUTCDate() + days)
-  return date.toISOString().slice(0, 10)
 }

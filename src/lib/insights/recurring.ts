@@ -15,6 +15,7 @@
 import { cache } from "react"
 
 import { createClient } from "@/lib/supabase/server"
+import { addDaysYMD, todayLocalBR } from "@/lib/utils/date"
 
 const LOOKBACK_MONTHS = 6
 const MIN_OCCURRENCES = 3
@@ -144,9 +145,7 @@ type RawTx = {
 export const detectRecurringExpenses = cache(async (): Promise<RecurringExpense[]> => {
   const supabase = await createClient()
 
-  const cutoff = new Date()
-  cutoff.setMonth(cutoff.getMonth() - LOOKBACK_MONTHS)
-  const cutoffIso = cutoff.toISOString().slice(0, 10)
+  const cutoffIso = addDaysYMD(todayLocalBR(), -(LOOKBACK_MONTHS * 31))
 
   const { data, error } = await supabase
     .from("transactions")
@@ -223,7 +222,7 @@ export const detectRecurringExpenses = cache(async (): Promise<RecurringExpense[
       cur.due_date > acc.due_date ? cur : acc
     )
 
-    const daysSinceLast = dayDiff(latest.due_date, new Date().toISOString().slice(0, 10))
+    const daysSinceLast = dayDiff(latest.due_date, todayLocalBR())
 
     recurring.push({
       fingerprint: fp,

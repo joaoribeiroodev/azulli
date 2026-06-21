@@ -2,6 +2,7 @@ import Link from "next/link"
 
 import { LegalLayoutShell } from "@/components/legal/legal-layout-shell"
 import { LegalProse } from "@/components/legal/legal-prose"
+import { SUPPORT_EMAIL } from "@/lib/company/support-contact"
 import { LEGAL_PATHS } from "@/lib/legal/paths"
 
 export const metadata = {
@@ -17,7 +18,7 @@ export default function TermosDeUsoPage() {
         <header className="space-y-2 !mt-0">
           <h1>Termos de uso</h1>
           <p className="text-xs text-muted-foreground">
-            Última atualização: 17 de junho de 2026
+            Última atualização: 19 de junho de 2026
           </p>
         </header>
 
@@ -33,10 +34,16 @@ export default function TermosDeUsoPage() {
         <h2>1. O serviço</h2>
         <p>
           O Azulli é um software de gestão financeira voltado a MEIs e pequenas
-          empresas, incluindo lançamentos, importação de extratos, previsão de
-          caixa, assistente com IA e funcionalidades complementares. O serviço é
-          oferecido em modelo SaaS (software como serviço), com planos gratuitos
-          de trial e planos pagos.
+          empresas no Brasil, incluindo lançamentos, importação de extratos,
+          agenda financeira, metas e lembretes, notificações no app e por e-mail,
+          previsão de caixa, assistente com IA e funcionalidades complementares
+          (área do contador, exportações, etc.). O serviço é oferecido em modelo
+          SaaS (software como serviço), com planos de trial e planos pagos.
+        </p>
+        <p>
+          Datas de vencimento, calendário, gráficos e comunicações automáticas
+          utilizam o fuso horário de Brasília (America/Sao_Paulo), salvo
+          indicação em contrário na interface.
         </p>
 
         <h2>2. Cadastro e conta</h2>
@@ -105,7 +112,23 @@ export default function TermosDeUsoPage() {
           de negócio.
         </p>
 
-        <h2>7. Disponibilidade e suporte</h2>
+        <h2>7. Notificações e agenda</h2>
+        <p>
+          O Azulli pode exibir alertas no aplicativo (ícone de sino) sobre
+          lembretes, prazos de metas e avisos operacionais da plataforma, além
+          de e-mails automáticos opcionais (insights, cobrança, vencidos) nos
+          planos que incluem essa funcionalidade. Você pode ajustar preferências
+          de e-mail em Configurações. Notificações in-app de lembretes e metas
+          seguem critérios de urgência definidos pelo produto para evitar
+          excesso de alertas.
+        </p>
+        <p>
+          A agenda financeira consolida visualmente lançamentos pendentes,
+          lembretes e prazos de metas já cadastrados por você; não substitui
+          calendários externos nem garante lembretes fora do Azulli.
+        </p>
+
+        <h2>8. Disponibilidade e suporte</h2>
         <p>
           Buscamos alta disponibilidade, mas o serviço pode sofrer
           interrupções por manutenção, atualizações ou fatores fora do nosso
@@ -113,7 +136,7 @@ export default function TermosDeUsoPage() {
           (WhatsApp, e-mail).
         </p>
 
-        <h2>8. Limitação de responsabilidade</h2>
+        <h2>9. Limitação de responsabilidade</h2>
         <p>
           Na extensão permitida pela lei, o Azulli não se responsabiliza por
           perdas indiretas, lucros cessantes ou decisões tomadas com base em
@@ -122,7 +145,7 @@ export default function TermosDeUsoPage() {
           pelo plano contratado.
         </p>
 
-        <h2>9. Cancelamento e exclusão</h2>
+        <h2>10. Cancelamento e exclusão</h2>
         <p>
           Você pode cancelar a assinatura e solicitar exclusão da conta em{" "}
           <strong className="text-foreground">Configurações → Conta</strong>.
@@ -131,24 +154,24 @@ export default function TermosDeUsoPage() {
           Política de Privacidade.
         </p>
 
-        <h2>10. Alterações</h2>
+        <h2>11. Alterações</h2>
         <p>
           Podemos atualizar estes Termos. Mudanças relevantes serão comunicadas
           por e-mail ou aviso na plataforma. O uso continuado após a vigência
           das alterações constitui aceite.
         </p>
 
-        <h2>11. Legislação aplicável</h2>
+        <h2>12. Legislação aplicável</h2>
         <p>
           Estes Termos são regidos pelas leis da República Federativa do Brasil.
           Fica eleito o foro da comarca de Salvador/BA, salvo disposição legal
           específica em favor do consumidor.
         </p>
 
-        <h2>12. Contato</h2>
+        <h2>13. Contato</h2>
         <p>
           Dúvidas sobre estes Termos:{" "}
-          <a href="mailto:oi@azulli.app.br">oi@azulli.app.br</a>
+          <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
         </p>
       </LegalProse>
     </LegalLayoutShell>

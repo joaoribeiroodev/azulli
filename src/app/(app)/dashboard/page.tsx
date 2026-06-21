@@ -35,6 +35,7 @@ import {
 import { TrialEndingBanner } from "./_components/trial-ending-banner"
 import { DashboardTour } from "./_components/dashboard-tour"
 import { DashboardTipCard } from "./_components/dashboard-tip-card"
+import { AgendaUpcomingCard } from "./_components/agenda-upcoming-card"
 
 export const metadata = { title: "Dashboard — Azulli" }
 
@@ -80,6 +81,10 @@ export default async function DashboardPage() {
           <ExpensesByCategoryWrapper />
         </Suspense>
       </div>
+
+      <Suspense fallback={<Skeleton className="h-64" />}>
+        <AgendaUpcomingCard />
+      </Suspense>
 
       <ForecastChartSection />
 

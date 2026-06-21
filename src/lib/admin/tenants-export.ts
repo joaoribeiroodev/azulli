@@ -7,6 +7,7 @@ import {
   writeWorkbookBuffer,
 } from "@/lib/export/xlsx-format"
 import type { TenantDirectoryRow } from "@/lib/admin/tenant-directory"
+import { formatDateInBR } from "@/lib/utils/date"
 
 function tierLabel(tier: string): string {
   if (tier === "trial") return "Trial"
@@ -60,6 +61,6 @@ export function buildTenantsXlsxBuffer(rows: TenantDirectoryRow[]): Uint8Array {
 }
 
 export function tenantsExportFilename(date = new Date()): string {
-  const stamp = date.toISOString().slice(0, 10)
+  const stamp = formatDateInBR(date)
   return `azulli-empresas-${stamp}.xlsx`
 }

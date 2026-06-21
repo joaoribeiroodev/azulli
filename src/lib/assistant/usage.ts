@@ -1,16 +1,7 @@
 import "server-only"
 
 import { createClient } from "@/lib/supabase/server"
-
-/** Início do dia em BRT como ISO UTC (para filtro created_at). */
-function startOfTodayBRT(): string {
-  const now = new Date()
-  const br = new Date(
-    now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })
-  )
-  br.setHours(0, 0, 0, 0)
-  return br.toISOString()
-}
+import { startOfTodayBRTIso } from "@/lib/utils/date"
 
 /**
  * Mensagens do usuário no assistente hoje (tenant).
@@ -20,7 +11,7 @@ export async function countAssistantUserMessagesToday(
   tenantId: string
 ): Promise<number> {
   const supabase = await createClient()
-  const since = startOfTodayBRT()
+  const since = startOfTodayBRTIso()
 
   const { data: conversations } = await supabase
     .from("conversations")

@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js"
 import { createServiceRoleClient } from "@/lib/supabase/service-role"
 import { env } from "@/lib/env"
 import { formatBRL } from "@/lib/utils/currency"
-import { formatDateBR } from "@/lib/utils/date"
+import { formatDateBR, addDaysYMD, formatDateInBR, todayLocalBR } from "@/lib/utils/date"
 import { buildUnsubscribeUrl } from "./unsubscribe-token"
 import type { CollectionReminderItem, CollectionReminderPayload } from "./types"
 
@@ -26,8 +26,8 @@ export async function buildCollectionReminderPayload(
   const supabase = createServiceRoleClient()
   const baseUrl = input.appBaseUrl ?? env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "")
   const now = input.now ?? new Date()
-  const today = todayIso(now)
-  const remindDate = addDaysIso(today, REMIND_DAYS_BEFORE)
+  const today = input.now ? formatDateInBR(now) : todayLocalBR()
+  const remindDate = addDaysYMD(today, REMIND_DAYS_BEFORE)
 
   const rows = await loadIncomePending(supabase, input.tenantId, today, remindDate)
   if (rows.length === 0) return null
@@ -136,25 +136,12 @@ function toItem(
 }
 
 function daysOverdueLabel(dueIso: string, today: string): string {
-  const due = new Date(dueIso + "T12:00:00Z").getTime()
-  const t = new Date(today + "T12:00:00Z").getTime()
+  const [y1, m1, d1] = dueIso.slice(0, 10).split("-").map(Number)
+  const [y2, m2, d2] = today.slice(0, 10).split("-").map(Number)
+  const due = new Date(y1, m1 - 1, d1).getTime()
+  const t = new Date(y2, m2 - 1, d2).getTime()
   const days = Math.floor((t - due) / (1000 * 60 * 60 * 24))
   if (days <= 0) return "Vencido hoje"
   if (days === 1) return "Vencido há 1 dia"
   return `Vencido há ${days} dias`
-}
-
-function todayIso(now: Date): string {
-  return new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
-  )
-    .toISOString()
-    .slice(0, 10)
-}
-
-function addDaysIso(iso: string, days: number): string {
-  const [y, m, d] = iso.split("-").map(Number)
-  const date = new Date(Date.UTC(y, m - 1, d))
-  date.setUTCDate(date.getUTCDate() + days)
-  return date.toISOString().slice(0, 10)
 }

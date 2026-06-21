@@ -41,6 +41,7 @@ import {
 import { createTransactionAction } from "@/lib/financial/transactions.actions"
 import { maskBRL, parseBRL } from "@/lib/utils/currency"
 import { cn } from "@/lib/utils"
+import { todayLocalBR } from "@/lib/utils/date"
 
 import { CategoryCombobox } from "@/components/app/category-combobox"
 import { TransactionItemsBuilder } from "@/components/app/transaction-items-builder"
@@ -95,7 +96,7 @@ export function TransactionDialog({
     defaultValues: {
       type,
       amount: 0,
-      due_date: new Date().toISOString().slice(0, 10),
+      due_date: todayLocalBR(),
       description: "",
       customer_id: null,
       supplier_id: null,
@@ -150,7 +151,7 @@ export function TransactionDialog({
       form.reset({
         type,
         amount,
-        due_date: new Date().toISOString().slice(0, 10),
+        due_date: todayLocalBR(),
         description: defaultDescription,
         customer_id: type === "income" ? defaultCustomerId : null,
         supplier_id: type === "expense" ? defaultSupplierId : null,

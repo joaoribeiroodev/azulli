@@ -1,4 +1,5 @@
 import { Lightbulb } from "lucide-react"
+import { getWeekdayIndexBR, todayLocalBR } from "@/lib/utils/date"
 
 import { Card, CardContent } from "@/components/ui/card"
 
@@ -13,7 +14,7 @@ const TIPS = [
 ]
 
 export function DashboardTipCard() {
-  const tip = TIPS[new Date().getDay() % TIPS.length]
+  const tip = TIPS[getWeekdayIndexBR(todayLocalBR()) % TIPS.length]
 
   return (
     <Card className="border-brand/20 bg-brand-soft/30">

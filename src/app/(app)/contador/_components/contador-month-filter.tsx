@@ -4,6 +4,7 @@ import { useMemo, useTransition } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 
 import { Label } from "@/components/ui/label"
+import { todayLocalBR } from "@/lib/utils/date"
 import {
   Select,
   SelectContent,
@@ -23,14 +24,20 @@ export function ContadorMonthFilter() {
     const fmt = new Intl.DateTimeFormat("pt-BR", {
       month: "long",
       year: "numeric",
+      timeZone: "America/Sao_Paulo",
     })
-    const now = new Date()
+    const [y, m] = todayLocalBR().split("-").map(Number)
     const options: Array<{ value: string; label: string }> = []
     for (let i = 0; i < 24; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+      let month = m - i
+      let year = y
+      while (month < 1) {
+        month += 12
+        year -= 1
+      }
+      const value = `${year}-${String(month).padStart(2, "0")}`
       const label = fmt
-        .format(d)
+        .format(new Date(`${value}-15T12:00:00-03:00`))
         .replace(/^\w/, (c) => c.toUpperCase())
       options.push({ value, label })
     }

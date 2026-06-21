@@ -2,6 +2,7 @@ import Link from "next/link"
 
 import { LegalLayoutShell } from "@/components/legal/legal-layout-shell"
 import { LegalProse } from "@/components/legal/legal-prose"
+import { SUPPORT_EMAIL } from "@/lib/company/support-contact"
 import { LEGAL_PATHS } from "@/lib/legal/paths"
 
 export const metadata = {
@@ -17,7 +18,7 @@ export default function PoliticaDePrivacidadePage() {
         <header className="space-y-2 !mt-0">
           <h1>Política de privacidade</h1>
           <p className="text-xs text-muted-foreground">
-            Última atualização: 17 de junho de 2026
+            Última atualização: 19 de junho de 2026
           </p>
         </header>
 
@@ -33,7 +34,7 @@ export default function PoliticaDePrivacidadePage() {
         <p>
           Controlador: Azulli — gestão financeira para pequenas empresas.
           Contato do encarregado / canal LGPD:{" "}
-          <a href="mailto:oi@azulli.app.br">oi@azulli.app.br</a>.
+          <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
         </p>
 
         <h2>2. Dados que coletamos</h2>
@@ -51,8 +52,14 @@ export default function PoliticaDePrivacidadePage() {
           <li>
             <strong className="text-foreground">Operação:</strong> lançamentos
             financeiros, clientes, fornecedores, produtos, funcionários, metas,
-            lembretes, conversas com o assistente IA e arquivos importados (ex.:
-            OFX).
+            lembretes, eventos exibidos na agenda financeira, conversas com o
+            assistente IA e arquivos importados (ex.: OFX).
+          </li>
+          <li>
+            <strong className="text-foreground">Notificações:</strong> preferências
+            de e-mail, histórico de envios, leitura de avisos globais da
+            plataforma e dados necessários para alertas in-app (lembretes e
+            prazos de metas).
           </li>
           <li>
             <strong className="text-foreground">Pagamentos:</strong> status de
@@ -71,8 +78,16 @@ export default function PoliticaDePrivacidadePage() {
           <li>Prestar e melhorar o serviço contratado.</li>
           <li>Autenticar usuários e garantir segurança da conta.</li>
           <li>
-            Enviar comunicações transacionais (insights, lembretes de cobrança,
-            avisos de trial) conforme suas preferências.
+            Enviar comunicações transacionais e, quando ativadas, e-mails de
+            insights, cobrança e alertas de vencidos conforme suas preferências.
+          </li>
+          <li>
+            Exibir notificações in-app (sino) sobre lembretes, metas e avisos
+            operacionais do Azulli.
+          </li>
+          <li>
+            Calcular datas, vencimentos, gráficos e agenda no fuso horário de
+            Brasília (America/Sao_Paulo).
           </li>
           <li>Processar pagamentos e cumprir obrigações legais.</li>
           <li>
@@ -117,12 +132,14 @@ export default function PoliticaDePrivacidadePage() {
           de segurança e contratos adequados.
         </p>
 
-        <h2>6. Cookies</h2>
+        <h2>6. Cookies e armazenamento local</h2>
         <p>
-          Utilizamos cookies essenciais para manter sua sessão autenticada e
-          cookies de preferência (ex.: tema claro/escuro). Não utilizamos
-          cookies de publicidade comportamental. Você pode gerenciar cookies no
-          navegador; desabilitar cookies essenciais pode impedir o login.
+          Utilizamos cookies essenciais para manter sua sessão autenticada
+          (incluindo domínio compartilhado entre subdomínios use e trial),
+          cookies de preferência (ex.: tema claro/escuro) e, quando instalado,
+          cache do PWA. Não utilizamos cookies de publicidade comportamental.
+          Você pode gerenciar cookies no navegador; desabilitar cookies
+          essenciais pode impedir o login.
         </p>
 
         <h2>7. Retenção</h2>
@@ -156,7 +173,7 @@ export default function PoliticaDePrivacidadePage() {
         </ul>
         <p>
           Para outras solicitações, envie e-mail a{" "}
-          <a href="mailto:oi@azulli.app.br">oi@azulli.app.br</a>.
+          <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
         </p>
 
         <h2>9. Exclusão de conta</h2>

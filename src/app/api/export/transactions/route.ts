@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server"
 import * as XLSX from "xlsx"
 import { createClient } from "@/lib/supabase/server"
 import { applyTransactionDateRange } from "@/lib/financial/date-filters"
+import { todayLocalBR, utcToLocalDateBR } from "@/lib/utils/date"
 import {
   formatWorksheet,
   writeWorkbookBuffer,
@@ -130,7 +131,7 @@ export async function GET(request: NextRequest) {
             ? "Vencido"
             : "Pendente",
       Vencimento: r.due_date,
-      "Pago em": r.paid_at ? r.paid_at.slice(0, 10) : "",
+      "Pago em": r.paid_at ? utcToLocalDateBR(r.paid_at) : "",
     }
   })
 
@@ -210,7 +211,7 @@ function buildFilename(
   } else if (from || to) {
     parts.push(`${from ?? "inicio"}_a_${to ?? "hoje"}`)
   } else {
-    parts.push(new Date().toISOString().slice(0, 10))
+    parts.push(todayLocalBR())
   }
   return parts.join("_") + ".xlsx"
 }

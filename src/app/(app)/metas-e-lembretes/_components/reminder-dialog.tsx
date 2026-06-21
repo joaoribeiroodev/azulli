@@ -47,6 +47,7 @@ type Props =
       mode: "create"
       open: boolean
       onOpenChange: (open: boolean) => void
+      defaultDueDate?: string
       reminder?: never
     }
   | {
@@ -77,6 +78,8 @@ const PRIORITY_STYLES: Record<
 export function ReminderDialog(props: Props) {
   const { mode, open, onOpenChange } = props
   const reminder = mode === "edit" ? props.reminder : undefined
+  const defaultDueDate =
+    mode === "create" ? props.defaultDueDate ?? todayLocalBR() : todayLocalBR()
   const [isPending, startTransition] = useTransition()
 
   const form = useForm<CreateReminderInput>({
@@ -94,11 +97,11 @@ export function ReminderDialog(props: Props) {
       form.reset({
         title: reminder?.title ?? "",
         description: reminder?.description ?? "",
-        due_date: reminder?.due_date ?? todayLocalBR(),
+        due_date: reminder?.due_date ?? defaultDueDate,
         priority: reminder?.priority ?? "medium",
       })
     }
-  }, [open, reminder, form])
+  }, [open, reminder, form, defaultDueDate])
 
   function onSubmit(values: CreateReminderInput) {
     startTransition(async () => {

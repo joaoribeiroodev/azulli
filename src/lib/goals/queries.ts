@@ -1,7 +1,7 @@
 import "server-only"
 import { cache } from "react"
 import { createClient } from "@/lib/supabase/server"
-import { utcToLocalDateBR } from "@/lib/utils/date"
+import { endOfDayBRTIso, startOfDayBRTIso, utcToLocalDateBR } from "@/lib/utils/date"
 import type { GoalKind } from "@/lib/goals/schemas"
 
 export type GoalRow = {
@@ -56,8 +56,8 @@ export const listGoals = cache(async (opts?: {
     .select("type, amount, paid_at")
     .eq("status", "paid")
     .not("paid_at", "is", null)
-    .gte("paid_at", `${minStart}T00:00:00`)
-    .lte("paid_at", `${maxEnd}T23:59:59.999`)
+    .gte("paid_at", startOfDayBRTIso(minStart))
+    .lte("paid_at", endOfDayBRTIso(maxEnd))
 
   const txs = transactions ?? []
 

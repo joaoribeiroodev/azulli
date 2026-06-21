@@ -55,11 +55,12 @@ import { formatDateBR } from "@/lib/utils/date"
 import {
   parseOfxAction,
   confirmImportAction,
+  cancelImportAction,
   discardImportBatchAction,
   type ParseOfxResult,
 } from "@/lib/imports/actions"
 
-type Step = "upload" | "review"
+type Step = "upload" | "review" | "done"
 
 type EditableRow = {
   rowId: string
@@ -81,7 +82,11 @@ export function ImportWizard() {
   const [rows, setRows] = useState<EditableRow[]>([])
   const [isParsing, startParse] = useTransition()
   const [isConfirming, startConfirm] = useTransition()
+  const [isCancelling, startCancel] = useTransition()
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [cancelReviewOpen, setCancelReviewOpen] = useState(false)
+  const [cancelDoneOpen, setCancelDoneOpen] = useState(false)
+  const [importedCount, setImportedCount] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
@@ -144,8 +149,41 @@ export function ImportWizard() {
         toast.error(result.error)
         return
       }
+      setImportedCount(result.data.imported)
       toast.success(
         `${result.data.imported} lançamento${result.data.imported === 1 ? "" : "s"} importado${result.data.imported === 1 ? "" : "s"}! 🎉`
+      )
+      setStep("done")
+    })
+  }
+
+  function handleCancelReview() {
+    if (!parseData) return
+    setCancelReviewOpen(false)
+
+    startCancel(async () => {
+      const result = await discardImportBatchAction(parseData.batchId)
+      if (!result.success) {
+        toast.error(result.error)
+        return
+      }
+      toast.success("Importação cancelada.")
+      router.push("/lancamentos")
+    })
+  }
+
+  function handleCancelDone() {
+    if (!parseData) return
+    setCancelDoneOpen(false)
+
+    startCancel(async () => {
+      const result = await cancelImportAction(parseData.batchId)
+      if (!result.success) {
+        toast.error(result.error)
+        return
+      }
+      toast.success(
+        `${result.data.removed} lançamento${result.data.removed === 1 ? "" : "s"} removido${result.data.removed === 1 ? "" : "s"}.`
       )
       router.push("/lancamentos")
     })
@@ -170,6 +208,44 @@ export function ImportWizard() {
     )
   }
 
+  if (step === "done" && parseData) {
+    return (
+      <>
+        <DoneStep
+          fileName={parseData.statement.fileName}
+          importedCount={importedCount}
+          isCancelling={isCancelling}
+          onCancel={() => setCancelDoneOpen(true)}
+          onGoToTransactions={() => router.push("/lancamentos")}
+        />
+        <AlertDialog open={cancelDoneOpen} onOpenChange={setCancelDoneOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Cancelar importação?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Vamos remover os {importedCount} lançamento
+                {importedCount === 1 ? "" : "s"} criados por esta importação.
+                Essa ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isCancelling}>
+                Voltar
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleCancelDone}
+                disabled={isCancelling}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isCancelling ? "Cancelando…" : "Cancelar importação"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </>
+    )
+  }
+
   return (
     <>
       <ReviewStep
@@ -177,7 +253,9 @@ export function ImportWizard() {
         rows={rows}
         setRows={setRows}
         isConfirming={isConfirming}
+        isCancelling={isCancelling}
         onConfirm={() => setConfirmOpen(true)}
+        onCancel={() => setCancelReviewOpen(true)}
         onStartOver={handleStartOver}
       />
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
@@ -194,6 +272,29 @@ export function ImportWizard() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirm}>
               Importar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={cancelReviewOpen} onOpenChange={setCancelReviewOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar importação?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Nenhum lançamento será criado. Você pode importar outro extrato
+              depois.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCancelling}>
+              Continuar revisando
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelReview}
+              disabled={isCancelling}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isCancelling ? "Cancelando…" : "Cancelar importação"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -323,14 +424,18 @@ function ReviewStep({
   rows,
   setRows,
   isConfirming,
+  isCancelling,
   onConfirm,
+  onCancel,
   onStartOver,
 }: {
   parseData: ParseOfxResult
   rows: EditableRow[]
   setRows: (rows: EditableRow[]) => void
   isConfirming: boolean
+  isCancelling: boolean
   onConfirm: () => void
+  onCancel: () => void
   onStartOver: () => void
 }) {
   const { statement } = parseData
@@ -589,16 +694,25 @@ function ReviewStep({
 
       {/* Footer ações */}
       <div className="flex items-center justify-between gap-3 flex-wrap sticky bottom-4 bg-background/95 backdrop-blur p-4 rounded-xl border shadow-sm">
-        <Button
-          variant="ghost"
-          onClick={onStartOver}
-          disabled={isConfirming}
-        >
-          Trocar arquivo
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={onCancel}
+            disabled={isConfirming || isCancelling}
+          >
+            Cancelar importação
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={onStartOver}
+            disabled={isConfirming || isCancelling}
+          >
+            Trocar arquivo
+          </Button>
+        </div>
         <Button
           onClick={onConfirm}
-          disabled={selectedCount === 0 || isConfirming}
+          disabled={selectedCount === 0 || isConfirming || isCancelling}
         >
           {isConfirming ? (
             <>
@@ -620,6 +734,67 @@ function ReviewStep({
         transaction={detailRow}
       />
     </div>
+  )
+}
+
+function DoneStep({
+  fileName,
+  importedCount,
+  isCancelling,
+  onCancel,
+  onGoToTransactions,
+}: {
+  fileName: string
+  importedCount: number
+  isCancelling: boolean
+  onCancel: () => void
+  onGoToTransactions: () => void
+}) {
+  return (
+    <Card>
+      <CardContent className="p-8 sm:p-12 text-center space-y-6">
+        <div className="mx-auto h-14 w-14 rounded-full bg-success-soft flex items-center justify-center">
+          <CheckCircle2 className="h-7 w-7 text-success-ink" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-display font-bold text-brand-ink">
+            Importação concluída
+          </h2>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            {importedCount} lançamento{importedCount === 1 ? "" : "s"} de{" "}
+            <span className="font-medium text-foreground break-all">
+              {fileName}
+            </span>{" "}
+            {importedCount === 1 ? "foi adicionado" : "foram adicionados"} como
+            pagos.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Button
+            className="w-full sm:w-auto bg-brand hover:bg-brand-hover"
+            onClick={onGoToTransactions}
+            disabled={isCancelling}
+          >
+            Ver lançamentos
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full sm:w-auto"
+            onClick={onCancel}
+            disabled={isCancelling}
+          >
+            {isCancelling ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Cancelando…
+              </>
+            ) : (
+              "Cancelar importação"
+            )}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   )
 }
 

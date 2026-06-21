@@ -26,6 +26,7 @@ async function getCurrentTenantId(): Promise<string | null> {
 function revalidateReminderRoutes() {
   revalidatePath("/metas-e-lembretes")
   revalidatePath("/dashboard")
+  revalidatePath("/agenda")
 }
 
 export async function createReminderAction(

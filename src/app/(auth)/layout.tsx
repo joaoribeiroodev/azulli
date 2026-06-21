@@ -1,19 +1,31 @@
 import Link from "next/link"
+import { headers } from "next/headers"
 
+import { isTrialHost } from "@/lib/app/domain-hosts"
+import { getLoginUrl } from "@/lib/app/public-urls"
 import { LEGAL_PATHS } from "@/lib/legal/paths"
 
-export default function AuthLayout({
+export default async function AuthLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const host = (await headers()).get("host") ?? ""
+  const trialHost = isTrialHost(host)
+  const logoHref = trialHost ? "/register" : "/"
+
   return (
     <main className="min-h-screen flex flex-col bg-surface">
       <header className="px-6 py-5">
         <Link
-          href="/"
+          href={logoHref}
           className="text-xl font-display font-bold text-brand-ink"
         >
           Azulli
         </Link>
+        {trialHost ? (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Trial grátis de 7 dias — sem cartão de crédito
+          </p>
+        ) : null}
       </header>
 
       <div className="flex-1 flex items-center justify-center px-4 pb-12">
@@ -31,6 +43,11 @@ export default function AuthLayout({
           <Link href={LEGAL_PATHS.privacy} className="hover:text-brand transition-colors">
             Política de privacidade
           </Link>
+          {trialHost ? (
+            <Link href={getLoginUrl()} className="hover:text-brand transition-colors">
+              Já tenho conta
+            </Link>
+          ) : null}
         </p>
       </footer>
     </main>

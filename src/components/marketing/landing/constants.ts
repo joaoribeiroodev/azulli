@@ -8,6 +8,8 @@ import {
   Upload,
   Wallet,
 } from "lucide-react"
+import { getLoginUrl, getRegisterUrl } from "@/lib/app/public-urls"
+
 const WHATSAPP_NUMBER = "5571991624162"
 
 const WHATSAPP_DEFAULT_MESSAGE =
@@ -18,8 +20,8 @@ export function buildWhatsAppUrl(message = WHATSAPP_DEFAULT_MESSAGE): string {
 }
 
 export const LANDING_LINKS = {
-  register: "/register",
-  login: "/login",
+  register: getRegisterUrl(),
+  login: getLoginUrl(),
   whatsapp: buildWhatsAppUrl(),
   instagram:
     "https://www.instagram.com/useazulli?igsh=eXVpYmxhOWx5YzJn&utm_source=qr",

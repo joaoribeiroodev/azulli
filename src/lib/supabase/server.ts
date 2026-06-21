@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr"
 import { cookies } from "next/headers"
+import { mergeSupabaseCookieOptions } from "@/lib/supabase/cookie-options"
 import { env } from "@/lib/env"
 
 export async function createClient() {
@@ -16,7 +17,11 @@ export async function createClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(
+                name,
+                value,
+                mergeSupabaseCookieOptions(options)
+              )
             )
           } catch {
             // Chamado a partir de um Server Component — ignorável

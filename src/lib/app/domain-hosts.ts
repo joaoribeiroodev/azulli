@@ -10,6 +10,8 @@ const ADMIN_HOSTS = new Set(["admin.azulli.app.br", "www.admin.azulli.app.br"])
 
 const FINDER_HOSTS = new Set(["finder.azulli.app.br", "www.finder.azulli.app.br"])
 
+const TRIAL_HOSTS = new Set(["trial.azulli.app.br", "www.trial.azulli.app.br"])
+
 export function getAppHostnameFromEnv(): string {
   const raw = process.env.NEXT_PUBLIC_APP_URL
   if (raw) {
@@ -46,6 +48,18 @@ export function getFinderHostnameFromEnv(): string {
   return "finder.azulli.app.br"
 }
 
+export function getTrialHostnameFromEnv(): string {
+  const raw = process.env.NEXT_PUBLIC_TRIAL_URL
+  if (raw) {
+    try {
+      return new URL(raw).hostname.toLowerCase()
+    } catch {
+      /* ignore */
+    }
+  }
+  return "trial.azulli.app.br"
+}
+
 function normalizeHost(hostname: string): string {
   return hostname.toLowerCase().split(":")[0]
 }
@@ -68,6 +82,13 @@ export function isFinderHost(hostname: string): boolean {
   return host === finderHost || host === `www.${finderHost}`
 }
 
+export function isTrialHost(hostname: string): boolean {
+  const host = normalizeHost(hostname)
+  if (TRIAL_HOSTS.has(host)) return true
+  const trialHost = getTrialHostnameFromEnv()
+  return host === trialHost || host === `www.${trialHost}`
+}
+
 export function isAppProductHost(hostname: string): boolean {
   const host = normalizeHost(hostname)
   if (host === "localhost" || host === "127.0.0.1") {
@@ -76,6 +97,7 @@ export function isAppProductHost(hostname: string): boolean {
   if (isMarketingHost(host)) return false
   if (isAdminHost(host)) return false
   if (isFinderHost(host)) return false
+  if (isTrialHost(host)) return false
   if (APP_PRODUCT_HOSTS.has(host)) return true
   const appHost = getAppHostnameFromEnv()
   return host === appHost || host === `www.${appHost}`

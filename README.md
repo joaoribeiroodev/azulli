@@ -33,6 +33,7 @@ Tudo roda em **um único deploy** na Vercel. O roteamento por host é feito em `
 | `use.azulli.app.br` | App do cliente (assinantes) | `/dashboard`, `/lancamentos`, `/billing`, … |
 | `admin.azulli.app.br` | Painel operacional interno | `/admin`, `/admin/announcements` |
 | `finder.azulli.app.br` | Prospecção comercial (SDR/closer) | `/finder/dashboard`, `/finder/leads`, … |
+| `trial.azulli.app.br` | Cadastro trial 7 dias (captação) | `/register` → onboarding → app |
 
 Em **localhost**, todas as superfícies ficam em `http://localhost:3000` (sem separação por subdomínio).
 
@@ -238,6 +239,7 @@ Copie [`.env.example`](.env.example) para `.env.local`. Resumo das principais:
 | `NEXT_PUBLIC_APP_URL` | Sim | Ex.: `https://use.azulli.app.br` |
 | `NEXT_PUBLIC_ADMIN_URL` | Admin | Ex.: `https://admin.azulli.app.br` |
 | `NEXT_PUBLIC_FINDER_URL` | Finder | Ex.: `https://finder.azulli.app.br` |
+| `NEXT_PUBLIC_TRIAL_URL` | Captação trial | Ex.: `https://trial.azulli.app.br` |
 | `ASAAS_API_KEY` | Billing | API Asaas (sem `$` no valor) |
 | `ASAAS_BASE_URL` | Billing | Sandbox ou produção |
 | `ASAAS_WEBHOOK_TOKEN` | Billing | Token do webhook Asaas |
@@ -332,6 +334,7 @@ Guias passo a passo:
 | Documento | Conteúdo |
 |-----------|----------|
 | [docs/ADMIN_SETUP.md](docs/ADMIN_SETUP.md) | Painel admin e avisos |
+| [docs/TRIAL_SUBDOMAIN.md](docs/TRIAL_SUBDOMAIN.md) | Subdomínio de cadastro trial |
 | [docs/FINDER_INTEGRATION_PLAN.md](docs/FINDER_INTEGRATION_PLAN.md) | Arquitetura do Finder |
 | [docs/FINDER_DEPLOY.md](docs/FINDER_DEPLOY.md) | Deploy do Finder |
 | [docs/VERCEL_ENV.md](docs/VERCEL_ENV.md) | Variáveis na Vercel |

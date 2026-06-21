@@ -37,14 +37,14 @@ export function LandingHeader() {
               asChild
               className="h-9 text-sm font-medium text-muted-foreground hover:text-brand-ink"
             >
-              <Link href={LANDING_LINKS.login}>Entrar</Link>
-            </Button>
-            <Button
-              size="sm"
-              asChild
-              className="h-9 px-4 text-sm font-medium bg-brand hover:bg-brand-hover text-primary-foreground shadow-none"
-            >
-              <Link href={LANDING_LINKS.register}>Trial grátis</Link>
+            <a href={LANDING_LINKS.login}>Entrar</a>
+          </Button>
+          <Button
+            size="sm"
+            asChild
+            className="h-9 px-4 text-sm font-medium bg-brand hover:bg-brand-hover text-primary-foreground shadow-none"
+          >
+            <a href={LANDING_LINKS.register}>Trial grátis</a>
             </Button>
           </div>
         </nav>

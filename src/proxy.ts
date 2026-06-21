@@ -1,5 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { isAppProductHost, isAdminHost, isFinderHost } from "@/lib/app/domain-hosts"
+import {
+  isAppProductHost,
+  isAdminHost,
+  isFinderHost,
+  isTrialHost,
+} from "@/lib/app/domain-hosts"
+import { getAppPath } from "@/lib/app/public-urls"
 import { updateSession } from "@/lib/supabase/middleware"
 import { isMissingDbColumn } from "@/lib/onboarding/db"
 
@@ -44,11 +50,40 @@ const ALWAYS_ALLOWED_FOR_AUTHED = [
 
 const FINDER_STATIC_PREFIX = "/finder"
 
+const TRIAL_PUBLIC_PREFIXES = [
+  "/register",
+  "/login",
+  "/forgot-password",
+  "/reset-password",
+  "/auth/",
+  "/termos-de-uso",
+  "/politica-de-privacidade",
+]
+
+const TRIAL_AUTHED_PREFIXES = ["/onboarding", "/billing"]
+
+function isTrialPublicPath(pathname: string): boolean {
+  return TRIAL_PUBLIC_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p)
+  )
+}
+
+function isTrialAuthedPath(pathname: string): boolean {
+  return TRIAL_AUTHED_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`)
+  )
+}
+
+function redirectToApp(pathname: string): NextResponse {
+  return NextResponse.redirect(getAppPath(pathname))
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const hostname = request.nextUrl.hostname
   const isAdmin = isAdminHost(hostname)
   const isFinder = isFinderHost(hostname)
+  const isTrial = isTrialHost(hostname)
 
   const isPublicApi = PUBLIC_API_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
@@ -89,6 +124,68 @@ export async function proxy(request: NextRequest) {
   }
 
   const { response, user } = await updateSession(request)
+
+  // Subdomínio trial: foco em cadastro + onboarding; app completo em use.*
+  if (isTrial) {
+    if (
+      pathname.startsWith("/_next") ||
+      pathname === "/favicon.ico" ||
+      pathname.startsWith("/api/")
+    ) {
+      return response
+    }
+
+    if (pathname === "/") {
+      const url = request.nextUrl.clone()
+      if (!user) {
+        url.pathname = "/register"
+        return NextResponse.redirect(url)
+      }
+      const onboardingDone = await fetchOnboardingComplete(request)
+      if (!onboardingDone) {
+        url.pathname = "/onboarding"
+        return NextResponse.redirect(url)
+      }
+      return redirectToApp("/dashboard")
+    }
+
+    if (user) {
+      const onboardingDone = await fetchOnboardingComplete(request)
+
+      if (
+        pathname === "/register" ||
+        pathname === "/login" ||
+        pathname === "/forgot-password"
+      ) {
+        const url = request.nextUrl.clone()
+        url.pathname = onboardingDone ? "/dashboard" : "/onboarding"
+        if (onboardingDone) {
+          return redirectToApp("/dashboard")
+        }
+        return NextResponse.redirect(url)
+      }
+
+      if (onboardingDone && !isTrialAuthedPath(pathname)) {
+        return redirectToApp(pathname)
+      }
+
+      if (
+        !onboardingDone &&
+        !isTrialAuthedPath(pathname) &&
+        !isTrialPublicPath(pathname)
+      ) {
+        const url = request.nextUrl.clone()
+        url.pathname = "/onboarding"
+        return NextResponse.redirect(url)
+      }
+    } else if (!isTrialPublicPath(pathname)) {
+      const url = request.nextUrl.clone()
+      url.pathname = "/register"
+      return NextResponse.redirect(url)
+    }
+
+    return response
+  }
 
   // Subdomínio admin: raiz → painel admin
   if (isAdmin && pathname === "/") {

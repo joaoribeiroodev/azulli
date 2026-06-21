@@ -107,10 +107,12 @@ export function LandingPrimaryCta({
     />
   )
 
-  if (external) {
+  const isExternal = external ?? /^https?:\/\//i.test(href)
+
+  if (isExternal) {
     return (
       <Button asChild size="lg" className={cn(primaryCtaClass, className)}>
-        <a href={href} target="_blank" rel="noopener noreferrer">
+        <a href={href} rel="noopener noreferrer">
           {children}
           {arrow}
         </a>

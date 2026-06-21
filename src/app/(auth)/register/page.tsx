@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import {
   Card,
@@ -7,15 +8,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { isTrialHost } from "@/lib/app/domain-hosts"
+import { getLoginUrl } from "@/lib/app/public-urls"
 import { createClient } from "@/lib/supabase/server"
 import { isOnboardingComplete } from "@/lib/onboarding/queries"
 import { RegisterForm } from "./register-form"
 
 export const metadata = {
-  title: "Criar conta — Azulli",
+  title: "Trial grátis 7 dias — Azulli",
+  description:
+    "Crie sua conta e teste o Azulli por 7 dias, com tudo do plano Empresarial. Sem cartão de crédito.",
 }
 
 export default async function RegisterPage() {
+  const host = (await headers()).get("host") ?? ""
+  const trialHost = isTrialHost(host)
+
   const supabase = await createClient()
   const {
     data: { user },
@@ -28,10 +36,14 @@ export default async function RegisterPage() {
     <Card className="shadow-sm">
       <CardHeader className="space-y-1">
         <CardTitle className="text-2xl font-display">
-          Comece de graça por 7 dias 🚀
+          {trialHost
+            ? "Seu trial de 7 dias começa aqui 🚀"
+            : "Comece de graça por 7 dias 🚀"}
         </CardTitle>
         <CardDescription>
-          Sem cartão de crédito. Sem complicação.
+          {trialHost
+            ? "Cadastro em menos de 1 minuto. IA, previsão de caixa e e-mails automáticos liberados no trial."
+            : "Sem cartão de crédito. Sem complicação."}
         </CardDescription>
       </CardHeader>
 
@@ -41,7 +53,7 @@ export default async function RegisterPage() {
         <p className="text-sm text-center text-muted-foreground">
           Já tem conta?{" "}
           <Link
-            href="/login"
+            href={trialHost ? getLoginUrl() : "/login"}
             className="text-brand hover:text-brand-hover font-medium"
           >
             Entrar

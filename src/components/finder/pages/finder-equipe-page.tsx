@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
-import { useFinderContext, useFinderPageMeta } from "@/components/finder/finder-context"
+import { useFinderPageMeta } from "@/components/finder/finder-context"
+import { useFinderPermissions } from "@/components/finder/use-finder-permissions"
 import { EmptyState } from "@/components/finder/ui/empty-state"
 import { LoadingState } from "@/components/finder/ui/loading-state"
 import { Button } from "@/components/ui/button"
@@ -35,6 +36,11 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { USER_ROLES } from "@/lib/finder/constants"
+import {
+  FINDER_ROLE_META,
+  getFinderRoleLabel,
+  type FinderRole,
+} from "@/lib/finder/roles"
 import { fmtDate } from "@/lib/finder/format"
 import { finderClient } from "@/lib/finder/client"
 import type { User } from "@/lib/finder/types"
@@ -45,8 +51,7 @@ export function FinderEquipePage() {
     subtitle: "Usuários internos do time comercial",
   })
 
-  const { user: me } = useFinderContext()
-  const isAdmin = me?.role === "admin"
+  const { canManageUsers } = useFinderPermissions()
 
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
@@ -58,6 +63,7 @@ export function FinderEquipePage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [role, setRole] = useState("sdr")
+  const selectedRoleMeta = FINDER_ROLE_META[role as FinderRole]
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -115,7 +121,7 @@ export function FinderEquipePage() {
         <p className="text-sm text-muted-foreground">
           Membros do time que têm acesso ao Finder.
         </p>
-        {isAdmin ? (
+        {canManageUsers ? (
           <Button
             type="button"
             className="bg-brand hover:bg-brand-hover"
@@ -148,11 +154,11 @@ export function FinderEquipePage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Usuário</TableHead>
-                <TableHead>Role</TableHead>
+                <TableHead>Função</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Último login</TableHead>
                 <TableHead>Criado</TableHead>
-                {isAdmin ? <TableHead /> : null}
+                {canManageUsers ? <TableHead /> : null}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -163,8 +169,8 @@ export function FinderEquipePage() {
                     <div className="text-xs text-muted-foreground">{u.email}</div>
                   </TableCell>
                   <TableCell>
-                    <span className="text-xs px-2 py-0.5 rounded-md bg-muted uppercase font-semibold">
-                      {u.role}
+                    <span className="text-xs px-2 py-0.5 rounded-md bg-muted font-semibold">
+                      {getFinderRoleLabel(u.role)}
                     </span>
                   </TableCell>
                   <TableCell>
@@ -184,7 +190,7 @@ export function FinderEquipePage() {
                   <TableCell className="text-xs text-muted-foreground">
                     {fmtDate(u.created_at)}
                   </TableCell>
-                  {isAdmin ? (
+                  {canManageUsers ? (
                     <TableCell className="text-right">
                       <Button
                         type="button"
@@ -233,7 +239,7 @@ export function FinderEquipePage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="nu-role">Role</Label>
+              <Label htmlFor="nu-role">Função no time</Label>
               <Select value={role} onValueChange={setRole}>
                 <SelectTrigger id="nu-role">
                   <SelectValue />
@@ -241,11 +247,16 @@ export function FinderEquipePage() {
                 <SelectContent>
                   {USER_ROLES.map((r) => (
                     <SelectItem key={r} value={r}>
-                      {r.toUpperCase()}
+                      {FINDER_ROLE_META[r].label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {selectedRoleMeta ? (
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {selectedRoleMeta.description}
+                </p>
+              ) : null}
             </div>
             {formError ? (
               <p className="text-xs text-destructive bg-destructive/10 border border-destructive/20 px-3 py-2 rounded">

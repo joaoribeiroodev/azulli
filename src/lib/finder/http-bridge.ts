@@ -2,6 +2,10 @@ import { createRequire } from "node:module"
 import { NextResponse } from "next/server"
 
 import { convertFinderLead } from "@/lib/finder/convert-lead"
+import {
+  hasFinderPermission,
+  type FinderPermission,
+} from "@/lib/finder/roles"
 
 const require = createRequire(import.meta.url)
 const SERVER = "./server"
@@ -162,12 +166,6 @@ function getAuthMiddleware() {
   return load<{ requireAuth: RouteHandler }>("middleware/auth.js").requireAuth
 }
 
-function getRoleMiddleware(...roles: string[]) {
-  return load<(...roles: string[]) => RouteHandler>("middleware/requireRole.js")(
-    ...roles
-  )
-}
-
 async function withAuth(
   req: MockReq,
   res: MockRes,
@@ -190,14 +188,28 @@ async function withAuth(
   }
 }
 
-async function withRole(
+function permissionMiddleware(permission: FinderPermission): RouteHandler {
+  return (req, res, next) => {
+    if (!req.auth) {
+      res.status(401).json({ erro: "Não autenticado" })
+      return
+    }
+    if (!hasFinderPermission(req.auth.role, permission)) {
+      res.status(403).json({ erro: "Sem permissão para esta ação." })
+      return
+    }
+    next()
+  }
+}
+
+async function withPermission(
   req: MockReq,
   res: MockRes,
-  roles: string[],
+  permission: FinderPermission,
   handler: RouteHandler
 ): Promise<NextResponse> {
   const authMw = getAuthMiddleware()
-  const roleMw = getRoleMiddleware(...roles)
+  const permMw = permissionMiddleware(permission)
 
   try {
     await runHandler(authMw, req, res, { middleware: true })
@@ -205,10 +217,10 @@ async function withRole(
       return NextResponse.json(res.body, { status: res.statusCode })
     }
 
-    const roleRes = createMockRes()
-    await runHandler(roleMw, req, roleRes, { middleware: true })
-    if (roleRes.body !== null) {
-      return NextResponse.json(roleRes.body, { status: roleRes.statusCode })
+    const permRes = createMockRes()
+    await runHandler(permMw, req, permRes, { middleware: true })
+    if (permRes.body !== null) {
+      return NextResponse.json(permRes.body, { status: permRes.statusCode })
     }
 
     const inner = createMockRes()
@@ -339,14 +351,14 @@ async function dispatchFinderApi(
       }>("controllers/userController.js")
 
       if (!id && request.method === "GET") {
-        return withAuth(req, res, userCtrl.list)
+        return withPermission(req, res, "leads.read", userCtrl.list)
       }
       if (!id && request.method === "POST") {
-        return withRole(req, res, ["admin"], userCtrl.create)
+        return withPermission(req, res, "users.manage", userCtrl.create)
       }
       if (id && request.method === "PATCH") {
         req.params = { id }
-        return withRole(req, res, ["admin"], userCtrl.update)
+        return withPermission(req, res, "users.manage", userCtrl.update)
       }
     }
 
@@ -356,10 +368,10 @@ async function dispatchFinderApi(
       )
 
       if (request.method === "POST") {
-        return withAuth(req, res, searchCtrl.buscar)
+        return withPermission(req, res, "searches.run", searchCtrl.buscar)
       }
       if (request.method === "GET") {
-        return withAuth(req, res, searchCtrl.listar)
+        return withPermission(req, res, "leads.read", searchCtrl.listar)
       }
     }
 
@@ -367,46 +379,46 @@ async function dispatchFinderApi(
       const leadCtrl = load<Record<string, RouteHandler>>("controllers/leadController.js")
 
       if (slug[1] === "stats" && request.method === "GET") {
-        return withAuth(req, res, leadCtrl.stats)
+        return withPermission(req, res, "leads.read", leadCtrl.stats)
       }
       if (!id && request.method === "GET") {
-        return withAuth(req, res, leadCtrl.listar)
+        return withPermission(req, res, "leads.read", leadCtrl.listar)
       }
       if (id && !action && request.method === "GET") {
         req.params = { id }
-        return withAuth(req, res, leadCtrl.obter)
+        return withPermission(req, res, "leads.read", leadCtrl.obter)
       }
       if (id && !action && request.method === "PATCH") {
         req.params = { id }
-        return withAuth(req, res, leadCtrl.atualizar)
+        return withPermission(req, res, "leads.write", leadCtrl.atualizar)
       }
       if (id && !action && request.method === "DELETE") {
         req.params = { id }
-        return withRole(req, res, ["admin"], leadCtrl.excluir)
+        return withPermission(req, res, "leads.delete", leadCtrl.excluir)
       }
       if (id && action === "status" && request.method === "POST") {
         req.params = { id }
-        return withAuth(req, res, leadCtrl.trocarStatus)
+        return withPermission(req, res, "leads.write", leadCtrl.trocarStatus)
       }
       if (id && action === "atribuir" && request.method === "POST") {
         req.params = { id }
-        return withAuth(req, res, leadCtrl.atribuir)
+        return withPermission(req, res, "leads.write", leadCtrl.atribuir)
       }
       if (id && action === "pegar" && request.method === "POST") {
         req.params = { id }
-        return withAuth(req, res, leadCtrl.pegarParaMim)
+        return withPermission(req, res, "leads.write", leadCtrl.pegarParaMim)
       }
       if (id && action === "enriquecer" && request.method === "POST") {
         req.params = { id }
-        return withAuth(req, res, leadCtrl.reEnriquecer)
+        return withPermission(req, res, "leads.write", leadCtrl.reEnriquecer)
       }
       if (id && action === "pitch" && request.method === "POST") {
         req.params = { id }
-        return withAuth(req, res, leadCtrl.regerarPitch)
+        return withPermission(req, res, "leads.write", leadCtrl.regerarPitch)
       }
       if (id && action === "converter" && request.method === "POST") {
         req.params = { id }
-        return withRole(req, res, ["admin", "closer"], leadCtrl.converter)
+        return withPermission(req, res, "leads.convert", leadCtrl.converter)
       }
     }
 

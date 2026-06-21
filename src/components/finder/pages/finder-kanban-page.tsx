@@ -5,6 +5,8 @@ import Link from "next/link"
 import { toast } from "sonner"
 
 import { useFinderPageMeta } from "@/components/finder/finder-context"
+import { useFinderPermissions } from "@/components/finder/use-finder-permissions"
+import { FinderReadOnlyNotice } from "@/components/finder/ui/read-only-notice"
 import { IcpBadge } from "@/components/finder/ui/icp-badge"
 import { LeadStatusBadge } from "@/components/finder/ui/lead-status-badge"
 import { LoadingState } from "@/components/finder/ui/loading-state"
@@ -33,6 +35,8 @@ export function FinderKanbanPage() {
     title: "Pipeline (Kanban)",
     subtitle: "Arraste leads entre as etapas do pipeline comercial",
   })
+
+  const { canWriteLeads, isReadOnly } = useFinderPermissions()
 
   const [q, setQ] = useState("")
   const [uf, setUf] = useState("")
@@ -73,7 +77,7 @@ export function FinderKanbanPage() {
   }, [loadBoard])
 
   async function handleDrop(targetStatus: LeadStatus) {
-    if (!draggedId) return
+    if (!draggedId || !canWriteLeads) return
     const id = draggedId
     setDraggedId(null)
     setDragOver(null)
@@ -88,6 +92,7 @@ export function FinderKanbanPage() {
 
   return (
     <div className="space-y-4">
+      {isReadOnly ? <FinderReadOnlyNotice /> : null}
       <Card>
         <CardContent className="pt-4 flex flex-wrap items-center gap-3">
           <Input
@@ -141,15 +146,23 @@ export function FinderKanbanPage() {
                   "flex-none w-[min(85vw,280px)] xl:w-auto snap-start rounded-xl border bg-muted/50 p-3 flex flex-col gap-2 min-h-[min(60vh,420px)]",
                   dragOver === col.id && "bg-brand/10 border-brand"
                 )}
-                onDragOver={(e) => {
-                  e.preventDefault()
-                  setDragOver(col.id)
-                }}
-                onDragLeave={() => setDragOver(null)}
-                onDrop={(e) => {
-                  e.preventDefault()
-                  handleDrop(col.id)
-                }}
+                onDragOver={
+                  canWriteLeads
+                    ? (e) => {
+                        e.preventDefault()
+                        setDragOver(col.id)
+                      }
+                    : undefined
+                }
+                onDragLeave={canWriteLeads ? () => setDragOver(null) : undefined}
+                onDrop={
+                  canWriteLeads
+                    ? (e) => {
+                        e.preventDefault()
+                        handleDrop(col.id)
+                      }
+                    : undefined
+                }
               >
                 <div className="flex items-center justify-between font-bold text-sm pb-2 border-b mb-1">
                   <div className="flex items-center gap-2">
@@ -165,14 +178,23 @@ export function FinderKanbanPage() {
                     cards.map((lead) => (
                       <div
                         key={lead.id}
-                        draggable
-                        onDragStart={() => setDraggedId(lead.id)}
-                        onDragEnd={() => {
-                          setDraggedId(null)
-                          setDragOver(null)
-                        }}
+                        draggable={canWriteLeads}
+                        onDragStart={
+                          canWriteLeads ? () => setDraggedId(lead.id) : undefined
+                        }
+                        onDragEnd={
+                          canWriteLeads
+                            ? () => {
+                                setDraggedId(null)
+                                setDragOver(null)
+                              }
+                            : undefined
+                        }
                         className={cn(
-                          "rounded-lg border bg-card p-3 cursor-grab active:cursor-grabbing transition shadow-sm hover:shadow-md",
+                          "rounded-lg border bg-card p-3 transition shadow-sm hover:shadow-md",
+                          canWriteLeads
+                            ? "cursor-grab active:cursor-grabbing"
+                            : "cursor-default",
                           draggedId === lead.id && "opacity-50 scale-[0.98]"
                         )}
                       >

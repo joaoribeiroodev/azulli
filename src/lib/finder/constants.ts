@@ -52,7 +52,8 @@ export const KANBAN_COLUMNS: Array<{ id: LeadStatus; label: string }> = [
   { id: "descartado", label: "Descartado" },
 ]
 
-export const USER_ROLES = ["admin", "sdr", "bdr", "closer", "ops", "viewer"] as const
+export { FINDER_ROLES as USER_ROLES } from "@/lib/finder/roles"
+export type { FinderRole } from "@/lib/finder/roles"
 
 export const DEFAULT_PLANS = [
   { id: "pro", name: "Pro", price: 29.99 },

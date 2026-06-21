@@ -31,6 +31,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { getFinderRoleLabel } from "@/lib/finder/roles"
 import { cn } from "@/lib/utils"
 
 type NavItem = {
@@ -130,7 +131,9 @@ function UserChip() {
       </div>
       <div className="min-w-0 flex-1">
         <div className="text-sm font-medium truncate">{user?.nome || user?.email || "—"}</div>
-        <div className="text-xs text-muted-foreground truncate uppercase">{user?.role || "—"}</div>
+        <div className="text-xs text-muted-foreground truncate">
+          {user?.role ? getFinderRoleLabel(user.role) : "—"}
+        </div>
       </div>
     </div>
   )

@@ -7,6 +7,8 @@ import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { useFinderContext, useFinderPageMeta } from "@/components/finder/finder-context"
+import { useFinderPermissions } from "@/components/finder/use-finder-permissions"
+import { FinderReadOnlyNotice } from "@/components/finder/ui/read-only-notice"
 import { hasPosOptinMessage, PitchPanel } from "@/components/finder/pitch-panel"
 import { IcpBadge } from "@/components/finder/ui/icp-badge"
 import { LeadStatusBadge } from "@/components/finder/ui/lead-status-badge"
@@ -42,6 +44,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { STATUS_LABEL } from "@/lib/finder/constants"
+import { getFinderRoleLabel } from "@/lib/finder/roles"
 import { getPitchCopyText } from "@/lib/finder/pitch"
 import { fmtDate, fmtPhone, mapsSearchLink, whatsappLink } from "@/lib/finder/format"
 import { finderClient } from "@/lib/finder/client"
@@ -70,6 +73,8 @@ export function FinderLeadDetailPage({ leadId }: Props) {
 
   const router = useRouter()
   const { plans } = useFinderContext()
+  const { canWriteLeads, canDeleteLeads, canConvertLeads, isReadOnly } =
+    useFinderPermissions()
 
   const [lead, setLead] = useState<Lead | null>(null)
   const [history, setHistory] = useState<LeadHistoryItem[]>([])
@@ -268,6 +273,7 @@ export function FinderLeadDetailPage({ leadId }: Props) {
 
   return (
     <div className="space-y-6">
+      {isReadOnly ? <FinderReadOnlyNotice /> : null}
       <Link href="/finder/leads" className="text-xs text-muted-foreground hover:text-brand">
         ← Voltar para a lista
       </Link>
@@ -291,17 +297,26 @@ export function FinderLeadDetailPage({ leadId }: Props) {
                   <div className="text-sm text-muted-foreground mt-1">{lead.endereco || "—"}</div>
                 </div>
                 <div className="flex flex-col gap-2 items-end shrink-0">
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="bg-brand hover:bg-brand-hover"
-                    onClick={() => setStatusOpen(true)}
-                  >
-                    Mudar status
-                  </Button>
-                  <Button type="button" size="sm" variant="outline" onClick={() => setAssignOpen(true)}>
-                    Atribuir
-                  </Button>
+                  {canWriteLeads ? (
+                    <>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-brand hover:bg-brand-hover"
+                        onClick={() => setStatusOpen(true)}
+                      >
+                        Mudar status
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setAssignOpen(true)}
+                      >
+                        Atribuir
+                      </Button>
+                    </>
+                  ) : null}
                 </div>
               </div>
 
@@ -377,16 +392,18 @@ export function FinderLeadDetailPage({ leadId }: Props) {
                       Copiar pós opt-in
                     </Button>
                   ) : null}
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="bg-brand hover:bg-brand-hover"
-                    disabled={regerating}
-                    onClick={regerarPitch}
-                  >
-                    {regerating ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                    Regerar
-                  </Button>
+                  {canWriteLeads ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="bg-brand hover:bg-brand-hover"
+                      disabled={regerating}
+                      onClick={regerarPitch}
+                    >
+                      {regerating ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                      Regerar
+                    </Button>
+                  ) : null}
                 </div>
               </div>
 
@@ -409,18 +426,21 @@ export function FinderLeadDetailPage({ leadId }: Props) {
                 value={notas}
                 onChange={(e) => setNotas(e.target.value)}
                 rows={4}
+                disabled={!canWriteLeads}
               />
-              <div className="mt-3 flex justify-end">
-                <Button
-                  type="button"
-                  className="bg-brand hover:bg-brand-hover"
-                  disabled={savingNotas}
-                  onClick={saveNotas}
-                >
-                  {savingNotas ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  Salvar notas
-                </Button>
-              </div>
+              {canWriteLeads ? (
+                <div className="mt-3 flex justify-end">
+                  <Button
+                    type="button"
+                    className="bg-brand hover:bg-brand-hover"
+                    disabled={savingNotas}
+                    onClick={saveNotas}
+                  >
+                    {savingNotas ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                    Salvar notas
+                  </Button>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
         </div>
@@ -430,34 +450,42 @@ export function FinderLeadDetailPage({ leadId }: Props) {
             <CardContent className="pt-5">
               <h3 className="text-sm font-bold mb-3">Ações rápidas</h3>
               <div className="space-y-2">
-                <Button
-                  type="button"
-                  className="w-full bg-brand hover:bg-brand-hover"
-                  onClick={() => setConvertOpen(true)}
-                >
-                  ✅ Converter em assinante
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  disabled={enriching}
-                  onClick={enriquecer}
-                >
-                  {enriching ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  ⚙️ Re-enriquecer com IA
-                </Button>
-                <Button type="button" variant="outline" className="w-full" onClick={pegarLead}>
-                  📍 Pegar para mim
-                </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="w-full"
-                  onClick={() => setDeleteOpen(true)}
-                >
-                  Excluir lead
-                </Button>
+                {canConvertLeads ? (
+                  <Button
+                    type="button"
+                    className="w-full bg-brand hover:bg-brand-hover"
+                    onClick={() => setConvertOpen(true)}
+                  >
+                    ✅ Converter em assinante
+                  </Button>
+                ) : null}
+                {canWriteLeads ? (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      disabled={enriching}
+                      onClick={enriquecer}
+                    >
+                      {enriching ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                      ⚙️ Re-enriquecer com IA
+                    </Button>
+                    <Button type="button" variant="outline" className="w-full" onClick={pegarLead}>
+                      📍 Pegar para mim
+                    </Button>
+                  </>
+                ) : null}
+                {canDeleteLeads ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    className="w-full"
+                    onClick={() => setDeleteOpen(true)}
+                  >
+                    Excluir lead
+                  </Button>
+                ) : null}
               </div>
               {lead.azulli_account_id ? (
                 <div className="mt-4 p-3 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-200">
@@ -561,7 +589,7 @@ export function FinderLeadDetailPage({ leadId }: Props) {
                 <SelectItem value="none">— não atribuído —</SelectItem>
                 {users.map((u) => (
                   <SelectItem key={u.id} value={u.id}>
-                    {u.nome} ({u.role})
+                    {u.nome} ({getFinderRoleLabel(u.role)})
                   </SelectItem>
                 ))}
               </SelectContent>

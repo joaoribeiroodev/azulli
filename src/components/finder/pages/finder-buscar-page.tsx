@@ -7,6 +7,8 @@ import { Download, ExternalLink, Loader2, Search } from "lucide-react"
 import { toast } from "sonner"
 
 import { useFinderContext, useFinderPageMeta } from "@/components/finder/finder-context"
+import { useFinderPermissions } from "@/components/finder/use-finder-permissions"
+import { FinderReadOnlyNotice } from "@/components/finder/ui/read-only-notice"
 import { EmptyState } from "@/components/finder/ui/empty-state"
 import { IcpBadge } from "@/components/finder/ui/icp-badge"
 import { LoadingState } from "@/components/finder/ui/loading-state"
@@ -44,6 +46,7 @@ export function FinderBuscarPage() {
 
   const searchParams = useSearchParams()
   const { config } = useFinderContext()
+  const { canRunSearches, isReadOnly } = useFinderPermissions()
   const [termo, setTermo] = useState("")
   const [localizacao, setLocalizacao] = useState("")
   const [loading, setLoading] = useState(false)
@@ -92,6 +95,7 @@ export function FinderBuscarPage() {
 
   return (
     <div className="space-y-6">
+      {isReadOnly ? <FinderReadOnlyNotice /> : null}
       {searchNotConfigured ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-200 dark:border-amber-800 p-4 text-sm">
           <strong>Busca indisponível em produção.</strong> Configure{" "}
@@ -113,6 +117,7 @@ export function FinderBuscarPage() {
                 onChange={(e) => setTermo(e.target.value)}
                 placeholder="Ex.: Salão de Beleza, Oficina Mecânica, Pet Shop"
                 required
+                disabled={!canRunSearches}
               />
             </div>
             <div className="space-y-2">
@@ -123,10 +128,15 @@ export function FinderBuscarPage() {
                 onChange={(e) => setLocalizacao(e.target.value)}
                 placeholder="Ex.: Vila Madalena SP, Tijuca RJ"
                 required
+                disabled={!canRunSearches}
               />
             </div>
             <div className="flex items-end">
-              <Button type="submit" className="w-full bg-brand hover:bg-brand-hover" disabled={loading}>
+              <Button
+                type="submit"
+                className="w-full bg-brand hover:bg-brand-hover"
+                disabled={loading || !canRunSearches}
+              >
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
